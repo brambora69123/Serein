@@ -519,40 +519,57 @@ fn selected_media_keys(
 	account: Id,
 	messages: &BTreeSet<(Id, Id)>,
 ) -> Result<Vec<HistoryMediaKey>> {
-	let mut selected = Vec::new();
 	if messages.is_empty() {
-		return Ok(selected);
+		return Ok(Vec::new());
 	}
-	let mut query = connection.prepare(
-		"SELECT channel,message,attachment_id FROM history_attachments
-         WHERE account=?1 LIMIT ?2",
-	)?;
-	let limit = i64::try_from(HISTORY_MEDIA_MAX_KEYS + 1).map_err(|_| StoreError::Capacity)?;
-	let mut rows = query.query(params![account_key(account)?, limit])?;
-	while let Some(row) = rows.next()? {
-		let channel = row
-			.get::<_, String>(0)?
-			.parse::<Id>()
-			.map_err(|_| StoreError::Incompatible)?;
-		let message = row
-			.get::<_, String>(1)?
-			.parse::<Id>()
-			.map_err(|_| StoreError::Incompatible)?;
-		if !messages.contains(&(channel, message)) {
-			continue;
+	let messages: Vec<_> = messages.iter().collect();
+	let mut selected = Vec::new();
+	// Join only the selected message keys against the attachment primary key. Chunking keeps
+	// SQLite's variable count small and avoids an account-wide table scan at the retention cap.
+	for chunk in messages.chunks(400) {
+		let placeholders = chunk
+			.iter()
+			.enumerate()
+			.map(|(index, _)| format!("(?{},?{})", index * 2 + 2, index * 2 + 3))
+			.collect::<Vec<_>>()
+			.join(",");
+		let sql = format!(
+			"WITH requested(channel,message) AS (VALUES {placeholders})
+             SELECT a.channel,a.message,a.attachment_id FROM requested r
+             JOIN history_attachments a
+               ON a.account=?1 AND a.channel=r.channel AND a.message=r.message
+             LIMIT {}",
+			HISTORY_MEDIA_MAX_KEYS + 1
+		);
+		let mut values = vec![rusqlite::types::Value::from(account_key(account)?)];
+		for (channel, message) in chunk {
+			values.push(rusqlite::types::Value::from(channel.to_string()));
+			values.push(rusqlite::types::Value::from(message.to_string()));
 		}
-		let attachment = row
-			.get::<_, String>(2)?
-			.parse::<Id>()
-			.map_err(|_| StoreError::Incompatible)?;
-		if selected.len() == HISTORY_MEDIA_MAX_KEYS {
-			return Err(StoreError::Capacity);
+		let mut query = connection.prepare(&sql)?;
+		let mut rows = query.query(rusqlite::params_from_iter(values))?;
+		while let Some(row) = rows.next()? {
+			if selected.len() == HISTORY_MEDIA_MAX_KEYS {
+				return Err(StoreError::Capacity);
+			}
+			let channel = row
+				.get::<_, String>(0)?
+				.parse::<Id>()
+				.map_err(|_| StoreError::Incompatible)?;
+			let message = row
+				.get::<_, String>(1)?
+				.parse::<Id>()
+				.map_err(|_| StoreError::Incompatible)?;
+			let attachment = row
+				.get::<_, String>(2)?
+				.parse::<Id>()
+				.map_err(|_| StoreError::Incompatible)?;
+			selected.push(HistoryMediaKey {
+				channel,
+				message,
+				attachment,
+			});
 		}
-		selected.push(HistoryMediaKey {
-			channel,
-			message,
-			attachment,
-		});
 	}
 	Ok(selected)
 }
@@ -2641,6 +2658,7 @@ mod tests {
 				.unwrap(),
 			HistoryReservation::AlreadyStored
 		);
+		assert_eq!(store.history_usage(Id(1)).unwrap().attachment_bytes, 1024);
 		let page = store.history_page(Id(1), None, None, 10).unwrap();
 		assert_eq!(
 			page.messages[0].attachments[0].state,

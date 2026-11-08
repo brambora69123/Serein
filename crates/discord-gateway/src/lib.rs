@@ -1369,10 +1369,10 @@ async fn run_recoverable(
 		}
 		outgoing_activity.update_presence(&own_presence.borrow_and_update())?;
 		outgoing_activity.update_afk(*afk.borrow_and_update());
+		let fresh_session = state.session.is_none() || state.sequence.is_none();
 		let handshake = if let (Some(session), Some(sequence)) = (&state.session, state.sequence) {
 			serde_json::json!({"op":6,"d":{"token":secret.expose(),"session_id":session.as_str(),"seq":sequence}})
 		} else {
-			sessions.admit(Instant::now())?;
 			// Normal-user Identify remains live-unverified. Preserve the same identity on every
 			// transport rather than inventing per-connection device/session markers.
 			let properties: serde_json::Value =
@@ -1392,6 +1392,10 @@ async fn run_recoverable(
 			state.failed();
 			attempt = next_attempt(attempt, None);
 			continue;
+		}
+		if fresh_session {
+			// A failed socket write did not identify this client and consumes no slot.
+			sessions.admit(Instant::now())?;
 		}
 		let mut heartbeat = Heartbeat::default();
 		let interval = Duration::from_millis(hello.heartbeat_interval);
@@ -1413,6 +1417,7 @@ async fn run_recoverable(
 		let mut queries = member_search::Search::default();
 		outgoing_activity.reconnect();
 		loop {
+			socket.flush_pending().await.map_err(socket_failure)?;
 			if activity_enabled && last_observation != Some(outgoing_activity.observation) {
 				observe(outgoing_activity.observation)?;
 				last_observation = Some(outgoing_activity.observation);
@@ -1701,6 +1706,7 @@ async fn run_recoverable(
 					}
 				}
 				_ = tokio::time::sleep_until(ready_deadline), if ready_at.is_none() => break,
+				_ = sleep(socket.delay()) => {}
 				_ = timer.tick() => {
 					if heartbeat.tick(Instant::now(), interval).is_err() { break; }
 					let packet = serde_json::json!({"op":1,"d":state.sequence}).to_string();

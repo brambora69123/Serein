@@ -2,13 +2,15 @@
 use client_core::auth::Failure;
 use futures_util::{Sink, SinkExt, Stream, StreamExt};
 use std::collections::VecDeque;
-use tokio::time::{Duration, Instant, sleep};
+use tokio::time::{Duration, Instant};
 use tokio_tungstenite::tungstenite::{Error, Message as Frame};
 
 const IDENTIFY_WINDOW: Duration = Duration::from_secs(60 * 60);
 const MAX_IDENTIFIES: usize = 10;
 const COMMAND_WINDOW: Duration = Duration::from_secs(60);
 const MAX_COMMANDS: usize = 110;
+/// Only this many full-window commands wait for their original connection.
+const MAX_PENDING_COMMANDS: usize = 4;
 
 /// Counts only fresh IDENTIFY handshakes, not successful session resumes.
 #[derive(Default)]
@@ -48,44 +50,48 @@ impl Default for RateWindow {
 }
 
 impl RateWindow {
+	fn delay(&self, now: Instant) -> Duration {
+		if self.sent.len() < MAX_COMMANDS {
+			return Duration::ZERO;
+		}
+		self.sent.front().map_or(Duration::ZERO, |oldest| {
+			(*oldest + COMMAND_WINDOW).saturating_duration_since(now)
+		})
+	}
+
 	fn reserve(&mut self, now: Instant) -> Duration {
-		while self
-			.sent
-			.front()
-			.is_some_and(|sent| now.duration_since(*sent) >= COMMAND_WINDOW)
-		{
-			self.sent.pop_front();
+		let delay = self.delay(now);
+		if delay.is_zero() {
+			while self
+				.sent
+				.front()
+				.is_some_and(|sent| now.duration_since(*sent) >= COMMAND_WINDOW)
+			{
+				self.sent.pop_front();
+			}
+			self.sent.push_back(now);
 		}
-		if self.sent.len() >= MAX_COMMANDS {
-			return self.sent.front().map_or(Duration::ZERO, |oldest| {
-				(*oldest + COMMAND_WINDOW).saturating_duration_since(now)
-			});
-		}
-		self.sent.push_back(now);
-		Duration::ZERO
+		delay
 	}
 }
 
-/// Charges JSON gateway commands, but not heartbeat/control frames that keep the socket alive.
+/// Charges the top-level JSON gateway opcode, excluding heartbeat/control frames.
 fn charge(frame: &Frame) -> bool {
 	match frame {
-		Frame::Text(text) => !text.split_once("\"op\":").is_some_and(|(_, operation)| {
-			operation.as_bytes().first() == Some(&b'1')
-				&& operation
-					.as_bytes()
-					.get(1)
-					.is_none_or(|next| !next.is_ascii_digit())
-		}),
+		Frame::Text(text) => serde_json::from_str::<serde_json::Value>(text)
+			.ok()
+			.is_none_or(|packet| packet.get("op").and_then(serde_json::Value::as_u64) != Some(1)),
 		Frame::Ping(_) | Frame::Pong(_) | Frame::Close(_) => false,
 		_ => true,
 	}
 }
 
-/// One connection's command writer. The rate wait remains inside the gateway's select loop,
-/// so heartbeat branches are still able to run while a normal command is queued.
+/// A bounded command-window writer. A full window queues a few commands on this connection
+/// while heartbeat/read branches continue; no write timeout covers an entire rate window.
 pub struct CommandSocket<S> {
 	socket: S,
 	commands: RateWindow,
+	pending: VecDeque<Frame>,
 }
 
 impl<S> CommandSocket<S>
@@ -96,17 +102,39 @@ where
 		Self {
 			socket,
 			commands: RateWindow::default(),
+			pending: VecDeque::new(),
 		}
 	}
 
 	pub async fn send(&mut self, frame: Frame) -> Result<(), Error> {
-		if charge(&frame) {
-			let wait = self.commands.reserve(Instant::now());
-			if !wait.is_zero() {
-				sleep(wait).await;
+		let charge = charge(&frame);
+		if !charge || self.commands.delay(Instant::now()).is_zero() {
+			if charge {
+				self.commands.reserve(Instant::now());
 			}
+			return self.socket.send(frame).await;
 		}
-		self.socket.send(frame).await
+		if self.pending.len() == MAX_PENDING_COMMANDS {
+			return Err(Error::WriteBufferFull(Box::new(frame)));
+		}
+		self.pending.push_back(frame);
+		Ok(())
+	}
+
+	/// Flush at the actual rate wait; `send` itself covers only the underlying socket write.
+	pub async fn flush_pending(&mut self) -> Result<(), Error> {
+		while self.commands.delay(Instant::now()).is_zero() {
+			let Some(frame) = self.pending.pop_front() else {
+				break;
+			};
+			self.commands.reserve(Instant::now());
+			self.socket.send(frame).await?;
+		}
+		Ok(())
+	}
+
+	pub fn delay(&self) -> Duration {
+		self.commands.delay(Instant::now())
 	}
 
 	pub async fn next(&mut self) -> Option<Result<Frame, Error>> {
@@ -145,6 +173,8 @@ mod tests {
 		let command: Frame = serde_json::json!({"op":3,"d":{}}).to_string().into();
 		assert!(!charge(&heartbeat), "{heartbeat}");
 		assert!(charge(&command));
+		let nested: Frame = serde_json::json!({"op":3,"d":{"op":1}}).to_string().into();
+		assert!(charge(&nested), "a nested op must not spoof a heartbeat");
 		assert!(!charge(&Frame::Ping(Vec::new().into())));
 		assert!(!charge(&Frame::Pong(Vec::new().into())));
 		assert!(!charge(&Frame::Close(None)));
@@ -159,5 +189,69 @@ mod tests {
 			COMMAND_WINDOW - Duration::from_secs(1)
 		);
 		assert_eq!(window.reserve(start + COMMAND_WINDOW), Duration::ZERO);
+	}
+
+	#[derive(Default)]
+	struct TestSocket {
+		sent: Vec<Frame>,
+	}
+
+	impl Sink<Frame> for TestSocket {
+		type Error = Error;
+		fn poll_ready(
+			self: std::pin::Pin<&mut Self>,
+			_: &mut std::task::Context<'_>,
+		) -> std::task::Poll<Result<(), Self::Error>> {
+			std::task::Poll::Ready(Ok(()))
+		}
+		fn start_send(mut self: std::pin::Pin<&mut Self>, frame: Frame) -> Result<(), Self::Error> {
+			self.sent.push(frame);
+			Ok(())
+		}
+		fn poll_flush(
+			self: std::pin::Pin<&mut Self>,
+			_: &mut std::task::Context<'_>,
+		) -> std::task::Poll<Result<(), Self::Error>> {
+			std::task::Poll::Ready(Ok(()))
+		}
+		fn poll_close(
+			self: std::pin::Pin<&mut Self>,
+			_: &mut std::task::Context<'_>,
+		) -> std::task::Poll<Result<(), Self::Error>> {
+			std::task::Poll::Ready(Ok(()))
+		}
+	}
+	impl Stream for TestSocket {
+		type Item = Result<Frame, Error>;
+		fn poll_next(
+			self: std::pin::Pin<&mut Self>,
+			_: &mut std::task::Context<'_>,
+		) -> std::task::Poll<Option<Self::Item>> {
+			std::task::Poll::Ready(None)
+		}
+	}
+
+	#[tokio::test]
+	async fn full_window_queues_bounded_commands_and_flushes_without_a_send_timeout() {
+		let mut socket = CommandSocket::new(TestSocket::default());
+		let command: Frame = serde_json::json!({"op":3,"d":{}}).to_string().into();
+		for _ in 0..MAX_COMMANDS {
+			socket.send(command.clone()).await.unwrap();
+		}
+		assert_eq!(socket.socket.sent.len(), MAX_COMMANDS);
+		socket.send(command.clone()).await.unwrap();
+		assert_eq!(socket.pending.len(), 1);
+		assert!(socket.delay() > Duration::ZERO);
+		assert_eq!(socket.socket.sent.len(), MAX_COMMANDS);
+		// No timeout can cancel these writes because the wait is delegated to the select loop.
+		socket.flush_pending().await.unwrap();
+		assert_eq!(socket.socket.sent.len(), MAX_COMMANDS);
+		// Advance the synthetic budget rather than sleeping for a minute.
+		for sent in &mut socket.commands.sent {
+			*sent -= COMMAND_WINDOW;
+		}
+		socket.flush_pending().await.unwrap();
+		assert_eq!(socket.socket.sent.len(), MAX_COMMANDS + 1);
+		assert!(socket.pending.is_empty());
 	}
 }

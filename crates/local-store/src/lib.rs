@@ -341,11 +341,21 @@ impl<'de> serde::Deserialize<'de> for CachedEmbeds {
 		deserializer.deserialize_seq(Visitor)
 	}
 }
+/// Creates one absolute root without broadening existing directory permissions.
+pub fn prepare_data_dir_at(root: &Path) -> Result<()> {
+	create_data_dir(root)
+}
+/// Creates the selected private root before any launch acquires its advisory store lock.
+pub fn prepare_data_dir() -> Result<PathBuf> {
+	let root = data_dir()?;
+	prepare_data_dir_at(&root)?;
+	Ok(root)
+}
+
 impl LocalStore {
 	/// Opens the SQLite store beneath the selected application-data root.
 	pub fn open_default() -> Result<Self> {
-		let root = data_dir()?;
-		create_data_dir(&root)?;
+		let root = prepare_data_dir()?;
 		Self::open(&root.join("client.sqlite3"))
 	}
 	pub fn open(path: &Path) -> Result<Self> {

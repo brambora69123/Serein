@@ -403,6 +403,15 @@ fn main() -> eframe::Result {
 		std::process::exit(2);
 	}
 	// Fixture runs may overlap; real launches show the running client instead of duplicating it.
+	let mut instance = if demo {
+		platform::single_instance::Instance::default()
+	} else {
+		match platform::single_instance::claim() {
+			platform::single_instance::Launch::Primary(instance) => instance,
+			platform::single_instance::Launch::Forwarded => return Ok(()),
+		}
+	};
+	// The primary alone takes the account lock, after any second-launch foreground forwarding.
 	let _session_lock = if demo {
 		None
 	} else {
@@ -412,14 +421,6 @@ fn main() -> eframe::Result {
 				eprintln!("{error}");
 				return Ok(());
 			}
-		}
-	};
-	let mut instance = if demo {
-		platform::single_instance::Instance::default()
-	} else {
-		match platform::single_instance::claim() {
-			platform::single_instance::Launch::Primary(instance) => instance,
-			platform::single_instance::Launch::Forwarded => return Ok(()),
 		}
 	};
 	let frame_sample = std::env::args()

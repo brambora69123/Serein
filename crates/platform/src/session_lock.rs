@@ -9,7 +9,7 @@ pub struct SessionLock {
 }
 
 pub fn acquire() -> Result<SessionLock, Failure> {
-	let root = local_store::data_dir().map_err(|_| {
+	let root = local_store::prepare_data_dir().map_err(|_| {
 		Failure::ProtocolAt(
 			"The local account store is unavailable; no account session was started",
 		)
@@ -23,6 +23,11 @@ pub fn acquire_at(root: &Path) -> Result<SessionLock, Failure> {
 			"The local account store must be an absolute path; no account session was started",
 		));
 	}
+	local_store::prepare_data_dir_at(root).map_err(|_| {
+		Failure::ProtocolAt(
+			"Could not create the local account store; no account session was started",
+		)
+	})?;
 	let path = root.join("session-store.lock");
 	let file = OpenOptions::new()
 		.read(true)
@@ -51,7 +56,7 @@ mod tests {
 	use super::*;
 
 	#[test]
-	fn second_client_waits_for_the_first_lock_to_close() {
+	fn second_client_is_rejected_until_the_first_lock_closes() {
 		let random = {
 			let mut bytes = [0_u8; 8];
 			getrandom::fill(&mut bytes).unwrap();
@@ -66,6 +71,22 @@ mod tests {
 		drop(second);
 		// An unlocked file is not a claim; a crashed process cannot leave a stale one.
 		assert!(root.join("session-store.lock").exists());
+		std::fs::remove_dir_all(root).unwrap();
+	}
+
+	#[test]
+	fn a_new_data_directory_is_created_before_locking() {
+		let random = {
+			let mut bytes = [0_u8; 8];
+			getrandom::fill(&mut bytes).unwrap();
+			u64::from_le_bytes(bytes)
+		};
+		let root = std::env::temp_dir().join(format!("serein-store-lock-new-{random:016x}"));
+		let nested = root.join("nested");
+		assert!(!nested.exists());
+		let lock = acquire_at(&nested).unwrap();
+		assert!(nested.is_dir());
+		drop(lock);
 		std::fs::remove_dir_all(root).unwrap();
 	}
 }
