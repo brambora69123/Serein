@@ -3083,8 +3083,10 @@ limit, not an anti-fraud bypass or proof that Discord accepts normal-user client
 
 Ordinary JSON gateway commands now share a 110-command rolling 60-second window per connection.
 Heartbeats, ping, pong and close control frames bypass it so a full command window cannot suppress
-liveness signaling. The command wait yields inside the gateway's select loop. The malformed-JSON,
-restart and command-window fixtures exercise the same guards used by the production write path.
+liveness signaling. The command wait yields inside the gateway's select loop. A bounded backlog of full-window commands
+is retained on that connection instead of timing out or silently dropping them. The fresh-session
+budget is charged only after a successful handshake write. The malformed-JSON,
+restart and command-window fixtures exercise the same writer used by the production path.
 
 Real launches additionally hold an operating-system lock on `session-store.lock` in the selected
 application-data directory before authentication or SQLite work. Another real process using that

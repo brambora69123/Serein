@@ -410,23 +410,6 @@ impl MediaManager {
 		self.prepare_clear_account(account)?.commit_media()
 	}
 
-	/// Stop exactly the selected downloads, then stage their completed files for the caller to
-	/// remove after its database purge commits. A staging failure aborts the database purge.
-	pub fn clear_attachments(
-		&self,
-		account: u64,
-		selected: &[local_store::message_history::HistoryMediaKey],
-	) -> Result<(), MediaFailure> {
-		if account == 0 || selected.len() > local_store::message_history::HISTORY_MEDIA_MAX_KEYS {
-			return Err("Media cleanup exceeds its bound");
-		}
-		if selected.is_empty() {
-			return Ok(());
-		}
-		self.prepare_clear_attachments(account, selected)?
-			.commit_media()
-	}
-
 	/// Stage every account media file behind a cleanup lease. Dropping the guard restores the
 	/// files; committing it permanently removes them after the SQL transaction succeeds.
 	pub(crate) fn prepare_clear_account(&self, account: u64) -> Result<CleanupGuard, MediaFailure> {
@@ -736,12 +719,12 @@ fn active_matches(state: &State, account: u64, attachments: Option<&BTreeSet<u64
 }
 
 /// Wait for a cancelled transfer to stop, but never hang the history worker indefinitely.
-fn wait_for_active(
-	shared: &Shared,
-	mut state: MutexGuard<'_, State>,
+fn wait_for_active<'a>(
+	shared: &'a Shared,
+	mut state: MutexGuard<'a, State>,
 	account: u64,
 	attachments: Option<&BTreeSet<u64>>,
-) -> Result<MutexGuard<'_, State>, MediaFailure> {
+) -> Result<MutexGuard<'a, State>, MediaFailure> {
 	let deadline = Instant::now() + CLEANUP_WAIT_TIMEOUT;
 	while active_matches(&state, account, attachments) && !state.worker_finished {
 		let now = Instant::now();
@@ -1601,8 +1584,8 @@ mod tests {
 		fs::write(directory.join("7/101.png"), b"remove").unwrap();
 		fs::write(directory.join("7/102.png"), b"keep").unwrap();
 		fs::write(directory.join("8/101.png"), b"other-account").unwrap();
-		manager
-			.clear_attachments(
+		let cleanup = manager
+			.prepare_clear_attachments(
 				7,
 				&[local_store::message_history::HistoryMediaKey {
 					channel: model::Id(20),
@@ -1611,6 +1594,7 @@ mod tests {
 				}],
 			)
 			.unwrap();
+		cleanup.commit_media().unwrap();
 		assert!(!directory.join("7/101.png").exists());
 		assert_eq!(fs::read(directory.join("7/102.png")).unwrap(), b"keep");
 		assert_eq!(

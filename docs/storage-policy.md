@@ -2082,11 +2082,15 @@ writes. Only the exact validated Discord CDN object is fetched without redirects
 Signed URLs never enter SQLite, exports or persisted filenames. The browser's data directory stores
 owner-only media under generated account/attachment paths. A database reservation precedes HTTP;
 completion or cancellation commits/releases it. Scope change cancels volatile requests. Account,
-channel and author purges, retention expiry and count/byte eviction cancel matching jobs and remove
-matching files before their attachment rows are discarded; failure rolls back the matching database
-purge rather than promising erasure. Full forget/logout additionally clears the account media
+channel and author purges, retention expiry and count/byte eviction cancel matching jobs and stage
+matching files in bounded `.purge-*` locations. Staged files are permanently removed only after the
+matching SQLite transaction commits; dropping the cleanup guard restores them. Matching download
+admission is blocked during that decision. Staging failure aborts the matching database purge; a
+failure during final deletion leaves remaining staged files on disk with conservative byte
+accounting and does not promise erasure. Full forget/logout additionally clears the account media
 directory asynchronously and reports any failure. Unsupported types remain metadata-only. Filesystem
-errors or forced termination can leave artifacts; there is no forensic-erasure claim.
+errors or forced termination can leave original or staged artifacts; this is coordinated cleanup,
+not perfect cross-filesystem/SQLite atomicity or forensic erasure.
 
 Text/JSON export is an explicit native action covering one account's retained rows, old versions
 and deleted bodies. It caps at 50,000 rows or 256 MiB with bounded 500-row read pages, uses an
