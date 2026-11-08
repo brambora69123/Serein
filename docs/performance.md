@@ -1893,14 +1893,14 @@ The final compressed-tree SHA-256 is
 not imply that all 373 Equicord plugins are included or compatible. Packaging and measurements ran sequentially to avoid
 shared-worktree compiler pressure.
 
-### Fork integration candidates — November 8, 2026
+### Fork integration candidates and review fixes — November 8, 2026
 
-The fork integration candidate `cb97a248` adds the independent upstream fixes #611 (Windows caption dragging), #941 (bounded incoming-video reception feedback) and #925 (font-list regrowth) to the session-hardening revision above. The optimized `cargo xtask package --format dir` contained the same 245-file layout and was built after all 1,599 workspace tests passed.
+The final integration includes the independent upstream fixes #611 (Windows caption dragging), #941 (bounded incoming-video reception feedback) and #925 (font-list regrowth), plus the corrected session recovery, first-launch locking, indexed attachment selection and guarded media cleanup described below. The optimized `cargo xtask package --format dir` contained the same 245-file layout and was built after all 1,605 workspace tests passed.
 
 | Metric | Detached `21f8870b` baseline | Candidate | Delta |
 | --- | ---: | ---: | ---: |
-| Executable bytes | 95,117,576 | 95,989,640 | +872,064 (+0.917%) |
-| Installed `linux-root` bytes | 99,816,808 | 100,689,829 | +873,021 (+0.875%) |
-| Compressed `linux-root` (`tar.gz`) bytes | 57,188,160 | 57,571,921 | +383,761 (+0.671%) |
+| Executable bytes | 95,117,576 | 96,012,168 | +894,592 (+0.941%) |
+| Installed `linux-root` bytes | 99,816,808 | 100,712,357 | +895,549 (+0.898%) |
+| Compressed `linux-root` (`tar.gz`) bytes | 57,188,160 | 57,581,396 | +393,236 (+0.688%) |
 
-Candidate executable SHA-256 is `ed70eb8c089f1809a7e95ccaca5c35f6e162c526b4c3d921254cd38a55945ed5`; the compressed-tree SHA-256 is `7d8c6467ef41abcdd030bfe32ad1671e662f6ea2d5ca66080177a53f4c267c61`. The voice feedback extension remains experimental: a clean workspace gate is not proof of group-call or packet-loss behavior, and its multiplier effect in official clients is not live-verified here. The font test passed locally because upstream CI had not run for #925. The DWM fix relies on its native Windows CI evidence; this Linux environment could not execute its local DWM path. No new UI-speed, startup, call-quality or live-enforcement claim is made.
+Candidate executable SHA-256 is `8ff8dfa3370dc292dce4f766f72ed83e59ba13f4bb3f2aaff69d90e0bc07597b`; the compressed-tree SHA-256 is `be14002e2a93ec83d50ba7f7e9ee18f5140cce5db8bc4166b01694fdc0a8eb27`. The voice feedback extension remains experimental: a clean workspace gate is not proof of group-call or packet-loss behavior, and its multiplier effect in official clients is not live-verified here. The font test passed locally because upstream CI had not run for #925. The DWM fix relies on its native Windows CI evidence; this Linux environment could not execute its local DWM path. No new UI-speed, startup, call-quality or live-enforcement claim is made.
