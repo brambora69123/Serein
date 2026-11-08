@@ -218,12 +218,13 @@ impl HistoryMedia {
 		&self,
 		account: Id,
 		selected: Option<&[local_store::message_history::HistoryMediaKey]>,
-	) -> Result<(), StoreError> {
+	) -> Result<Box<dyn local_store::message_history::HistoryMediaGuard>, StoreError> {
 		let manager = self.manager()?;
 		match selected {
-			Some(selected) => manager.clear_attachments(account.0, selected),
-			None => manager.clear_account(account.0),
+			Some(selected) => manager.prepare_clear_attachments(account.0, selected),
+			None => manager.prepare_clear_account(account.0),
 		}
+		.map(|guard| Box::new(guard) as Box<dyn local_store::message_history::HistoryMediaGuard>)
 		.map_err(|_| StoreError::Unavailable)
 	}
 }

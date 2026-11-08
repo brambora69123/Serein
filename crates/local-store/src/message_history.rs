@@ -58,9 +58,22 @@ pub struct HistoryMediaKey {
 	pub attachment: Id,
 }
 
+/// Owns media staged by a cleanup until the surrounding SQL transaction is decided.
+///
+/// The guard must permanently remove its staged files only from [`Self::commit`], after the
+/// transaction committed. Dropping it without a commit restores the staged files.
+pub trait HistoryMediaGuard: Send {
+	fn commit(self: Box<Self>) -> std::result::Result<(), StoreError>;
+}
+
 /// `None` clears all media for the account. `Some` clears only listed attachments.
-/// The callback runs before matching rows are deleted and may roll back their purge on failure.
-pub type HistoryMediaCleanup = dyn FnMut(Id, Option<&[HistoryMediaKey]>) -> std::result::Result<(), StoreError>
+///
+/// The callback stages matching files before their rows are deleted and returns a guard. The store
+/// commits the guard only after a successful transaction commit; dropping it restores the files.
+pub type HistoryMediaCleanup = dyn FnMut(
+		Id,
+		Option<&[HistoryMediaKey]>,
+	) -> std::result::Result<Box<dyn HistoryMediaGuard>, StoreError>
 	+ Send
 	+ 'static;
 
@@ -579,23 +592,32 @@ fn cleanup_selected_media(
 	connection: &Connection,
 	account: Id,
 	messages: &BTreeSet<(Id, Id)>,
-) -> Result<()> {
+) -> Result<Option<Box<dyn HistoryMediaGuard>>> {
 	let Some(cleanup) = cleanup.as_mut() else {
-		return Ok(());
+		return Ok(None);
 	};
 	let selected = selected_media_keys(connection, account, messages)?;
 	if selected.is_empty() {
-		return Ok(());
+		return Ok(None);
 	}
-	cleanup(account, Some(&selected))
+	cleanup(account, Some(&selected)).map(Some)
 }
 
 fn cleanup_account_media(
 	cleanup: &mut Option<Box<HistoryMediaCleanup>>,
 	account: Id,
-) -> Result<()> {
+) -> Result<Option<Box<dyn HistoryMediaGuard>>> {
 	if let Some(cleanup) = cleanup.as_mut() {
-		cleanup(account, None)?;
+		cleanup(account, None).map(Some)
+	} else {
+		Ok(None)
+	}
+}
+
+/// Finalize staged media only after the owning transaction committed.
+fn commit_media_guard(guard: Option<Box<dyn HistoryMediaGuard>>) -> Result<()> {
+	if let Some(guard) = guard {
+		guard.commit()?;
 	}
 	Ok(())
 }
@@ -663,8 +685,9 @@ impl LocalStore {
 				params![account.as_str(), id.to_string()],
 			)?;
 		}
-		enforce_history_limits_in(&transaction, &account, value, &mut self.1)?;
+		let (_, guard) = enforce_history_limits_in(&transaction, &account, value, &mut self.1)?;
 		transaction.commit()?;
+		commit_media_guard(guard)?;
 		Ok(())
 	}
 
@@ -748,8 +771,9 @@ impl LocalStore {
 				],
 			)?;
 		}
-		enforce_history_limits_in(&transaction, &account, &settings, &mut self.1)?;
+		let (_, guard) = enforce_history_limits_in(&transaction, &account, &settings, &mut self.1)?;
 		transaction.commit()?;
+		commit_media_guard(guard)?;
 		Ok(HistoryWrite::Applied)
 	}
 
@@ -817,8 +841,9 @@ impl LocalStore {
 				observed_at,
 			],
 		)?;
-		enforce_history_limits_in(&transaction, &account, &settings, &mut self.1)?;
+		let (_, guard) = enforce_history_limits_in(&transaction, &account, &settings, &mut self.1)?;
 		transaction.commit()?;
+		commit_media_guard(guard)?;
 		Ok(HistoryWrite::Applied)
 	}
 
@@ -846,10 +871,12 @@ impl LocalStore {
 			observed_at,
 			settings.max_messages,
 		)?;
+		let mut guard = None;
 		if result == HistoryWrite::Applied {
-			enforce_history_limits_in(&transaction, &account, &settings, &mut self.1)?;
+			(_, guard) = enforce_history_limits_in(&transaction, &account, &settings, &mut self.1)?;
 		}
 		transaction.commit()?;
+		commit_media_guard(guard)?;
 		Ok(result)
 	}
 
@@ -888,10 +915,12 @@ impl LocalStore {
 				applied += 1;
 			}
 		}
+		let mut guard = None;
 		if applied != 0 {
-			enforce_history_limits_in(&transaction, &account, &settings, &mut self.1)?;
+			(_, guard) = enforce_history_limits_in(&transaction, &account, &settings, &mut self.1)?;
 		}
 		transaction.commit()?;
+		commit_media_guard(guard)?;
 		Ok(applied)
 	}
 
@@ -930,7 +959,7 @@ impl LocalStore {
 				))
 			})
 			.collect::<Result<BTreeSet<_>>>()?;
-		cleanup_selected_media(&mut self.1, &transaction, account_id, &messages)?;
+		let guard = cleanup_selected_media(&mut self.1, &transaction, account_id, &messages)?;
 		for (channel, message) in &keys {
 			delete_history_message(&transaction, &account, channel, message)?;
 		}
@@ -939,6 +968,7 @@ impl LocalStore {
 			params![account.as_str(), cutoff],
 		)?;
 		transaction.commit()?;
+		commit_media_guard(guard)?;
 		Ok(keys.len())
 	}
 
@@ -947,8 +977,10 @@ impl LocalStore {
 		let account = account_key(account)?;
 		let settings = read_history_settings(&self.0, &account)?;
 		let transaction = self.0.transaction()?;
-		let evicted = enforce_history_limits_in(&transaction, &account, &settings, &mut self.1)?;
+		let (evicted, guard) =
+			enforce_history_limits_in(&transaction, &account, &settings, &mut self.1)?;
 		transaction.commit()?;
+		commit_media_guard(guard)?;
 		Ok(evicted)
 	}
 
@@ -1020,7 +1052,7 @@ impl LocalStore {
 				messages.insert((channel, message));
 			}
 		}
-		cleanup_selected_media(&mut self.1, &transaction, account_id, &messages)?;
+		let guard = cleanup_selected_media(&mut self.1, &transaction, account_id, &messages)?;
 		transaction.execute(
 			"DELETE FROM history_attachments WHERE account=?1 AND channel=?2",
 			params![account.as_str(), channel.as_str()],
@@ -1038,6 +1070,7 @@ impl LocalStore {
 			params![account.as_str(), channel.as_str()],
 		)?;
 		transaction.commit()?;
+		commit_media_guard(guard)?;
 		usize::try_from(count).map_err(|_| StoreError::Incompatible)
 	}
 
@@ -1051,7 +1084,7 @@ impl LocalStore {
 			params![account.as_str()],
 			|row| row.get(0),
 		)?;
-		cleanup_account_media(&mut self.1, account_id)?;
+		let guard = cleanup_account_media(&mut self.1, account_id)?;
 		for table in [
 			"history_attachments",
 			"history_tombstones",
@@ -1085,6 +1118,7 @@ impl LocalStore {
 			)?;
 		}
 		transaction.commit()?;
+		commit_media_guard(guard)?;
 		usize::try_from(count).map_err(|_| StoreError::Incompatible)
 	}
 
@@ -1117,11 +1151,12 @@ impl LocalStore {
 				))
 			})
 			.collect::<Result<BTreeSet<_>>>()?;
-		cleanup_selected_media(&mut self.1, &transaction, account_id, &messages)?;
+		let guard = cleanup_selected_media(&mut self.1, &transaction, account_id, &messages)?;
 		for (channel, message) in &keys {
 			delete_history_message(&transaction, &account, channel, message)?;
 		}
 		transaction.commit()?;
+		commit_media_guard(guard)?;
 		Ok(keys.len())
 	}
 
@@ -1670,7 +1705,7 @@ fn enforce_history_limits_in(
 	account: &str,
 	settings: &HistorySettings,
 	cleanup: &mut Option<Box<HistoryMediaCleanup>>,
-) -> Result<usize> {
+) -> Result<(usize, Option<Box<dyn HistoryMediaGuard>>)> {
 	let sql = format!(
 		"SELECT m.channel,m.id,{HISTORY_MESSAGE_BYTES_SQL}
          FROM history_messages m WHERE m.account=?1
@@ -1714,11 +1749,11 @@ fn enforce_history_limits_in(
 		total = total.saturating_sub(u64::try_from(*bytes).unwrap_or(0));
 		evicted += 1;
 	}
-	cleanup_selected_media(cleanup, connection, account_id, &evicted_messages)?;
+	let guard = cleanup_selected_media(cleanup, connection, account_id, &evicted_messages)?;
 	for (channel, message, _) in candidates.into_iter().take(evicted) {
 		delete_history_message(connection, account, &channel, &message)?;
 	}
-	Ok(evicted)
+	Ok((evicted, guard))
 }
 
 fn history_view_inner(
@@ -2082,6 +2117,31 @@ mod tests {
 		HistorySettings {
 			enabled: true,
 			..HistorySettings::default()
+		}
+	}
+
+	struct TestMediaGuard {
+		commits: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+		restores: std::sync::Arc<std::sync::atomic::AtomicUsize>,
+		committed: std::sync::atomic::AtomicBool,
+	}
+
+	impl HistoryMediaGuard for TestMediaGuard {
+		fn commit(self: Box<Self>) -> Result<()> {
+			self.commits
+				.fetch_add(1, std::sync::atomic::Ordering::Release);
+			self.committed
+				.store(true, std::sync::atomic::Ordering::Release);
+			Ok(())
+		}
+	}
+
+	impl Drop for TestMediaGuard {
+		fn drop(&mut self) {
+			if !self.committed.load(std::sync::atomic::Ordering::Acquire) {
+				self.restores
+					.fetch_add(1, std::sync::atomic::Ordering::Release);
+			}
 		}
 	}
 
@@ -2730,9 +2790,13 @@ mod tests {
 		store.save_history_settings(Id(1), &settings).unwrap();
 		let events = Arc::new(Mutex::new(Vec::<(Id, Option<Vec<HistoryMediaKey>>)>::new()));
 		let fail = Arc::new(AtomicBool::new(false));
+		let commits = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+		let restores = Arc::new(std::sync::atomic::AtomicUsize::new(0));
 		store.set_history_media_cleanup(Some({
 			let events = events.clone();
 			let fail = fail.clone();
+			let commits = commits.clone();
+			let restores = restores.clone();
 			Box::new(move |account, selected| {
 				events
 					.lock()
@@ -2741,7 +2805,11 @@ mod tests {
 				if fail.load(Ordering::Acquire) {
 					Err(StoreError::Unavailable)
 				} else {
-					Ok(())
+					Ok(Box::new(TestMediaGuard {
+						commits: commits.clone(),
+						restores: restores.clone(),
+						committed: std::sync::atomic::AtomicBool::new(false),
+					}))
 				}
 			})
 		}));
@@ -2806,5 +2874,84 @@ mod tests {
 		assert!(events.lock().unwrap().last().unwrap().1.is_none());
 		assert_eq!(store.history_usage(Id(1)).unwrap().messages, 0);
 		assert!(!store.history_settings(Id(1)).unwrap().enabled);
+		assert!(commits.load(Ordering::Acquire) > 0);
+		assert_eq!(restores.load(Ordering::Acquire), 0);
+	}
+
+	#[test]
+	fn channel_and_retention_purges_stage_only_their_own_media_keys() {
+		use std::sync::{
+			Arc, Mutex,
+			atomic::{AtomicUsize, Ordering},
+		};
+		let mut store = test_store();
+		store
+			.save_history_settings(Id(1), &enabled_settings())
+			.unwrap();
+		let events = Arc::new(Mutex::new(Vec::<(Id, Option<Vec<HistoryMediaKey>>)>::new()));
+		let commits = Arc::new(AtomicUsize::new(0));
+		let restores = Arc::new(AtomicUsize::new(0));
+		store.set_history_media_cleanup(Some({
+			let events = events.clone();
+			let commits = commits.clone();
+			let restores = restores.clone();
+			Box::new(move |account, selected| {
+				events
+					.lock()
+					.unwrap()
+					.push((account, selected.map(<[HistoryMediaKey]>::to_vec)));
+				Ok(Box::new(TestMediaGuard {
+					commits: commits.clone(),
+					restores: restores.clone(),
+					committed: std::sync::atomic::AtomicBool::new(false),
+				}))
+			})
+		}));
+		for (channel, message, attachment, observed_at) in [(10, 100, 1000, 1), (11, 101, 1001, 2)]
+		{
+			let attachments = [HistoryAttachmentInput {
+				id: Id(attachment),
+				filename: "a.png",
+				content_type: Some("image/png"),
+				size: 1,
+				kind: HistoryAttachmentKind::Image,
+			}];
+			store
+				.record_history_baseline(
+					Id(1),
+					&HistoryBaseline {
+						channel: Id(channel),
+						message: Id(message),
+						author: Id(7),
+						content: "body",
+						revision: 1,
+						observed_at,
+						attachments: &attachments,
+					},
+				)
+				.unwrap();
+		}
+		assert_eq!(store.clear_history_channel(Id(1), Id(10)).unwrap(), 1);
+		{
+			let events = events.lock().unwrap();
+			assert_eq!(events.len(), 1);
+			let keys = events[0].1.as_deref().unwrap();
+			assert_eq!(keys.len(), 1);
+			assert_eq!(keys[0].channel, Id(10));
+			assert_eq!(keys[0].message, Id(100));
+			assert_eq!(keys[0].attachment, Id(1000));
+		}
+		assert_eq!(store.expire_history(Id(1), 31 * HISTORY_DAY_MS).unwrap(), 1);
+		{
+			let events = events.lock().unwrap();
+			let keys = events.last().unwrap().1.as_deref().unwrap();
+			assert_eq!(keys.len(), 1);
+			assert_eq!(keys[0].channel, Id(11));
+			assert_eq!(keys[0].message, Id(101));
+			assert_eq!(keys[0].attachment, Id(1001));
+		}
+		assert_eq!(store.history_usage(Id(1)).unwrap().messages, 0);
+		assert_eq!(commits.load(Ordering::Acquire), 2);
+		assert_eq!(restores.load(Ordering::Acquire), 0);
 	}
 }

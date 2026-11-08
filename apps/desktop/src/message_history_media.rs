@@ -11,7 +11,7 @@
 //! static failure and never enter the queue.
 
 use std::{
-	collections::{HashMap, VecDeque},
+	collections::{BTreeSet, HashMap, VecDeque},
 	fs::{self, File, OpenOptions},
 	io::Write,
 	path::{Path, PathBuf},
@@ -43,6 +43,11 @@ const MAX_CONTENT_TYPE_BYTES: usize = 128;
 const MAX_URL_BYTES: usize = 4096;
 const MAX_QUERY_VALUE_BYTES: usize = 2048;
 const CANCELLED: MediaFailure = "Cancelled";
+/// A cleanup waits at most this long for a cancelled transfer to release its file.
+const CLEANUP_WAIT_TIMEOUT: Duration = Duration::from_secs(10);
+const MEDIA_EXTENSIONS: [&str; 10] = [
+	"png", "jpg", "jpeg", "gif", "webp", "mp3", "ogg", "wav", "mp4", "webm",
+];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MediaKind {
@@ -213,6 +218,24 @@ struct Active {
 	notify: Arc<Notify>,
 }
 
+/// One in-flight cleanup owns admission for its account scope until the SQL decision is known.
+struct CleanupLease {
+	token: u64,
+	account: u64,
+	/// `None` blocks the whole account; `Some` blocks only these attachments.
+	attachments: Option<BTreeSet<u64>>,
+}
+
+impl CleanupLease {
+	fn blocks(&self, account: u64, attachment: u64) -> bool {
+		self.account == account
+			&& self
+				.attachments
+				.as_ref()
+				.is_none_or(|attachments| attachments.contains(&attachment))
+	}
+}
+
 #[derive(Default)]
 struct AccountState {
 	epoch: u64,
@@ -229,6 +252,8 @@ struct State {
 	completions: VecDeque<MediaCompletion>,
 	progress: Option<MediaProgress>,
 	next_job: u64,
+	cleanup: Option<CleanupLease>,
+	next_cleanup: u64,
 	shutdown: bool,
 	worker_finished: bool,
 }
@@ -243,6 +268,8 @@ impl Default for State {
 			completions: VecDeque::new(),
 			progress: None,
 			next_job: 1,
+			cleanup: None,
+			next_cleanup: 1,
 			shutdown: false,
 			worker_finished: false,
 		}
@@ -294,6 +321,13 @@ impl MediaManager {
 		let mut state = lock_state(&self.shared);
 		if state.shutdown {
 			return Err("Media downloads are stopping");
+		}
+		if state
+			.cleanup
+			.as_ref()
+			.is_some_and(|lease| lease.blocks(request.account, request.attachment))
+		{
+			return Err("Media cleanup is in progress");
 		}
 		if state.queue.len() + usize::from(state.active.is_some()) >= MAX_JOBS {
 			return Err("Too many queued media downloads");
@@ -373,45 +407,11 @@ impl MediaManager {
 	/// Cancel an account, wait for its active job to release its temporary file, then remove every
 	/// owned media file for that account. Safe to call on logout or explicit history clearing.
 	pub fn clear_account(&self, account: u64) -> Result<(), MediaFailure> {
-		let mut state = lock_state(&self.shared);
-		cancel_account_locked(&mut state, account);
-		while state
-			.active
-			.as_ref()
-			.is_some_and(|active| active.account == account)
-			&& !state.worker_finished
-		{
-			state = self
-				.shared
-				.wake
-				.wait(state)
-				.unwrap_or_else(|poisoned| poisoned.into_inner());
-		}
-		if state
-			.active
-			.as_ref()
-			.is_some_and(|active| active.account == account)
-		{
-			return Err("Media download is still stopping");
-		}
-		drop(state);
-		let directory = self.root.join(account.to_string());
-		match fs::remove_dir_all(&directory) {
-			Ok(()) => {}
-			Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-			Err(_) => return Err("Could not clear account media"),
-		}
-		let mut state = lock_state(&self.shared);
-		if let Some(account) = state.accounts.get_mut(&account) {
-			account.bytes = 0;
-			account.scanned = true;
-			account.epoch = account.epoch.wrapping_add(1);
-		}
-		Ok(())
+		self.prepare_clear_account(account)?.commit_media()
 	}
 
-	/// Stop exactly the selected downloads, then remove their completed files before the
-	/// caller discards their history records. Any failure aborts the database purge.
+	/// Stop exactly the selected downloads, then stage their completed files for the caller to
+	/// remove after its database purge commits. A staging failure aborts the database purge.
 	pub fn clear_attachments(
 		&self,
 		account: u64,
@@ -423,7 +423,54 @@ impl MediaManager {
 		if selected.is_empty() {
 			return Ok(());
 		}
-		let attachments: std::collections::BTreeSet<u64> = selected
+		self.prepare_clear_attachments(account, selected)?
+			.commit_media()
+	}
+
+	/// Stage every account media file behind a cleanup lease. Dropping the guard restores the
+	/// files; committing it permanently removes them after the SQL transaction succeeds.
+	pub(crate) fn prepare_clear_account(&self, account: u64) -> Result<CleanupGuard, MediaFailure> {
+		if account == 0 {
+			return Err("Media cleanup identity is invalid");
+		}
+		let token = self.begin_cleanup(account, None)?;
+		let result = (|| {
+			let mut state = lock_state(&self.shared);
+			ensure_account_scanned(&self.root, &mut state, account)?;
+			cancel_account_locked(&mut state, account);
+			drop(wait_for_active(&self.shared, state, account, None)?);
+			let original = self.root.join(account.to_string());
+			let staged = self.root.join(format!(".{account}-{token}.purge"));
+			let staged = match fs::rename(&original, &staged) {
+				Ok(()) => Some(staged),
+				Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+				Err(_) => return Err("Could not stage account media for cleanup"),
+			};
+			Ok(CleanupGuard {
+				shared: self.shared.clone(),
+				token,
+				account,
+				staging: Staging::Account { original, staged },
+				finished: false,
+			})
+		})();
+		if result.is_err() {
+			self.end_cleanup(token);
+		}
+		result
+	}
+
+	/// Stage only the selected attachment files. No file is permanently deleted until the guard
+	/// commits after the database purge; a failed staging step restores everything it moved.
+	pub(crate) fn prepare_clear_attachments(
+		&self,
+		account: u64,
+		selected: &[local_store::message_history::HistoryMediaKey],
+	) -> Result<CleanupGuard, MediaFailure> {
+		if account == 0 || selected.len() > local_store::message_history::HISTORY_MEDIA_MAX_KEYS {
+			return Err("Media cleanup exceeds its bound");
+		}
+		let attachments: BTreeSet<u64> = selected
 			.iter()
 			.map(|key| {
 				(key.channel.0 != 0 && key.message.0 != 0 && key.attachment.0 != 0)
@@ -431,50 +478,286 @@ impl MediaManager {
 					.ok_or("Media cleanup identity is invalid")
 			})
 			.collect::<Result<_, _>>()?;
-		let mut state = lock_state(&self.shared);
-		ensure_account_scanned(&self.root, &mut state, account)?;
-		cancel_selected_locked(&mut state, account, &attachments);
-		while state.active.as_ref().is_some_and(|active| {
-			active.account == account && attachments.contains(&active.attachment)
-		}) && !state.worker_finished
-		{
-			state = self
-				.shared
-				.wake
-				.wait(state)
-				.unwrap_or_else(|poisoned| poisoned.into_inner());
+		let token = self.begin_cleanup(account, Some(attachments.clone()))?;
+		let result = (|| {
+			let mut state = lock_state(&self.shared);
+			ensure_account_scanned(&self.root, &mut state, account)?;
+			cancel_selected_locked(&mut state, account, &attachments);
+			drop(wait_for_active(
+				&self.shared,
+				state,
+				account,
+				Some(&attachments),
+			)?);
+			let directory = self.root.join(account.to_string());
+			let mut staged = Vec::new();
+			let staging = (|| {
+				for attachment in &attachments {
+					for extension in MEDIA_EXTENSIONS {
+						let path = directory.join(format!("{attachment}.{extension}"));
+						match fs::symlink_metadata(&path) {
+							Ok(metadata) if metadata.is_file() => {
+								let staged_path = directory
+									.join(format!(".purge-{token}-{attachment}.{extension}"));
+								fs::rename(&path, &staged_path)
+									.map_err(|_| "Could not stage selected media for cleanup")?;
+								staged.push(QuarantinedFile {
+									original: path,
+									staged: staged_path,
+									bytes: metadata.len(),
+								});
+							}
+							Ok(_) => return Err("Unexpected selected media entry"),
+							Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+							Err(_) => return Err("Could not inspect selected media"),
+						}
+					}
+				}
+				Ok(())
+			})();
+			if let Err(error) = staging {
+				restore_files(&mut staged);
+				return Err(error);
+			}
+			Ok(CleanupGuard {
+				shared: self.shared.clone(),
+				token,
+				account,
+				staging: Staging::Selected(staged),
+				finished: false,
+			})
+		})();
+		if result.is_err() {
+			self.end_cleanup(token);
 		}
-		if state.active.as_ref().is_some_and(|active| {
-			active.account == account && attachments.contains(&active.attachment)
-		}) {
-			return Err("Selected media download is still stopping");
+		result
+	}
+
+	fn begin_cleanup(
+		&self,
+		account: u64,
+		attachments: Option<BTreeSet<u64>>,
+	) -> Result<u64, MediaFailure> {
+		let mut state = lock_state(&self.shared);
+		if state.shutdown {
+			return Err("Media downloads are stopping");
+		}
+		if state.cleanup.is_some() {
+			return Err("Another media cleanup is already in progress");
+		}
+		let token = state.next_cleanup;
+		state.next_cleanup = state.next_cleanup.wrapping_add(1).max(1);
+		state.cleanup = Some(CleanupLease {
+			token,
+			account,
+			attachments,
+		});
+		Ok(token)
+	}
+
+	fn end_cleanup(&self, token: u64) {
+		let mut state = lock_state(&self.shared);
+		if state
+			.cleanup
+			.as_ref()
+			.is_some_and(|lease| lease.token == token)
+		{
+			state.cleanup = None;
 		}
 		drop(state);
+		self.shared.wake.notify_all();
+	}
+}
 
-		let directory = self.root.join(account.to_string());
-		let mut removed_bytes = 0u64;
-		for attachment in attachments {
-			for extension in [
-				"png", "jpg", "jpeg", "gif", "webp", "mp3", "ogg", "wav", "mp4", "webm",
-			] {
-				let path = directory.join(format!("{attachment}.{extension}"));
-				match fs::symlink_metadata(&path) {
-					Ok(metadata) if metadata.is_file() => {
-						fs::remove_file(&path).map_err(|_| "Could not clear selected media")?;
-						removed_bytes = removed_bytes.saturating_add(metadata.len());
+/// Files renamed aside by a cleanup. They stay on disk until the owning SQL transaction commits.
+struct QuarantinedFile {
+	original: PathBuf,
+	staged: PathBuf,
+	bytes: u64,
+}
+
+enum Staging {
+	Selected(Vec<QuarantinedFile>),
+	Account {
+		original: PathBuf,
+		staged: Option<PathBuf>,
+	},
+}
+
+/// Owns a staged cleanup until its database transaction is decided. Dropping without a commit
+/// restores every staged file; committing permanently removes them.
+pub(crate) struct CleanupGuard {
+	shared: Arc<Shared>,
+	token: u64,
+	account: u64,
+	staging: Staging,
+	finished: bool,
+}
+
+impl CleanupGuard {
+	fn commit_media(mut self) -> Result<(), MediaFailure> {
+		let result = self.commit_staging();
+		self.finished = true;
+		self.end_cleanup();
+		result
+	}
+
+	fn end_cleanup(&self) {
+		let mut state = lock_state(&self.shared);
+		if state
+			.cleanup
+			.as_ref()
+			.is_some_and(|lease| lease.token == self.token)
+		{
+			state.cleanup = None;
+		}
+		drop(state);
+		self.shared.wake.notify_all();
+	}
+
+	fn commit_staging(&mut self) -> Result<(), MediaFailure> {
+		match &mut self.staging {
+			Staging::Selected(files) => {
+				let mut removed_bytes = 0u64;
+				let mut failed = false;
+				for file in files.iter() {
+					match fs::remove_file(&file.staged) {
+						Ok(()) => removed_bytes = removed_bytes.saturating_add(file.bytes),
+						Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+							removed_bytes = removed_bytes.saturating_add(file.bytes);
+						}
+						Err(_) => failed = true,
 					}
-					Ok(_) => return Err("Unexpected selected media entry"),
-					Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-					Err(_) => return Err("Could not inspect selected media"),
+				}
+				let mut state = lock_state(&self.shared);
+				if let Some(account) = state.accounts.get_mut(&self.account) {
+					account.bytes = account.bytes.saturating_sub(removed_bytes);
+				}
+				drop(state);
+				if failed {
+					for file in files.iter() {
+						if file.staged.exists() && !file.original.exists() {
+							let _ = fs::rename(&file.staged, &file.original);
+						}
+					}
+					return Err("Could not permanently remove selected media");
+				}
+				Ok(())
+			}
+			Staging::Account { original, staged } => {
+				let removed = match staged.as_ref() {
+					Some(staged) => fs::remove_dir_all(staged),
+					None => Ok(()),
+				};
+				match removed {
+					Ok(()) => {
+						let mut state = lock_state(&self.shared);
+						if let Some(account) = state.accounts.get_mut(&self.account) {
+							account.bytes = 0;
+							account.scanned = true;
+						}
+						Ok(())
+					}
+					Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+						let mut state = lock_state(&self.shared);
+						if let Some(account) = state.accounts.get_mut(&self.account) {
+							account.bytes = 0;
+							account.scanned = true;
+						}
+						Ok(())
+					}
+					Err(_) => {
+						let mut state = lock_state(&self.shared);
+						let remaining = match staged.as_ref() {
+							Some(staged) => {
+								if staged.exists() && !original.exists() {
+									let _ = fs::rename(staged, original.as_path());
+								}
+								account_directory_bytes(if original.exists() {
+									original.as_path()
+								} else {
+									staged.as_path()
+								})
+								.unwrap_or(0)
+							}
+							None => 0,
+						};
+						if let Some(account) = state.accounts.get_mut(&self.account) {
+							account.bytes = remaining;
+							account.scanned = true;
+						}
+						Err("Could not permanently remove account media")
+					}
 				}
 			}
 		}
-		let mut state = lock_state(&self.shared);
-		if let Some(account) = state.accounts.get_mut(&account) {
-			account.bytes = account.bytes.saturating_sub(removed_bytes);
-		}
-		Ok(())
 	}
+}
+
+impl Drop for CleanupGuard {
+	fn drop(&mut self) {
+		if !self.finished {
+			match &mut self.staging {
+				Staging::Selected(files) => restore_files(files),
+				Staging::Account { original, staged } => {
+					if let Some(staged) = staged
+						&& staged.exists() && !original.exists()
+					{
+						let _ = fs::rename(staged, original);
+					}
+				}
+			}
+		}
+		self.end_cleanup();
+	}
+}
+
+impl local_store::message_history::HistoryMediaGuard for CleanupGuard {
+	fn commit(self: Box<Self>) -> Result<(), local_store::StoreError> {
+		(*self)
+			.commit_media()
+			.map_err(|_| local_store::StoreError::Unavailable)
+	}
+}
+
+fn restore_files(files: &mut [QuarantinedFile]) {
+	for file in files.iter_mut().rev() {
+		if file.staged.exists() && !file.original.exists() {
+			let _ = fs::rename(&file.staged, &file.original);
+		}
+	}
+}
+
+fn active_matches(state: &State, account: u64, attachments: Option<&BTreeSet<u64>>) -> bool {
+	state.active.as_ref().is_some_and(|active| {
+		active.account == account
+			&& attachments.is_none_or(|attachments| attachments.contains(&active.attachment))
+	})
+}
+
+/// Wait for a cancelled transfer to stop, but never hang the history worker indefinitely.
+fn wait_for_active(
+	shared: &Shared,
+	mut state: MutexGuard<'_, State>,
+	account: u64,
+	attachments: Option<&BTreeSet<u64>>,
+) -> Result<MutexGuard<'_, State>, MediaFailure> {
+	let deadline = Instant::now() + CLEANUP_WAIT_TIMEOUT;
+	while active_matches(&state, account, attachments) && !state.worker_finished {
+		let now = Instant::now();
+		if now >= deadline {
+			return Err("Media download did not stop before the cleanup deadline");
+		}
+		let (next, _) = shared
+			.wake
+			.wait_timeout(state, deadline - now)
+			.unwrap_or_else(|poisoned| poisoned.into_inner());
+		state = next;
+	}
+	if active_matches(&state, account, attachments) {
+		return Err("Media download is still stopping");
+	}
+	Ok(state)
 }
 
 impl Drop for MediaManager {
@@ -696,8 +979,11 @@ fn ensure_account_scanned(
 }
 
 fn account_owned_bytes(root: &Path, account: u64) -> Result<u64, MediaFailure> {
-	let directory = root.join(account.to_string());
-	let entries = match fs::read_dir(&directory) {
+	account_directory_bytes(&root.join(account.to_string()))
+}
+
+fn account_directory_bytes(directory: &Path) -> Result<u64, MediaFailure> {
+	let entries = match fs::read_dir(directory) {
 		Ok(entries) => entries,
 		Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(0),
 		Err(_) => return Err("Cannot inspect media storage"),
@@ -1333,6 +1619,106 @@ mod tests {
 		);
 		let state = lock_state(&manager.shared);
 		assert_eq!(state.accounts.get(&7).unwrap().bytes, 4);
+		drop(state);
+		drop(manager);
+		let _ = fs::remove_dir_all(root);
+	}
+
+	#[test]
+	fn selected_cleanup_guard_restores_on_rollback_and_blocks_matching_admission() {
+		let root = std::env::temp_dir().join(format!("serein-media-guard-{}", std::process::id()));
+		let _ = fs::remove_dir_all(&root);
+		let manager = MediaManager::new(MediaConfig::new(&root)).unwrap();
+		let directory = manager.root.clone();
+		create_private_dir_all(&directory.join("7")).unwrap();
+		fs::write(directory.join("7/101.png"), b"remove").unwrap();
+		fs::write(directory.join("7/102.png"), b"keep").unwrap();
+		let key = local_store::message_history::HistoryMediaKey {
+			channel: model::Id(20),
+			message: model::Id(30),
+			attachment: model::Id(101),
+		};
+		let guard = manager.prepare_clear_attachments(7, &[key]).unwrap();
+		assert!(!directory.join("7/101.png").exists());
+		let mut request = request();
+		request.account = 7;
+		request.attachment = 101;
+		request.url =
+			"https://cdn.discordapp.com/attachments/2/3/101/synthetic%20image.png?ex=1&is=2&hm=abc"
+				.into();
+		assert_eq!(
+			manager.enqueue(request.clone()),
+			Err("Media cleanup is in progress")
+		);
+		drop(guard);
+		assert_eq!(fs::read(directory.join("7/101.png")).unwrap(), b"remove");
+		assert_eq!(fs::read(directory.join("7/102.png")).unwrap(), b"keep");
+		let state = lock_state(&manager.shared);
+		assert_eq!(state.accounts.get(&7).unwrap().bytes, 10);
+		assert!(state.cleanup.is_none());
+		drop(state);
+		assert!(manager.enqueue(request).is_ok());
+		manager.cancel_account(7);
+		drop(manager);
+		let _ = fs::remove_dir_all(root);
+	}
+
+	#[test]
+	fn account_cleanup_guard_restores_on_rollback_and_removes_only_after_commit() {
+		let root =
+			std::env::temp_dir().join(format!("serein-media-account-{}", std::process::id()));
+		let _ = fs::remove_dir_all(&root);
+		let manager = MediaManager::new(MediaConfig::new(&root)).unwrap();
+		let directory = manager.root.clone();
+		create_private_dir_all(&directory.join("7")).unwrap();
+		fs::write(directory.join("7/101.png"), b"media").unwrap();
+		drop(manager.prepare_clear_account(7).unwrap());
+		assert_eq!(fs::read(directory.join("7/101.png")).unwrap(), b"media");
+		{
+			let state = lock_state(&manager.shared);
+			assert_eq!(state.accounts.get(&7).unwrap().bytes, 5);
+			assert!(state.cleanup.is_none());
+		}
+		manager
+			.prepare_clear_account(7)
+			.unwrap()
+			.commit_media()
+			.unwrap();
+		assert!(!directory.join("7").exists());
+		let state = lock_state(&manager.shared);
+		assert_eq!(state.accounts.get(&7).unwrap().bytes, 0);
+		drop(state);
+		drop(manager);
+		let _ = fs::remove_dir_all(root);
+	}
+
+	#[test]
+	fn selected_cleanup_restores_staged_files_when_a_later_stage_fails() {
+		let root = std::env::temp_dir().join(format!("serein-media-stage-{}", std::process::id()));
+		let _ = fs::remove_dir_all(&root);
+		let manager = MediaManager::new(MediaConfig::new(&root)).unwrap();
+		let directory = manager.root.clone();
+		create_private_dir_all(&directory.join("7")).unwrap();
+		fs::write(directory.join("7/101.png"), b"first").unwrap();
+		fs::create_dir(directory.join("7/102.png")).unwrap();
+		let keys = [
+			local_store::message_history::HistoryMediaKey {
+				channel: model::Id(20),
+				message: model::Id(30),
+				attachment: model::Id(101),
+			},
+			local_store::message_history::HistoryMediaKey {
+				channel: model::Id(20),
+				message: model::Id(30),
+				attachment: model::Id(102),
+			},
+		];
+		assert!(manager.prepare_clear_attachments(7, &keys).is_err());
+		assert_eq!(fs::read(directory.join("7/101.png")).unwrap(), b"first");
+		assert!(directory.join("7/102.png").is_dir());
+		let state = lock_state(&manager.shared);
+		assert_eq!(state.accounts.get(&7).unwrap().bytes, 5);
+		assert!(state.cleanup.is_none());
 		drop(state);
 		drop(manager);
 		let _ = fs::remove_dir_all(root);
