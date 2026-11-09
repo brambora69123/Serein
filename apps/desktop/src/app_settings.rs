@@ -52,8 +52,13 @@ impl Settings {
 			update_nightly: ui.updates.nightly,
 			notification_options: ui.notification_options,
 			show_hidden_channels: ui.show_hidden_channels,
+			channel_display: ui.channel_display.clone(),
 			hide_nitro_emojis: ui.hide_nitro_emojis,
 			convert_emoticons: ui.convert_emoticons,
+			silent_typing: ui.silent_typing.clone(),
+			prefer_friend_nickname: ui.prefer_friend_nickname,
+			gif_insert: ui.gif_insert,
+			invite_defaults: ui.invite_defaults,
 			preload_on_hover: ui.preload_on_hover,
 			auto_idle: ui.auto_idle,
 			hide_title_bar: ui.hide_title_bar,
@@ -79,9 +84,13 @@ impl Settings {
 			output_percent: ui.voice_gain.output_percent,
 			keybinds: ui.keybinds.clone(),
 			expanded_folders: ui.expanded_folders.clone(),
+			one_folder_open: ui.one_folder_open,
+			close_folders_on_home: ui.close_folders_on_home,
+			close_folders_outside: ui.close_folders_outside,
 			user_volumes: ui.voice_user_volume_overrides(),
 			muted_users: ui.voice_user_mutes().to_vec(),
 			cosmetics: ui.cosmetics,
+			profile_presentation: ui.profile_presentation,
 			image_cache: ui.image_cache,
 			time_format: ui.time_format,
 			plaintext_login: ui.plaintext_login,
@@ -107,8 +116,14 @@ impl Settings {
 		ui.updates.nightly = value.update_nightly;
 		ui.notification_options = value.notification_options;
 		ui.show_hidden_channels = value.show_hidden_channels;
+		ui.channel_display = value.channel_display.clone();
 		ui.hide_nitro_emojis = value.hide_nitro_emojis;
 		ui.convert_emoticons = value.convert_emoticons;
+		ui.silent_typing = value.silent_typing.clone();
+		ui.silent_typing_locations = value.silent_typing.locations_text();
+		ui.prefer_friend_nickname = value.prefer_friend_nickname;
+		ui.gif_insert = value.gif_insert;
+		ui.invite_defaults = value.invite_defaults;
 		ui.preload_on_hover = value.preload_on_hover;
 		ui.auto_idle = value.auto_idle;
 		ui.hide_title_bar = value.hide_title_bar;
@@ -134,9 +149,13 @@ impl Settings {
 		ui.voice_gain.output_percent = value.output_percent;
 		ui.keybinds = value.keybinds.clone();
 		ui.expanded_folders.clone_from(&value.expanded_folders);
+		ui.one_folder_open = value.one_folder_open;
+		ui.close_folders_on_home = value.close_folders_on_home;
+		ui.close_folders_outside = value.close_folders_outside;
 		ui.set_voice_user_volume_overrides(&value.user_volumes);
 		ui.set_voice_user_mutes(&value.muted_users);
 		ui.cosmetics = value.cosmetics;
+		ui.profile_presentation = value.profile_presentation;
 		ui.image_cache = value.image_cache;
 		ui.time_format = value.time_format;
 		ui.plaintext_login = value.plaintext_login;
@@ -518,17 +537,21 @@ mod tests {
 		settings.current.language = Some("cs".into());
 		settings.current.notification_options.current_channel = true;
 		settings.current.graphics_api = model::GraphicsApi::OpenGl;
+		settings.current.profile_presentation.hide_other_themes = true;
 		settings.loaded = true;
 		settings.apply(&mut ui);
 		settings.observe(&ui);
 		assert_eq!(ui.language, ui::i18n::Language::Czech);
 		assert!(ui.notification_options.current_channel);
 		assert_eq!(ui.graphics_api, model::GraphicsApi::OpenGl);
+		assert!(ui.profile_presentation.hide_other_themes);
 		assert!(!settings.state.touched);
 		assert!(!settings.state.dirty);
 		ui.graphics_api = model::GraphicsApi::Vulkan;
+		ui.profile_presentation.platform_indicators = true;
 		settings.observe(&ui);
 		assert_eq!(settings.current.graphics_api, model::GraphicsApi::Vulkan);
+		assert!(settings.current.profile_presentation.platform_indicators);
 		assert!(settings.state.dirty);
 	}
 
@@ -548,6 +571,46 @@ mod tests {
 		ui.message_requests_collapsed = false;
 		settings.observe(&ui);
 		assert!(!settings.current.message_requests_collapsed);
+		assert!(settings.state.dirty);
+	}
+
+	#[test]
+	fn gif_insert_and_invite_defaults_restore_and_track_user_changes() {
+		let mut settings = Settings {
+			loaded: true,
+			..Default::default()
+		};
+		settings.current.gif_insert = true;
+		settings.current.invite_defaults = model::server_invites::InviteDefaults {
+			max_age: 3600,
+			max_uses: 5,
+			temporary: true,
+		};
+		settings.current.silent_typing = model::SilentTyping {
+			enabled: true,
+			default_hidden: true,
+			locations: vec![model::Id(20), model::Id(10)],
+		};
+		settings.current.prefer_friend_nickname = true;
+		let mut ui = ui::MessagingUi::default();
+		settings.apply(&mut ui);
+		assert!(ui.gif_insert);
+		assert_eq!(ui.invite_defaults, settings.current.invite_defaults);
+		assert_eq!(ui.silent_typing, settings.current.silent_typing);
+		assert_eq!(ui.silent_typing_locations, "20, 10");
+		assert!(ui.prefer_friend_nickname);
+		settings.observe(&ui);
+		assert!(!settings.state.dirty);
+
+		ui.gif_insert = false;
+		ui.invite_defaults.max_uses = 10;
+		ui.silent_typing.enabled = false;
+		ui.prefer_friend_nickname = false;
+		settings.observe(&ui);
+		assert!(!settings.current.gif_insert);
+		assert_eq!(settings.current.invite_defaults.max_uses, 10);
+		assert!(!settings.current.silent_typing.enabled);
+		assert!(!settings.current.prefer_friend_nickname);
 		assert!(settings.state.dirty);
 	}
 

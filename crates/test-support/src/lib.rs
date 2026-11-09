@@ -2028,6 +2028,7 @@ mod tests {
 					author: crate::message(1, Id(20)).author,
 					mentions: vec![],
 					excerpt: "pin".into(),
+					preview_limited: false,
 					attachments: vec![],
 					embeds: vec![],
 				})
@@ -2161,6 +2162,7 @@ mod tests {
 					author: crate::message(1, Id(20)).author,
 					mentions: vec![],
 					excerpt: "synthetic match".into(),
+					preview_limited: false,
 					attachments: vec![],
 					embeds: vec![],
 				}],
@@ -2276,6 +2278,7 @@ mod tests {
 					author: crate::message(1, Id(20)).author,
 					mentions: vec![],
 					excerpt: "index text".into(),
+					preview_limited: false,
 					attachments: vec![],
 					embeds: vec![],
 				}],

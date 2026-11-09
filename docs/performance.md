@@ -4,6 +4,49 @@ Recent synthetic/offline measurements are workload-specific. They do not establi
 performance, universal device results or application-wide memory bounds. The raw PR screenshot,
 log and per-run evidence archive has been removed; the summaries below retain the useful results.
 
+## Discord message toolbar and safe extension ports — November 8, 2026
+
+Baseline `21f8870b` and this branch were built with pinned Rust 1.98.1 and locked dependencies on
+Linux x86-64 (kernel 7.3.1-1-cachyos), Ryzen 9 9900X with 30 GiB RAM and an NVIDIA RTX 4070 using
+Vulkan. The host display was X11 at 3840×2160 with Xft.dpi 192. Package measurements use the standard
+voice-enabled `cargo xtask package --format dir` method on separate worktrees. The host has no `dpkg`,
+so the default `.deb` command failed for that external reason; the supported directory package was
+used for both revisions. Compression uses the same Python `tarfile` gzip method and sorted source order.
+
+| Metric / method | Baseline `21f8870b` | After this branch | Delta |
+| --- | ---: | ---: | ---: |
+| Release executable | 95,117,576 B | 95,126,280 B | +8,704 B (+0.009%) |
+| Regular-file payload, 477 files each | 199,279,452 B | 199,298,284 B | +18,832 B (+0.009%) |
+| Compressed package (`tar.gz`) | 113,557,397 B | 113,566,452 B | +9,055 B (+0.008%) |
+
+The native `profile_preview` interactive fixture was built in release `--features demo` mode. The
+identical example source was copied into the baseline worktree solely to produce the same close-
+settings capture path; no baseline production code was edited. Baseline runs have no hover. Current
+runs add `--toolbar-hover=normal`, which injects pointer movement and `ModifiersChanged` through
+`RawInput` every frame. Both use `--demo --page=chat --interactive --close-settings` at 1120×760
+logical pixels and `chat_demo_state()` with no account, network, voice call or helper process.
+
+Three runs per revision alternated baseline/current order. Each run had a 15-second warmup followed
+by 20 one-second samples of `/proc/<pid>/stat` and `/proc/<pid>/status`. Reported CPU sums user and
+system ticks converted to a percentage of one logical core for the actual sample interval. Memory is
+resident-set size (VmRSS in KiB), with main and helper processes summed separately when present.
+No helpers existed, so combined equals main-process RSS. Peak uses each run's maximum; settled is
+its final sample. No cargo build or source edit ran during sampling.
+
+| Runtime metric, three runs | Baseline | After | Delta |
+| --- | ---: | ---: | ---: |
+| Idle CPU, median | 9.396% of one core | 9.696% of one core | +0.300 percentage points (+3.19% relative) |
+| Peak combined RSS, maximum | 235,040 KiB | 234,244 KiB | −796 KiB (−0.34%) |
+| Settled combined RSS, median | 234,416 KiB | 233,768 KiB | −648 KiB (−0.28%) |
+
+Per-run values and package figures are retained in
+[the measurement record](pr-evidence/discord-message-toolbar/measurements.json), and both hover
+images and their reproduction commands are in
+[the capture guide](pr-evidence/discord-message-toolbar/README.md). The fixture intentionally
+represents missing-hover versus active-hover, so the CPU delta is not an isolated implementation
+regression estimate. Small memory differences are treated as noise, not an improvement. Frame time,
+startup latency and live Discord performance were not measured.
+
 ## High-resolution attachment sources — November 6, 2026
 
 Offline comparison against `77bdddae` on Ubuntu 24.04.5 x86-64, an Intel i5-1235U,
@@ -1813,3 +1856,55 @@ Native computer use exposed no applications in this session. Native before/after
 screenshots, UI workload warmup/sampling, CPU/RSS, display scale/renderer observation,
 frame latency and live Discord verification remain unavailable. No UI speed or
 memory improvement is established by these package sizes.
+
+### Equicord ecosystem and persistent message history — November 8, 2026
+
+Measured on Ubuntu Linux x86_64 with Rust 1.98.1. Baseline is the detached
+`21f8870b3849f24f9b0fb0bb17b9e3e272e2b93a`; the final source is the integrated ecosystem working
+tree. Both standard packages include voice and use `cargo xtask package --format dir`. Package size
+measurements compare only the installed `linux-root` trees, not duplicate loose staging copies;
+earlier draft totals included those duplicates and are superseded by this normalized comparison.
+No live account, incoming message, network, microphone or audio playback was measured. Debian
+`.deb` builds could not be produced because `dpkg` is absent.
+
+| Metric | Baseline | Current | Delta |
+| --- | ---: | ---: | ---: |
+| Release executable bytes | 95,117,576 | 95,986,696 | +869,120 (+0.914%) |
+| Installed `linux-root` bytes (245 files each) | 99,816,808 | 100,686,885 | +870,077 (+0.872%) |
+| Compressed `linux-root` (`tar.gz`) bytes | 57,188,160 | 57,569,522 | +381,362 (+0.667%) |
+| Optimized UI-fixture median process CPU | 6.99% | 7.66% | +0.67 percentage points; small, variable sample |
+| CPU range, five runs | 6.33–8.66% | 6.99–7.66% | not enough isolation for a neutral-cost claim |
+| Optimized UI-fixture median resident memory | 210.39 MiB | 210.59 MiB | +0.21 MiB (+0.10%) |
+
+The separate UI sampler used the same synthetic optimized `demo` profile/chat page at 1120x760
+with settings closed, private `xvfb-run` displays and `LIBGL_ALWAYS_SOFTWARE=1`. Five alternating runs
+per revision each used a three-second warmup, then 12 RSS samples at 250 ms intervals over three
+seconds. CPU is `/proc/<pid>/stat` user+system ticks over that interval; RSS is
+`/proc/<pid>/statm`, not PSS or total system memory. No child/helper process was observed for
+either preview. These results isolate the optimized UI fixture, not the Message History worker or
+Discord service. A larger debug-build sample was not used for the release comparison. The small CPU
+and memory deltas do not establish an improvement or neutral runtime cost; no FPS, p95 frame time,
+startup latency, voice quality or service latency was measured.
+
+Final executable SHA-256 is `cb45c8f592699f7adb1f6f92c511df162209869ea7e5e61d29580f41d4da4524`;
+the baseline hash is `cecd822fbd95c86c09cb91bf88fbf21fa240a7e57c389468f378e80ae28ddbbe`.
+The final compressed-tree SHA-256 is
+`4e782b0a7e176370f59e38d560d51abfd4e8df2d3923563e914574415c87f54f`. The reviewed 31-package development starter selection is debug-only, so release package deltas do
+not imply that all 373 Equicord plugins are included or compatible. Packaging and measurements ran sequentially to avoid
+shared-worktree compiler pressure.
+
+### Fork integration candidates and review fixes — November 8–9, 2026
+
+The integration includes the independent upstream fixes #611 (Windows caption dragging), #941 (bounded incoming-video reception feedback) and #925 (font-list regrowth), plus corrected session recovery, first-launch locking, indexed attachment selection and guarded media cleanup. The public-client audit corrects pre-Hello/server reconnects, empty-queue polling, queued-write recovery and edge-429 send classification. The selective upstream sync adds the SQLite advisory update, decoder-state consolidation, access-filtered hidden-channel rosters, long-name elision, profile-effect clipping and adapted search-result menus. It does not change the fixed client fingerprint or import the large SDK/egui/RTL migrations. The optimized `cargo xtask package --format dir` contained the same 245-file layout and was built after all 1,617 workspace tests passed.
+
+| Metric | Detached `21f8870b` baseline | Candidate | Delta |
+| --- | ---: | ---: | ---: |
+| Executable bytes | 95,117,576 | 96,083,688 | +966,112 (+1.016%) |
+| Installed `linux-root` bytes | 99,816,808 | 100,783,877 | +967,069 (+0.969%) |
+| Compressed `linux-root` (`tar.gz`) bytes | 57,188,160 | 57,614,856 | +426,696 (+0.746%) |
+
+Candidate executable SHA-256 is `afb24881fffc27454dfba81707dcd6c07737b1883c762c38ed8604fc41d0f45f`; the compressed-tree SHA-256 is `4bb216955e0e5134c29ef58c54d88822421abf521cf0c230fc50932a44d45e3d`. Against the exact pre-sync `79ac72a6` package, executable and installed payload each grew by 69,472 bytes (+0.072% / +0.069%), and the compressed tree by 29,492 bytes (+0.051%).
+
+The required synthetic reducer control used one `cargo replay` warmup followed by five direct optimized `replay-bench` runs per revision, sequentially on the same host. Both retained 401,492–401,977 estimated bytes over 500 records. Exact pre-sync median was 49.284 ms (48.693–50.288 ms) and candidate median was 49.287 ms (48.785–50.361 ms), +0.006% / below useful measurement precision. This is not evidence of a Gateway improvement or regression; the workload constructs no Gateway or WebSocket and does not measure connection latency, connection CPU, UI frame time or live compatibility.
+
+The voice feedback extension remains experimental: a clean workspace gate is not proof of group-call or packet-loss behavior, and its multiplier effect in official clients is not live-verified here. The font test passed locally because upstream CI had not run for #925. The DWM fix relies on its native Windows CI evidence; this Linux environment could not execute its local DWM path. No new UI-speed, startup, call-quality or live-enforcement claim is made.

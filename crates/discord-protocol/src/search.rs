@@ -103,8 +103,9 @@ impl Reply {
 
 impl Hit {
 	pub(crate) fn into_hit(self) -> SearchHit {
-		let excerpt = if self.content.len() > 8192 {
-			"Message exceeds preview limit - open message to read".into()
+		let preview_limited = self.content.len() > 8192;
+		let excerpt = if preview_limited {
+			model::PREVIEW_LIMIT_NOTICE.into()
 		} else {
 			self.content
 		};
@@ -119,6 +120,7 @@ impl Hit {
 				.map(UserDto::into_model)
 				.collect(),
 			excerpt,
+			preview_limited,
 			attachments: self.attachments.0,
 			embeds: crate::embeds::bounded(self.embeds.0),
 		}
@@ -149,6 +151,7 @@ mod tests {
 		assert_eq!(page.hits[0].id, Id(3));
 		assert!(page.partial);
 		assert_eq!(page.hits[0].excerpt, "hidden ||synthetic spoiler|| <@42>");
+		assert!(!page.hits[0].preview_limited);
 		assert_eq!(page.hits[0].mentions[0].name, "Mentioned");
 		for value in [
 			json!({"total_results":1}),
@@ -171,7 +174,15 @@ mod tests {
 			.unwrap()
 			.into_page(Some(Id(1)), None, false)
 			.unwrap();
-		assert!(page.hits[0].excerpt.contains("exceeds preview limit"));
+		assert_eq!(page.hits[0].excerpt, model::PREVIEW_LIMIT_NOTICE);
+		assert!(page.hits[0].preview_limited);
+		let literal =
+			decode(json!({"total_results":1,"messages":[[hit(3,1,model::PREVIEW_LIMIT_NOTICE)]]}))
+				.unwrap()
+				.into_page(Some(Id(1)), None, false)
+				.unwrap();
+		assert!(!literal.hits[0].preview_limited);
+		assert_eq!(literal.hits[0].excerpt, model::PREVIEW_LIMIT_NOTICE);
 		assert!(page.bytes() < model::MAX_SEARCH_BYTES);
 		assert!(model::valid_search_query("synthetic & ? 日本語"));
 		assert!(!model::valid_search_query("\n"));

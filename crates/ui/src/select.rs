@@ -271,6 +271,12 @@ struct Pointer {
 	menu: bool,
 	silent: bool,
 	cached: String,
+	/// Last settled label selection, retained for actions that run after a click
+	/// outside the label has already cleared the live selection.
+	selected: String,
+	/// Where the latest primary press landed: a label selection starts there, so a menu can
+	/// tell whether the active selection belongs to the item it was opened on.
+	selection_start: Option<egui::Pos2>,
 	#[cfg(target_os = "macos")]
 	control_primary: bool,
 }
@@ -311,6 +317,17 @@ impl egui::Plugin for Pointer {
 	fn input_hook(&mut self, ctx: &egui::Context, input: &mut RawInput) {
 		#[cfg(target_os = "macos")]
 		normalize_control_click(input, &mut self.control_primary);
+		if let Some(pos) = input.events.iter().rev().find_map(|event| match event {
+			Event::PointerButton {
+				button: PointerButton::Primary,
+				pressed: true,
+				pos,
+				..
+			} => Some(*pos),
+			_ => None,
+		}) {
+			self.selection_start = Some(pos);
+		}
 		let selecting = ctx.plugin::<LabelSelectionState>().lock().has_selection();
 		let secondary = input.events.iter().any(|event| {
 			matches!(
@@ -387,6 +404,16 @@ impl egui::Plugin for Pointer {
 					.retain(|command| !matches!(command, egui::OutputCommand::CopyText(_)));
 			}
 		}
+		if let Some(text) = output
+			.platform_output
+			.commands
+			.iter()
+			.find_map(|command| match command {
+				egui::OutputCommand::TextSelectionSettled(text) => Some(text.clone()),
+				_ => None,
+			}) {
+			self.selected = text;
+		}
 		self.silent = false;
 		if output.platform_output.cursor_icon == CursorIcon::Text && !hovering_edit(ctx) {
 			output.platform_output.cursor_icon = CursorIcon::Default;
@@ -410,6 +437,16 @@ pub fn has_selection(ctx: &egui::Context) -> bool {
 	ctx.plugin::<LabelSelectionState>().lock().has_selection()
 }
 
+/// True when a label range is active and began inside `rect`, such as the item a menu was
+/// opened on, so its Copy never takes text selected somewhere else.
+pub fn has_selection_in(ctx: &egui::Context, rect: Rect) -> bool {
+	has_selection(ctx)
+		&& ctx
+			.plugin_opt::<Pointer>()
+			.and_then(|plugin| plugin.lock().selection_start)
+			.is_some_and(|start| rect.contains(start))
+}
+
 /// Drop a label range, e.g. the word a row double-click selected beside its text.
 pub fn clear(ctx: &egui::Context) {
 	ctx.plugin::<LabelSelectionState>().lock().clear_selection();
@@ -418,6 +455,18 @@ pub fn clear(ctx: &egui::Context) {
 pub fn open_menu(ctx: &egui::Context) -> bool {
 	ctx.plugin_opt::<Pointer>()
 		.is_some_and(|plugin| plugin.lock().menu)
+}
+
+/// The settled label text, while a selection is active. Retained across the click that
+/// ends the selection so an action on a hover toolbar can still use it.
+pub fn selected_text(ctx: &egui::Context) -> Option<String> {
+	has_selection(ctx)
+		.then(|| {
+			ctx.plugin_opt::<Pointer>()
+				.map(|plugin| plugin.lock().selected.clone())
+		})
+		.flatten()
+		.filter(|text| !text.is_empty())
 }
 
 /// Copy the text cached from the last selected range.

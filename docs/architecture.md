@@ -64,6 +64,8 @@ Device choices, mute/deafen and focused V push-to-talk remain session-local. Voi
 
 Conversation search owns one page of at most 25 ID/author/excerpt records plus bounded mentioned-user metadata, capped at 256 KiB, alongside the existing 500-message / 4 MiB timeline. Queries are capped at 256 characters / 1024 UTF-8 bytes. The decoder caps the HTTP body at 512 KiB, 25 result groups and 5 context records per group; only the matching 8 KiB excerpt and its at most 100 mentioned users are retained. Snippets reuse bounded message formatting without entering the message cache or loading a member directory. One cancellable read task shares the four REST permits. Opening a result replaces the active window with revalidated history rather than merging index snapshots into the message cache; the completed search page remains open. Numbered pages replace that same result slot with offsets capped at 9,975, retaining only fixed-size offset and total metadata.
 
+A result carries an explicit `preview_limited` flag when its excerpt exceeds 8 KiB rather than relying on notice-text equality. Result/shift-F10 menus reuse existing copy/link/ID and permitted message actions; text actions require actual excerpt or loaded-message content, and Copy remains scoped to the result that owns the selection.
+
 
 Application components reuse bounded model/protocol records and the serial REST write
 worker. The connection adapter intercepts the zeroized Gateway session handoff; the

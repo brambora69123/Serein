@@ -463,6 +463,24 @@ fn stat(ui: &mut egui::Ui, dot: egui::Color32, value: &str, label: &str, color: 
 
 /// Discord's voice channel invite: the channel's name over who is in it and a join action.
 /// Only members can see the channel's roster.
+/// An invite exposes only roster entries whose channel the account may currently view.
+fn invited_roster(
+	state: &client_core::State,
+	channel: Option<model::Id>,
+) -> Vec<&client_core::voice::RosterEntry> {
+	channel
+		.filter(|&channel| state.can_view(channel))
+		.map(|channel| {
+			state
+				.voice
+				.roster
+				.iter()
+				.filter(|entry| entry.channel == channel)
+				.collect()
+		})
+		.unwrap_or_default()
+}
+
 #[allow(clippy::too_many_arguments)]
 fn voice_card(
 	ui: &mut egui::Ui,
@@ -533,16 +551,7 @@ fn voice_card(
 				.show(ui, |ui| {
 					ui.set_width(width - 2.0 * PAD);
 					ui.spacing_mut().item_spacing.y = 4.0;
-					let roster: Vec<_> = channel
-						.map(|channel| {
-							state
-								.voice
-								.roster
-								.iter()
-								.filter(|entry| entry.channel == channel)
-								.collect()
-						})
-						.unwrap_or_default();
+					let roster = invited_roster(state, channel);
 					if let Some(status) = status {
 						ui.add(
 							egui::Label::new(
@@ -854,5 +863,28 @@ mod tests {
 		] {
 			assert!(super::code(bad).is_none());
 		}
+	}
+
+	#[test]
+	fn invite_roster_requires_current_channel_visibility() {
+		let mut state = test_support::voice_demo_state();
+		assert_eq!(super::invited_roster(&state, Some(model::Id(25))).len(), 3);
+		state.voice.active = None;
+		state.apply(client_core::Envelope {
+			generation: state.generation,
+			event: client_core::Event::Permissions(client_core::permissions::Event::Channel {
+				channel: model::Id(25),
+				guild: Some(model::Id(10)),
+				overwrites: model::Patch::Value(vec![model::permissions::Overwrite {
+					id: model::Id(10),
+					kind: 0,
+					allow: 0,
+					deny: model::permissions::VIEW_CHANNEL,
+				}]),
+			}),
+		});
+		assert!(super::invited_roster(&state, Some(model::Id(25))).is_empty());
+		state.voice.roster[0].channel = model::Id(26);
+		assert_eq!(super::invited_roster(&state, Some(model::Id(26))).len(), 1);
 	}
 }

@@ -30,6 +30,7 @@ pub enum ExtensionKind {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Capability {
+	ApiProxy,
 	RichPresence,
 	RelationshipControl,
 	AccountControl,
@@ -84,6 +85,7 @@ pub enum Capability {
 	DataEvents,
 	MessageDetails,
 	Relationships,
+	ExternalNavigation,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]

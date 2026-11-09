@@ -1,10 +1,9 @@
-//! Client identity presented to Discord over REST and the Gateway.
+//! Browser-shaped client identity presented by Serein's REST and Gateway Identify paths.
 //!
-//! Discord's anti-spam classifies normal-user sessions by their client fingerprint. A custom
-//! user agent with no super-properties header reads as an automated tool, which quarantines
-//! the account (spam restriction, attachment upload limits). Presenting one consistent,
-//! browser-shaped identity on every transport keeps the session classified as an ordinary
-//! web client. Nothing here carries account data; it is the same for every user.
+//! Sharing these values avoids internal contradictions between those paths and the verification
+//! webviews that explicitly use them. The values are fixed for every user and contain no account
+//! data. Their acceptance, current public-client equivalence, and any relationship to enforcement
+//! are unverified; this module does not establish an anti-abuse bypass or trusted-client status.
 
 /// Chrome version advertised on Windows and Linux; bump together when refreshing.
 const CHROME_MAJOR: &str = "128";
@@ -32,9 +31,8 @@ fn platform_token() -> &'static str {
 	}
 }
 
-/// Browser name Discord expects in super-properties, matched to the engine the embedded
-/// hCaptcha widget actually runs in. A passcode solved in WebKit but submitted with a Chrome
-/// fingerprint reads as a relayed captcha and triggers phone verification.
+/// Browser name in the shared web identity. macOS uses Safari to match its verification
+/// WebKit engine; other targets retain the existing Chrome-shaped identity, including WebKitGTK.
 pub fn browser() -> &'static str {
 	if cfg!(target_os = "macos") {
 		"Safari"

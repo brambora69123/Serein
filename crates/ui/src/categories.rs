@@ -664,7 +664,9 @@ impl MessagingUi {
 			}
 			let mut participants = BTreeMap::<Id, Vec<_>>::new();
 			for entry in &state.voice.roster {
-				if Some(entry.guild) == self.guild && state.can_view(entry.channel) {
+				if Some(entry.guild) == self.guild
+					&& (self.show_hidden_channels || state.can_view(entry.channel))
+				{
 					participants.entry(entry.channel).or_default().push(entry);
 				}
 			}
@@ -832,11 +834,12 @@ impl MessagingUi {
 									model::PreferenceEdit::Unchanged => {}
 								}
 							}
-							self.channel_menu.context(
+							self.channel_menu.context_with_display(
 								&response,
 								state,
 								category,
 								ShortcutView::new(&self.channel_preferences, shortcuts_available),
+								Some(&mut self.channel_display),
 							);
 						}
 						CachedRow::Channel(channel, slot, nested) => {
@@ -894,7 +897,7 @@ impl MessagingUi {
 										rect: response.rect,
 									});
 								}
-								self.channel_menu.context(
+								self.channel_menu.context_with_display(
 									&response,
 									state,
 									channel,
@@ -902,6 +905,7 @@ impl MessagingUi {
 										&self.channel_preferences,
 										shortcuts_available,
 									),
+									Some(&mut self.channel_display),
 								);
 								self.preload.conversation(&response, || Some(channel.id));
 								if response.clicked() {
@@ -1043,13 +1047,28 @@ impl MessagingUi {
 								.map_or(if count > 0 { 34.0 } else { 0.0 }, |label| {
 									label.size().x + 12.0
 								});
+							let type_badge = self
+								.channel_display
+								.type_badges
+								.then(|| model::channel_display::channel_badge(channel.kind))
+								.flatten();
+							let type_badge_width = type_badge.map_or(0.0, |label| {
+								ui.painter()
+									.layout_no_wrap(
+										label.to_owned(),
+										egui::FontId::proportional(11.0),
+										colors.muted,
+									)
+									.size()
+									.x + 12.0
+							});
 							let request = slot == Slot::Request;
 							let trailing = badge_width
-								+ if external.is_some() || request {
-									30.0
-								} else {
-									0.0
-								} + channel_marks::trailing(access);
+								+ type_badge_width + if external.is_some() || request {
+								30.0
+							} else {
+								0.0
+							} + channel_marks::trailing(access);
 							let content = egui::Rect::from_min_max(
 								egui::pos2(highlight.left() + 8.0, row.top()),
 								egui::pos2(row.right() - 8.0 - trailing, row.bottom()),
@@ -1168,7 +1187,8 @@ impl MessagingUi {
 									),
 								);
 							}
-							let mut label = String::from(state.conversation_name(channel));
+							let display_name = self.display_channel_name(state, channel);
+							let mut label = display_name.to_string();
 							if !enabled && visible {
 								label.push_str(" · unavailable");
 							}
@@ -1315,6 +1335,26 @@ impl MessagingUi {
 										});
 								}
 							}
+							if let Some(label) = type_badge {
+								let galley = ui.painter().layout_no_wrap(
+									label.to_owned(),
+									egui::FontId::proportional(11.0),
+									colors.muted,
+								);
+								let rect = egui::Rect::from_min_size(
+									egui::pos2(
+										row.right() - 8.0 - trailing,
+										row.center().y - galley.size().y * 0.5 - 2.0,
+									),
+									egui::vec2(type_badge_width, galley.size().y + 4.0),
+								);
+								ui.painter().rect_filled(rect, 4, colors.raised);
+								ui.painter().galley(
+									rect.min + egui::vec2(6.0, 2.0),
+									galley,
+									colors.muted,
+								);
+							}
 							if let Some(label) = new_label {
 								let pos = row.right_center()
 									- egui::vec2(8.0 + lane + label.size().x, label.size().y * 0.5);
@@ -1349,7 +1389,7 @@ impl MessagingUi {
 							let response = response.on_hover_text_with(|| {
 								format!(
 									"{} · {}{}{}",
-									channel.name,
+									display_name,
 									crate::i18n::translate_if_key(kind_label(channel.kind)),
 									channel_marks::label(access),
 									if unread && !forum && state.channel_unread(channel).is_none() {
@@ -1369,7 +1409,7 @@ impl MessagingUi {
 									enabled,
 									format!(
 										"{}{}{}; {} {}",
-										channel.name,
+										display_name,
 										channel_marks::label(access),
 										if unread {
 											crate::i18n::translate("categories-channel-list-unread")
@@ -1404,7 +1444,13 @@ impl MessagingUi {
 								self.group_menu.context(&response, state, channel, view);
 							}
 							if channel.guild.is_some() {
-								self.channel_menu.context(&response, state, channel, view);
+								self.channel_menu.context_with_display(
+									&response,
+									state,
+									channel,
+									view,
+									Some(&mut self.channel_display),
+								);
 							}
 							if enabled {
 								self.preload.conversation(&response, || Some(channel.id));
@@ -1884,6 +1930,59 @@ mod tests {
 		assert!(list(false).is_empty());
 		assert_eq!(list(true).len(), 1);
 	}
+	#[test]
+	fn hidden_voice_participants_are_cached_only_with_hidden_channels_opted_in() {
+		use model::permissions as p;
+
+		fn cached_users(ctx: &egui::Context, view: &mut MessagingUi, state: &mut State) -> Vec<Id> {
+			ctx.run_ui(egui::RawInput::default(), |ui| {
+				view.channel_list(ui, state);
+			})
+			.drop_without_applying_deltas();
+			view.channel_cache
+				.rows
+				.iter()
+				.filter_map(|row| match row {
+					CachedRow::Participant(index) => {
+						Some(state.voice.roster[*index].participant.user)
+					}
+					_ => None,
+				})
+				.collect()
+		}
+
+		let mut state = test_support::voice_demo_state();
+		state.voice.active = None;
+		state.apply(client_core::Envelope {
+			generation: state.generation,
+			event: client_core::Event::Permissions(client_core::permissions::Event::Channel {
+				channel: Id(25),
+				guild: Some(Id(10)),
+				overwrites: model::Patch::Value(vec![p::Overwrite {
+					id: Id(10),
+					kind: 0,
+					allow: 0,
+					deny: p::VIEW_CHANNEL,
+				}]),
+			}),
+		});
+		assert!(!state.can_view(Id(25)));
+		assert_eq!(state.voice.roster.len(), 3);
+		let ctx = egui::Context::default();
+		let mut view = MessagingUi {
+			guild: Some(Id(10)),
+			..Default::default()
+		};
+		assert!(
+			cached_users(&ctx, &mut view, &mut state).is_empty(),
+			"Hidden-off must not leak participant rows into the sidebar cache"
+		);
+		view.show_hidden_channels = true;
+		let mut admitted = cached_users(&ctx, &mut view, &mut state);
+		admitted.sort_unstable();
+		assert_eq!(admitted, [Id(1), Id(2), Id(3)]);
+	}
+
 	#[test]
 	fn categories_without_visible_children_follow_hidden_visibility() {
 		let mut state = test_support::demo_state();
@@ -2697,6 +2796,65 @@ mod tests {
 				.any(|(rect, fill)| *fill == hover_color && rect.contains(egui::pos2(20.0, 66.0))),
 			"row highlight must be painted when pointer hovers over the avatar widget"
 		);
+	}
+
+	#[test]
+	fn long_voice_channel_names_use_one_elided_row() {
+		fn find<'a>(shape: &'a egui::Shape, text: &str) -> Option<&'a egui::Galley> {
+			match shape {
+				egui::Shape::Text(text_shape) if text_shape.galley.job.text == text => {
+					Some(text_shape.galley.as_ref())
+				}
+				egui::Shape::Vec(children) => children.iter().find_map(|shape| find(shape, text)),
+				_ => None,
+			}
+		}
+
+		let long = "Quiet room with a deliberately long name that must not wrap";
+		let mut state = test_support::voice_demo_state();
+		state
+			.channels
+			.iter_mut()
+			.find(|c| c.id == Id(25))
+			.unwrap()
+			.name = long.into();
+		state.invalidate_navigation();
+		let mut view = MessagingUi {
+			guild: Some(Id(10)),
+			..Default::default()
+		};
+		let ctx = egui::Context::default();
+		let output = ctx.run_ui(
+			egui::RawInput {
+				screen_rect: Some(egui::Rect::from_min_size(
+					egui::Pos2::ZERO,
+					egui::vec2(180.0, 1600.0),
+				)),
+				..Default::default()
+			},
+			|ui| {
+				view.channel_list(ui, &mut state);
+			},
+		);
+		let galley = output
+			.shapes
+			.iter()
+			.find_map(|shape| find(&shape.shape, long))
+			.unwrap_or_else(|| {
+				let texts: Vec<_> = output
+					.shapes
+					.iter()
+					.filter_map(|shape| match &shape.shape {
+						egui::Shape::Text(text) => Some(text.galley.job.text.clone()),
+						_ => None,
+					})
+					.collect();
+				panic!("voice channel name missing; texts: {texts:?}");
+			});
+		let (elided, rows) = (galley.elided, galley.rows.len());
+		output.drop_without_applying_deltas();
+		assert!(elided, "long voice channel names should end in an ellipsis");
+		assert_eq!(rows, 1, "voice channel rows hold a single line");
 	}
 
 	#[test]

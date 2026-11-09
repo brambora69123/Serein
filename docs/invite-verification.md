@@ -30,10 +30,11 @@ enterprise data, request token and session ID remain bound to that attempt. The
 verification view has its own incognito context, an app-local reserved
 origin and a random IPC capability. It presents the same user agent as the REST client
 that later submits the passcode (`client_core::fingerprint`); on macOS that identity is
-Safari, because the widget runs in WebKit and a Chrome-fingerprinted submission of a
-WebKit-solved passcode was observed to trigger phone verification on September 13, 2026.
-It receives no Discord account token and uses no solver, browser-profile access, origin
-spoofing, fingerprint override or backend.
+Safari, because the widget runs in WebKit and the owner reported that a Chrome-shaped
+submission of a WebKit-solved passcode triggered phone verification on September 13, 2026.
+That observation was not independently reproduced. The view receives no Discord account
+token and uses no solver, browser-profile access, origin spoofing or backend. Its explicit
+user-agent override does not establish an anti-abuse bypass or current client equivalence.
 The widget's generated passcode is not saved to SQLite or diagnostics. The browser
 engine and hCaptcha necessarily process the user's interaction; this is not a claim
 that a third-party widget or OS leaves no traces.

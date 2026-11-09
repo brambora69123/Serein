@@ -505,6 +505,605 @@ fn check_app_actions(package: &Package) {
 	);
 }
 
+fn check_safe_ports(catalog_wasm_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
+	let offline = rebuilt(
+		include_str!("../../../extensions/plugins/offline-composer-tools/manifest.json"),
+		&catalog_wasm_dir.join("offline_composer_tools.wasm"),
+	)?;
+	let text_commands = rebuilt(
+		include_str!("../../../extensions/plugins/text-commands/manifest.json"),
+		&catalog_wasm_dir.join("text_commands.wasm"),
+	)?;
+	let view_raw = rebuilt(
+		include_str!("../../../extensions/plugins/view-raw-message/manifest.json"),
+		&catalog_wasm_dir.join("view_raw_message.wasm"),
+	)?;
+	let external = rebuilt(
+		include_str!("../../../extensions/plugins/external-search-tools/manifest.json"),
+		&catalog_wasm_dir.join("external_search_tools.wasm"),
+	)?;
+	let codecs = rebuilt(
+		include_str!("../../../extensions/plugins/text-codecs/manifest.json"),
+		&catalog_wasm_dir.join("text_codecs.wasm"),
+	)?;
+	let composition = rebuilt(
+		include_str!("../../../extensions/plugins/message-composition-tools/manifest.json"),
+		&catalog_wasm_dir.join("message_composition_tools.wasm"),
+	)?;
+	let identity = rebuilt(
+		include_str!("../../../extensions/plugins/identity-tools/manifest.json"),
+		&catalog_wasm_dir.join("identity_tools.wasm"),
+	)?;
+	let role_members = rebuilt(
+		include_str!("../../../extensions/plugins/loaded-role-members/manifest.json"),
+		&catalog_wasm_dir.join("loaded_role_members.wasm"),
+	)?;
+	let status_presets = rebuilt(
+		include_str!("../../../extensions/plugins/status-presets/manifest.json"),
+		&catalog_wasm_dir.join("status_presets.wasm"),
+	)?;
+	let reference_tools = rebuilt(
+		include_str!("../../../extensions/plugins/message-reference-tools/manifest.json"),
+		&catalog_wasm_dir.join("message_reference_tools.wasm"),
+	)?;
+	let draft_style = rebuilt(
+		include_str!("../../../extensions/plugins/draft-style-tools/manifest.json"),
+		&catalog_wasm_dir.join("draft_style_tools.wasm"),
+	)?;
+	let command_palette = rebuilt(
+		include_str!("../../../extensions/plugins/command-palette/manifest.json"),
+		&catalog_wasm_dir.join("command_palette.wasm"),
+	)?;
+	let message_history = rebuilt(
+		include_str!("../../../extensions/plugins/message-history/manifest.json"),
+		&catalog_wasm_dir.join("message_history.wasm"),
+	)?;
+	let ingtoninator = rebuilt(
+		include_str!("../../../extensions/plugins/ingtoninator/manifest.json"),
+		&catalog_wasm_dir.join("ingtoninator.wasm"),
+	)?;
+	let own_sed = rebuilt(
+		include_str!("../../../extensions/plugins/own-message-sed/manifest.json"),
+		&catalog_wasm_dir.join("own_message_sed.wasm"),
+	)?;
+	let social = rebuilt(
+		include_str!("../../../extensions/plugins/social-link-tools/manifest.json"),
+		&catalog_wasm_dir.join("social_link_tools.wasm"),
+	)?;
+	let offline_committed = parse_package(include_bytes!(
+		"../../../extensions/plugins/packages/offline-composer-tools.serein-extension"
+	))?;
+	let text_committed = parse_package(include_bytes!(
+		"../../../extensions/plugins/packages/text-commands.serein-extension"
+	))?;
+	let raw_committed = parse_package(include_bytes!(
+		"../../../extensions/plugins/packages/view-raw-message.serein-extension"
+	))?;
+	let external_committed = parse_package(include_bytes!(
+		"../../../extensions/plugins/packages/external-search-tools.serein-extension"
+	))?;
+	let codecs_committed = parse_package(include_bytes!(
+		"../../../extensions/plugins/packages/text-codecs.serein-extension"
+	))?;
+	let composition_committed = parse_package(include_bytes!(
+		"../../../extensions/plugins/packages/message-composition-tools.serein-extension"
+	))?;
+	let identity_committed = parse_package(include_bytes!(
+		"../../../extensions/plugins/packages/identity-tools.serein-extension"
+	))?;
+	let role_committed = parse_package(include_bytes!(
+		"../../../extensions/plugins/packages/loaded-role-members.serein-extension"
+	))?;
+	let status_committed = parse_package(include_bytes!(
+		"../../../extensions/plugins/packages/status-presets.serein-extension"
+	))?;
+	let reference_committed = parse_package(include_bytes!(
+		"../../../extensions/plugins/packages/message-reference-tools.serein-extension"
+	))?;
+	let draft_committed = parse_package(include_bytes!(
+		"../../../extensions/plugins/packages/draft-style-tools.serein-extension"
+	))?;
+	let command_committed = parse_package(include_bytes!(
+		"../../../extensions/plugins/packages/command-palette.serein-extension"
+	))?;
+	let history_committed = parse_package(include_bytes!(
+		"../../../extensions/plugins/packages/message-history.serein-extension"
+	))?;
+	let ington_committed = parse_package(include_bytes!(
+		"../../../extensions/plugins/packages/ingtoninator.serein-extension"
+	))?;
+	let sed_committed = parse_package(include_bytes!(
+		"../../../extensions/plugins/packages/own-message-sed.serein-extension"
+	))?;
+	let social_committed = parse_package(include_bytes!(
+		"../../../extensions/plugins/packages/social-link-tools.serein-extension"
+	))?;
+	let role_members_input: Invocation = serde_json::from_value(serde_json::json!({
+		"action": "open-profile",
+		"storage": "{\"role_id\":\"400\"}",
+		"values": {"member": "Synthetic user [300]"},
+		"app": {"member_details": {
+			"channel_id": "100", "guild_id": "400", "truncated": false,
+			"roles": [{"id":"400","name":"Role","color":1223476,"position":1}], "roles_truncated": false,
+			"items": [{"user":{"id":"300","name":"Synthetic user"},"display_name":"Synthetic user","role_ids":["400"],"roles_truncated":false}]
+		}}
+	}))?;
+	let mut role_color_input = role_members_input.clone();
+	role_color_input.action = "copy-role-color".into();
+	role_color_input.storage = None;
+	role_color_input.values.clear();
+	role_color_input
+		.values
+		.insert("role".into(), "Role [400]".into());
+	let composition_input: Invocation = serde_json::from_value(serde_json::json!({
+		"action": "filter-keywords", "composer": "keep\ndrop private line\n",
+		"storage": "{\"split_mode\":\"newlines\",\"split_limit\":2000,\"keywords\":[\"drop\"],\"keyword_case_sensitive\":false,\"burst_style\":\"lines\",\"burst_max_segments\":8}"
+	}))?;
+	let status_presets_input: Invocation = serde_json::from_value(serde_json::json!({
+		"action": "apply", "values": {"preset":"Away"},
+		"storage": "{\"version\":1,\"presets\":[{\"name\":\"Away\",\"status\":\"idle\"}]}"
+	}))?;
+	let social_selection = |action: &str, selected: &str| Invocation {
+		action: action.into(),
+		selected_message: Some(selected.into()),
+		selected_message_ref: Some(Box::new(extensions::SelectedMessageRef {
+			channel_id: "100".into(),
+			message_id: "200".into(),
+			author_id: "300".into(),
+			guild_id: None,
+		})),
+		..Default::default()
+	};
+	let social_cancel_input: Invocation = serde_json::from_value(serde_json::json!({
+		"action": "cancel", "values": {"user-id":"10"},
+		"app": {"relationships": {
+			"items": [{"user":{"id":"10","name":"Outgoing"},"kind":"outgoing_request"}],
+			"truncated":false,"friends_known":true,"requests_known":true,"restricted_known":true
+		}}
+	}))?;
+	let social_repeat_input = social_selection("repeat", "hi <@123> @everyone");
+	let social_normalize_input = social_selection(
+		"normalize-links",
+		"see https://canary.discord.com/channels/1/2/3",
+	);
+	let sed_input: Invocation = serde_json::from_value(serde_json::json!({
+		"action": "apply",
+		"values": {"target":"200","match":r"a\*b","replace":"x/y","global":"false"},
+		"app": {
+			"context": {"connected":true,"user":{"id":"1","name":"Me"},"channel":{"id":"20","name":"general","kind":0}},
+			"timeline": {"channel_id":"20","truncated":false,"messages":[{"id":"200","author":{"id":"1","name":"Me"},"content":"a*b","attachment_count":0,"edited":false}]},
+			"message_details": {"channel_id":"20","items":[{"id":"200","kind":0,"mention_ids":[],"mentions_truncated":false,"mention_everyone":false,"attachments":[],"attachments_truncated":false,"reactions_truncated":false}],"truncated":false}
+		}
+	}))?;
+	for (name, action, package, activation) in [
+		(
+			"external-search-tools",
+			"open",
+			&external,
+			&external_committed,
+		),
+		(
+			"message-composition-tools",
+			"open",
+			&composition,
+			&composition_committed,
+		),
+		("status-presets", "open", &status_presets, &status_committed),
+		("draft-style-tools", "open", &draft_style, &draft_committed),
+		(
+			"command-palette",
+			"show",
+			&command_palette,
+			&command_committed,
+		),
+		("own-message-sed", "show", &own_sed, &sed_committed),
+	] {
+		for module in [package, activation] {
+			module.validate()?;
+			let panel = invoke(
+				module,
+				&Invocation {
+					action: action.into(),
+					..Default::default()
+				},
+			)
+			.unwrap_or_else(|error| panic!("{name}/{action}: settings panel failed: {error:?}"));
+			assert!(!panel.panel.is_empty(), "{name}: settings panel is empty");
+		}
+	}
+	for (name, package, committed, input, check) in [
+		(
+			"offline-composer-tools",
+			&offline,
+			&offline_committed,
+			Invocation {
+				action: "clear-urls".into(),
+				composer: Some("https://example.org/?utm_source=test&keep=1".into()),
+				..Default::default()
+			},
+			(|output: &Output| output.replacement.as_deref() == Some("https://example.org/?keep=1"))
+				as fn(&Output) -> bool,
+		),
+		(
+			"text-commands",
+			&text_commands,
+			&text_committed,
+			Invocation {
+				action: "apply-replacements".into(),
+				composer: Some("brb".into()),
+				storage: Some(r#"{"rules":[{"find":"brb","replace":"be right back","only_if_includes":""}],"tags":[]}"#.into()),
+				..Default::default()
+			},
+			(|output: &Output| output.replacement.as_deref() == Some("be right back"))
+				as fn(&Output) -> bool,
+		),
+		(
+			"view-raw-message",
+			&view_raw,
+			&raw_committed,
+			Invocation {
+				action: "view-raw".into(),
+				selected_message: Some("**synthetic raw text**".into()),
+				..Default::default()
+			},
+			(|output: &Output| output.effects.is_empty()
+				&& output.panel.iter().any(|element| {
+					matches!(element, Element::Text { text } if text == "**synthetic raw text**")
+				})) as fn(&Output) -> bool,
+		),
+		(
+			"external-search-tools",
+			&external,
+			&external_committed,
+			Invocation {
+				action: "translate".into(),
+				selected_message: Some("Synthetic translation".into()),
+				..Default::default()
+			},
+			(|output: &Output| output.effects.len() == 1
+				&& output.effects[0].required_capability() == extensions::Capability::ExternalNavigation)
+				as fn(&Output) -> bool,
+		),
+		(
+			"text-codecs",
+			&codecs,
+			&codecs_committed,
+			Invocation {
+				action: "decode".into(),
+				composer: Some("SGVsbG8=".into()),
+				..Default::default()
+			},
+			(|output: &Output| output.replacement.as_deref() == Some("Hello"))
+				as fn(&Output) -> bool,
+		),
+		(
+			"message-composition-tools",
+			&composition,
+			&composition_committed,
+			composition_input,
+			(|output: &Output| output.replacement.as_deref() == Some("keep\n"))
+				as fn(&Output) -> bool,
+		),
+		(
+			"identity-tools",
+			&identity,
+			&identity_committed,
+			Invocation {
+				action: "copy-user-url".into(),
+				selected_message: Some("Synthetic private text".into()),
+				selected_message_ref: Some(Box::new(extensions::SelectedMessageRef {
+					channel_id: "100".into(),
+					message_id: "200".into(),
+					author_id: "300".into(),
+					guild_id: None,
+				})),
+				..Default::default()
+			},
+			(|output: &Output| output.effects.len() == 1
+				&& output.effects[0].required_capability() == extensions::Capability::ClipboardWrite)
+				as fn(&Output) -> bool,
+		),
+		(
+			"loaded-role-members",
+			&role_members,
+			&role_committed,
+			role_members_input,
+			(|output: &Output| output.effects.len() == 1
+				&& output.effects[0].required_capability() == extensions::Capability::Navigation)
+				as fn(&Output) -> bool,
+		),
+		(
+			"status-presets",
+			&status_presets,
+			&status_committed,
+			status_presets_input,
+			(|output: &Output| output.effects.len() == 1
+				&& output.effects[0].required_capability() == extensions::Capability::AccountControl)
+				as fn(&Output) -> bool,
+		),
+		(
+			"message-reference-tools",
+			&reference_tools,
+			&reference_committed,
+			Invocation {
+				action: "search".into(),
+				selected_message: Some("Synthetic search".into()),
+				selected_message_ref: Some(Box::new(extensions::SelectedMessageRef {
+					channel_id: "100".into(),
+					message_id: "200".into(),
+					author_id: "300".into(),
+					guild_id: None,
+				})),
+				..Default::default()
+			},
+			(|output: &Output| output.effects.len() == 1
+				&& output.effects[0].required_capability() == extensions::Capability::ExternalNavigation)
+				as fn(&Output) -> bool,
+		),
+		(
+			"draft-style-tools",
+			&draft_style,
+			&draft_committed,
+			Invocation {
+				action: "reverse".into(),
+				composer: Some("hello <@42>".into()),
+				..Default::default()
+			},
+			(|output: &Output| output.replacement.as_deref() == Some("<@42> olleh"))
+				as fn(&Output) -> bool,
+		),
+		(
+			"command-palette",
+			&command_palette,
+			&command_committed,
+			serde_json::from_value(serde_json::json!({
+				"action":"go-destination", "values":{"destination":"Home (Friends)"}
+			}))?,
+			(|output: &Output| output.effects.len() == 1
+				&& output.effects[0].required_capability() == extensions::Capability::Navigation)
+				as fn(&Output) -> bool,
+		),
+		(
+			"ingtoninator",
+			&ingtoninator,
+			&ington_committed,
+			Invocation {
+				action: "ingtoninate".into(),
+				composer: Some("pin".into()),
+				..Default::default()
+			},
+			(|output: &Output| output.replacement.as_deref() == Some("pington"))
+				as fn(&Output) -> bool,
+		),
+		(
+			"own-message-sed",
+			&own_sed,
+			&sed_committed,
+			sed_input,
+			(|output: &Output| output.effects.len() == 1
+				&& output.effects[0].required_capability() == extensions::Capability::MessageManage)
+				as fn(&Output) -> bool,
+		),
+		(
+			"social-link-tools",
+			&social,
+			&social_committed,
+			social_cancel_input,
+			(|output: &Output| output.effects.len() == 1
+				&& output.effects[0].required_capability() == extensions::Capability::RelationshipControl)
+				as fn(&Output) -> bool,
+		),
+		(
+			"message-history",
+			&message_history,
+			&history_committed,
+			Invocation {
+				action: "enable-history".into(),
+				..Default::default()
+			},
+			(|output: &Output| {
+				serde_json::to_value(output).unwrap()
+					== serde_json::to_value(Output::default()).unwrap()
+			}) as fn(&Output) -> bool,
+		),
+	] {
+		package.validate()?;
+		committed.validate()?;
+		let output = invoke(committed, &input)?;
+		assert!(check(&output), "{name}/committed: behavior failed");
+		let output = invoke(package, &input)?;
+		assert!(check(&output), "{name}/rebuilt: behavior failed");
+		for effect in &output.effects {
+			effect.validate(&package.manifest)?;
+		}
+		println!("{name}/rebuilt: {} Wasm bytes; real ABI behavior passed", package.wasm.len());
+	}
+	for module in [&social, &social_committed] {
+		let normalized = invoke(module, &social_normalize_input)?;
+		assert!(matches!(
+			normalized.effects.as_slice(),
+			[extensions::HostEffect::CopyText { text }] if text == "see https://discord.com/channels/1/2/3"
+		));
+		let repeated = invoke(module, &social_repeat_input)?;
+		match &repeated.effects[0] {
+			extensions::HostEffect::AppAction {
+				action: extensions::AppAction::SendMessage {
+					channel_id,
+					content,
+				},
+			} => {
+				assert_eq!(channel_id, "100");
+				assert_eq!(content, "hi <@\u{200b}123> @\u{200b}everyone");
+			}
+			other => panic!("unexpected repeat effect: {other:?}"),
+		}
+	}
+	for module in [&role_members, &role_committed] {
+		let output = invoke(module, &role_color_input)?;
+		assert!(matches!(
+			output.effects.as_slice(),
+			[extensions::HostEffect::CopyText { text }] if text == "#12ab34"
+		));
+	}
+	// Every additional package crosses the real Wasm export/JSON boundary in both
+	// its rebuilt and committed forms. Their inline suites cover exact behavior;
+	// these no-data paths also verify graceful, bounded missing-snapshot handling.
+	let additional: &[(&str, &str, &str, &[u8])] = &[
+		(
+			"account-navigation-tools",
+			"open",
+			include_str!("../../../extensions/plugins/account-navigation-tools/manifest.json"),
+			include_bytes!(
+				"../../../extensions/plugins/packages/account-navigation-tools.serein-extension"
+			),
+		),
+		(
+			"better-search-tools",
+			"open",
+			include_str!("../../../extensions/plugins/better-search-tools/manifest.json"),
+			include_bytes!(
+				"../../../extensions/plugins/packages/better-search-tools.serein-extension"
+			),
+		),
+		(
+			"equicord-community-tools",
+			"open",
+			include_str!("../../../extensions/plugins/equicord-community-tools/manifest.json"),
+			include_bytes!(
+				"../../../extensions/plugins/packages/equicord-community-tools.serein-extension"
+			),
+		),
+		(
+			"greet-sticker-tools",
+			"open",
+			include_str!("../../../extensions/plugins/greet-sticker-tools/manifest.json"),
+			include_bytes!(
+				"../../../extensions/plugins/packages/greet-sticker-tools.serein-extension"
+			),
+		),
+		(
+			"linked-message-tools",
+			"preview",
+			include_str!("../../../extensions/plugins/linked-message-tools/manifest.json"),
+			include_bytes!(
+				"../../../extensions/plugins/packages/linked-message-tools.serein-extension"
+			),
+		),
+		(
+			"message-inspector-tools",
+			"copy-magnets",
+			include_str!("../../../extensions/plugins/message-inspector-tools/manifest.json"),
+			include_bytes!(
+				"../../../extensions/plugins/packages/message-inspector-tools.serein-extension"
+			),
+		),
+		(
+			"message-navigation-tools",
+			"jump-latest",
+			include_str!("../../../extensions/plugins/message-navigation-tools/manifest.json"),
+			include_bytes!(
+				"../../../extensions/plugins/packages/message-navigation-tools.serein-extension"
+			),
+		),
+		(
+			"more-quick-reactions-tools",
+			"open",
+			include_str!("../../../extensions/plugins/more-quick-reactions-tools/manifest.json"),
+			include_bytes!(
+				"../../../extensions/plugins/packages/more-quick-reactions-tools.serein-extension"
+			),
+		),
+		(
+			"music-link-tools",
+			"open",
+			include_str!("../../../extensions/plugins/music-link-tools/manifest.json"),
+			include_bytes!(
+				"../../../extensions/plugins/packages/music-link-tools.serein-extension"
+			),
+		),
+		(
+			"permissions-tools",
+			"show",
+			include_str!("../../../extensions/plugins/permissions-tools/manifest.json"),
+			include_bytes!(
+				"../../../extensions/plugins/packages/permissions-tools.serein-extension"
+			),
+		),
+		(
+			"plus-reacts-tools",
+			"plus-react",
+			include_str!("../../../extensions/plugins/plus-reacts-tools/manifest.json"),
+			include_bytes!(
+				"../../../extensions/plugins/packages/plus-reacts-tools.serein-extension"
+			),
+		),
+		(
+			"server-info-tools",
+			"show",
+			include_str!("../../../extensions/plugins/server-info-tools/manifest.json"),
+			include_bytes!(
+				"../../../extensions/plugins/packages/server-info-tools.serein-extension"
+			),
+		),
+		(
+			"voice-and-chat-tools",
+			"open",
+			include_str!("../../../extensions/plugins/voice-and-chat-tools/manifest.json"),
+			include_bytes!(
+				"../../../extensions/plugins/packages/voice-and-chat-tools.serein-extension"
+			),
+		),
+		(
+			"voice-panel-tools",
+			"open",
+			include_str!("../../../extensions/plugins/voice-panel-tools/manifest.json"),
+			include_bytes!(
+				"../../../extensions/plugins/packages/voice-panel-tools.serein-extension"
+			),
+		),
+		(
+			"voice-rejoin-tools",
+			"show",
+			include_str!("../../../extensions/plugins/voice-rejoin-tools/manifest.json"),
+			include_bytes!(
+				"../../../extensions/plugins/packages/voice-rejoin-tools.serein-extension"
+			),
+		),
+	];
+	for &(stem, action, manifest, committed_bytes) in additional {
+		let rebuilt_package = rebuilt(
+			manifest,
+			&catalog_wasm_dir.join(format!("{}.wasm", stem.replace('-', "_"))),
+		)?;
+		let committed_package = parse_package(committed_bytes)?;
+		let input: Invocation = serde_json::from_value(serde_json::json!({"action": action}))?;
+		let expected = invoke(&committed_package, &input)
+			.unwrap_or_else(|error| panic!("{stem}/committed: invocation failed: {error:?}"));
+		assert!(
+			!expected.panel.is_empty()
+				|| expected.replacement.is_some()
+				|| expected.storage.is_some()
+				|| !expected.effects.is_empty(),
+			"{stem}/committed: missing-snapshot path returned no bounded feedback"
+		);
+		let actual = invoke(&rebuilt_package, &input)
+			.unwrap_or_else(|error| panic!("{stem}/rebuilt: invocation failed: {error:?}"));
+		assert_eq!(
+			serde_json::to_value(&actual)?,
+			serde_json::to_value(&expected)?,
+			"{stem}: rebuilt and committed behavior differ"
+		);
+		for effect in &actual.effects {
+			effect.validate(&rebuilt_package.manifest)?;
+		}
+		println!(
+			"{stem}/committed+rebuilt: {} Wasm bytes; export and missing-snapshot behavior passed",
+			rebuilt_package.wasm.len()
+		);
+	}
+	Ok(())
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
 	let mut args = std::env::args_os().skip(1);
 	let wasm_dir = PathBuf::from(args.next().expect("usage: sdk_check <wasm-directory>"));
@@ -516,6 +1115,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 		args.next().is_none(),
 		"usage: sdk_check <wasm-directory> <catalog-wasm-directory>"
 	);
+	check_safe_ports(&catalog_wasm_dir)?;
 	check_app_actions(&rebuilt(
 		include_str!("../../../examples/extensions/app-actions/manifest.json"),
 		&wasm_dir.join("app_actions.wasm"),

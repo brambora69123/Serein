@@ -128,7 +128,9 @@ impl MessagingUi {
 		if self.voice_stream_muted {
 			0
 		} else {
-			self.voice_stream_volume.unwrap_or(100).min(200)
+			model::voice_settings::clamp_local_volume_percent(
+				self.voice_stream_volume.unwrap_or(100),
+			)
 		}
 	}
 
@@ -140,6 +142,9 @@ impl MessagingUi {
 			.as_deref()
 			.copied()
 			.unwrap_or([(0, 100); 64]);
+		for (_, volume) in &mut values {
+			*volume = model::voice_settings::clamp_local_volume_percent(*volume);
+		}
 		for user in self.voice_user_muted.iter().copied() {
 			if let Some(slot) = values.iter_mut().find(|(id, _)| *id == user) {
 				slot.1 = 0;
@@ -199,12 +204,16 @@ impl MessagingUi {
 		}
 		let mut array = [(0u64, 100u16); 64];
 		for (slot, value) in array.iter_mut().zip(values.iter().take(64)) {
-			*slot = *value;
+			*slot = (
+				value.0,
+				model::voice_settings::clamp_local_volume_percent(value.1),
+			);
 		}
 		self.voice_user_volumes = Some(Box::new(array));
 	}
 
 	pub(super) fn set_voice_user_volume(&mut self, user: Id, volume: u16) {
+		let volume = model::voice_settings::clamp_local_volume_percent(volume);
 		if volume == 100 {
 			if let Some(slot) = self
 				.voice_user_volumes
@@ -296,9 +305,12 @@ impl MessagingUi {
 						.as_deref()
 						.and_then(|values| values.iter().find(|(user, _)| *user == id))
 						.map_or(100, |(_, volume)| *volume);
-					let changed =
-						gain_slider(ui, &mut volume, "voice-voice-participant-menu-user-volume")
-							.changed();
+					let changed = local_gain_slider(
+						ui,
+						&mut volume,
+						"voice-voice-participant-menu-user-volume",
+					)
+					.changed();
 					let reset = ui
 						.add_enabled(
 							volume != 100,
@@ -484,18 +496,19 @@ impl MessagingUi {
 		let marks = channel_marks::trailing(access);
 		let elapsed_width = if elapsed.is_some() { 64.0 } else { 0.0 };
 		let badge_width = if count > 0 { 34.0 } else { 0.0 };
-		let name = ui.painter().layout(
+		let name_width = (row.width() - 40.0 - elapsed_width - badge_width - marks).max(10.0);
+		let mut name_job = egui::text::LayoutJob::simple_singleline(
 			channel.name.clone(),
 			egui::FontId::new(15.0, design::medium_family(ui.ctx())),
 			text_color,
-			(row.width() - 40.0 - elapsed_width - badge_width - marks).max(10.0),
 		);
+		name_job.wrap.max_width = name_width;
+		name_job.wrap.max_rows = 1;
+		name_job.wrap.break_anywhere = true;
+		let name = ui.painter().layout_job(name_job);
 		let name_rect = egui::Rect::from_min_size(
 			egui::pos2(row.left() + 34.0, row.center().y - name.size().y * 0.5),
-			egui::vec2(
-				row.width() - 40.0 - elapsed_width - badge_width - marks,
-				name.size().y,
-			),
+			egui::vec2(name_width, name.size().y),
 		);
 		ui.painter()
 			.with_clip_rect(name_rect)
@@ -568,9 +581,6 @@ impl MessagingUi {
 		state: &State,
 		entry: &RosterEntry,
 	) {
-		if !state.can_view(entry.channel) {
-			return;
-		}
 		let colors = design::palette(ui);
 		let (user, name) = resolve_member(state, entry);
 		ui.push_id(
@@ -614,6 +624,20 @@ impl MessagingUi {
 				} else {
 					colors.muted
 				};
+				let name_color = entry
+					.member
+					.as_ref()
+					.and_then(|member| {
+						crate::presentation::role_colors(
+							state,
+							entry.channel,
+							entry.participant.user,
+							&member.roles,
+						)
+					})
+					.map_or(name_color, |role| {
+						design::role_name_color(role.primary, colors.sidebar, name_color)
+					});
 				let mut inner = ui.new_child(
 					egui::UiBuilder::new()
 						.max_rect(rect)
@@ -1335,7 +1359,14 @@ impl MessagingUi {
 			})
 			.unwrap_or(rect);
 		if !compact {
-			name_badge(ui, content, "Your screen", None, self.badge_opacity());
+			name_badge(
+				ui,
+				content,
+				"Your screen",
+				None,
+				self.badge_opacity(),
+				STAGE_TEXT,
+			);
 		}
 	}
 
@@ -1427,6 +1458,7 @@ impl MessagingUi {
 				&format!("{name}'s screen"),
 				None,
 				self.badge_opacity(),
+				STAGE_TEXT,
 			);
 		}
 		// Fullscreen has no call bar, so it keeps its own small audio and stop actions.
@@ -1554,7 +1586,14 @@ impl MessagingUi {
 
 	fn watch_stream_button(&self, ui: &mut egui::Ui, rect: egui::Rect, name: &str, enabled: bool) {
 		let opacity = self.badge_opacity();
-		name_badge(ui, rect, &format!("{name}'s screen"), None, opacity);
+		name_badge(
+			ui,
+			rect,
+			&format!("{name}'s screen"),
+			None,
+			opacity,
+			STAGE_TEXT,
+		);
 		let font = egui::FontId::new(14.0, design::medium_family(ui.ctx()));
 		let label = "Watch Stream";
 		let galley = ui
@@ -1602,7 +1641,7 @@ impl MessagingUi {
 			&mut self.voice_stream_muted,
 			crate::i18n::translate("voice-stream-audio-controls-mute-stream-audio"),
 		);
-		gain_slider(
+		local_gain_slider(
 			ui,
 			self.voice_stream_volume.get_or_insert(100),
 			"voice-stream-audio-controls-stream-volume",
@@ -1643,6 +1682,20 @@ impl MessagingUi {
 		let size = rect.size();
 		let (user, name) = resolve_member(state, entry);
 		let colors = design::palette(ui);
+		let name_color = entry
+			.member
+			.as_ref()
+			.and_then(|member| {
+				crate::presentation::role_colors(
+					state,
+					entry.channel,
+					entry.participant.user,
+					&member.roles,
+				)
+			})
+			.map_or(STAGE_TEXT, |role| {
+				design::role_name_color(role.primary, STAGE_FILL, STAGE_TEXT)
+			});
 		let own = state
 			.user
 			.as_ref()
@@ -1805,7 +1858,7 @@ impl MessagingUi {
 			let mut job = egui::text::LayoutJob::simple_singleline(
 				name.to_owned(),
 				egui::FontId::new(13.0, design::medium_family(ui.ctx())),
-				STAGE_TEXT,
+				name_color,
 			);
 			job.wrap = egui::text::TextWrapping::truncate_at_width((size.x - 8.0).max(20.0));
 			let galley = ui.painter().layout_job(job);
@@ -1815,7 +1868,7 @@ impl MessagingUi {
 					avatar_rect.bottom() + 24.0 - galley.size().y * 0.5,
 				),
 				galley,
-				STAGE_TEXT,
+				name_color,
 			);
 		} else {
 			name_badge(
@@ -1824,6 +1877,7 @@ impl MessagingUi {
 				name,
 				silenced.filter(|_| video.is_some()),
 				self.badge_opacity(),
+				name_color,
 			);
 		}
 	}
@@ -4273,6 +4327,7 @@ fn name_badge(
 	name: &str,
 	icon: Option<crate::icons::Icon>,
 	opacity: f32,
+	color: egui::Color32,
 ) {
 	if opacity <= 0.0 {
 		return;
@@ -4282,7 +4337,7 @@ fn name_badge(
 	let font = egui::FontId::new(13.0, design::medium_family(ui.ctx()));
 	let icon_width = if icon.is_some() { 20.0 } else { 0.0 };
 	// One line, truncated with an ellipsis; the tile hover text carries the full name.
-	let mut job = egui::text::LayoutJob::simple_singleline(name.to_owned(), font, STAGE_TEXT);
+	let mut job = egui::text::LayoutJob::simple_singleline(name.to_owned(), font, color);
 	job.wrap.max_width = (rect.width() * 0.6 - icon_width).max(20.0);
 	job.wrap.max_rows = 1;
 	job.wrap.break_anywhere = true;
@@ -4295,7 +4350,7 @@ fn name_badge(
 	painter.galley(
 		egui::pos2(badge.left() + 8.0, badge.center().y - galley.size().y * 0.5),
 		galley,
-		STAGE_TEXT,
+		color,
 	);
 	if let Some(icon) = icon {
 		crate::icons::paint(
@@ -4719,14 +4774,49 @@ pub(super) fn participant_user(state: &State, channel: Id, user: Id) -> Option<&
 		})
 }
 
-/// Labelled percentage slider shared by the voice popout and the settings page.
+/// Labelled canonical percentage slider shared by the voice popout and the settings page.
 fn gain_slider(ui: &mut egui::Ui, value: &mut u16, title: &str) -> egui::Response {
+	gain_slider_range(
+		ui,
+		value,
+		title,
+		0..=model::voice_settings::CANONICAL_VOLUME_PERCENT_MAX,
+	)
+}
+
+/// Participant and stream level, including the explicit local-only boost up to 400%.
+fn local_gain_slider(ui: &mut egui::Ui, value: &mut u16, title: &str) -> egui::Response {
+	let response = gain_slider_range(
+		ui,
+		value,
+		title,
+		0..=model::voice_settings::LOCAL_BOOST_VOLUME_PERCENT_MAX,
+	);
+	if *value > model::voice_settings::CANONICAL_VOLUME_PERCENT_MAX {
+		ui.label(
+			RichText::new(crate::i18n::translate("voice-local-volume-boost-warning"))
+				.size(11.0)
+				.color(design::palette(ui).danger),
+		)
+		.on_hover_text(crate::i18n::translate(
+			"voice-local-volume-boost-warning-detail",
+		));
+	}
+	response
+}
+
+fn gain_slider_range(
+	ui: &mut egui::Ui,
+	value: &mut u16,
+	title: &str,
+	range: std::ops::RangeInclusive<u16>,
+) -> egui::Response {
 	let title = crate::i18n::translate_if_key(title);
 	ui.scope(|ui| {
 		let colors = design::palette(ui);
 		ui.spacing_mut().item_spacing.y = 4.0;
 		let label = ui.label(RichText::new(title).size(13.0).color(colors.muted));
-		design::slider(ui, value, 0..=200, "%").labelled_by(label.id)
+		design::slider(ui, value, range, "%").labelled_by(label.id)
 	})
 	.inner
 }
@@ -4943,6 +5033,22 @@ mod tests {
 		view.set_voice_user_mutes(&(0..200).collect::<Vec<u64>>());
 		assert_eq!(view.voice_user_mutes().len(), MAX_USER_MUTES);
 		assert!(!view.voice_user_mutes().contains(&0));
+	}
+
+	#[test]
+	fn local_boost_is_bounded_and_mute_restores_the_boosted_level() {
+		let mut view = MessagingUi::default();
+		view.set_voice_user_volume_overrides(&[(7, 300), (8, 900)]);
+		assert!(view.voice_user_volumes().contains(&(7, 300)));
+		// Persisted or extension-provided values above the local ceiling clamp to 400.
+		assert!(view.voice_user_volumes().contains(&(8, 400)));
+		view.set_voice_user_locally_muted(Id(7), true);
+		assert!(view.voice_user_volumes().contains(&(7, 0)));
+		view.set_voice_user_locally_muted(Id(7), false);
+		assert!(view.voice_user_volumes().contains(&(7, 300)));
+		assert_eq!(view.voice_user_volume_overrides(), vec![(7, 300), (8, 400)]);
+		view.set_voice_user_volume(Id(9), u16::MAX);
+		assert!(view.voice_user_volumes().contains(&(9, 400)));
 	}
 
 	#[test]

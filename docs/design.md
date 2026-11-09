@@ -94,7 +94,13 @@ The bundled faces remain upstream's hinted TrueType builds. See `assets/README.m
   controls. A thin notice strip appears only for loading/stale/archive/history states.
 - Timeline: 16px gutters, 40px avatars, content at 72px, medium-weight author names, 12px muted
   timestamps, `hover` row highlight, date dividers with a centred label, red "New messages"
-  divider, floating hover toolbar (react, reply, edit, more) overlapping the row above.
+  divider, floating hover toolbar overlapping the row above. Normal hover follows quick
+  reactions → Translate → Add Reaction → Edit → Reply → More. Shift hides quick reactions and More
+  and exposes Copy ID/Link, Mark Unread, Pin, Reply, Translate, Add Reaction, Edit, Forward, then a
+  red Delete. Right-click and Shift+F10 retain the full menu in either mode. Copy message stays in
+  that menu. Translate hands at most 2 KiB of the selected text to the ordinary external-link
+  confirmation flow for Google Translate in the user's browser; Serein does not make a translation
+  request itself. A bookmark is not shown because Serein has no bookmark store/service path.
 - Composer: rounded `raised` bar with attach (+), placeholder `Message #channel`, emoji picker
   and send icons; a character counter appears within 200 characters of the limit.
   Typing `@game` offers a game-search option. Selecting it leaves an `@game` filter chip
@@ -142,8 +148,11 @@ fixture; `--demo-light` selects the light appearance.
 
 Icons are [Phosphor Icons](https://phosphoricons.com) 2.1.1 (MIT) in the fill/bold weights,
 rasterized once into `assets/icons/atlas.png` (37 white glyphs in 64px cells) and tinted at
-draw time by `crates/ui/src/icons.rs`; there is no icon font. Provenance and the regeneration
-command are in `assets/icons/README.md`. The profile popout keeps its 300px Discord-style card.
+draw time by `crates/ui/src/icons.rs`; there is no icon font. Standard icon buttons use a 70%
+glyph/hitbox ratio (20px on a 28px button), quick reactions use 22px idle/24px hovered glyphs,
+and Delete uses its semantic danger color. `style.icon_size` scales shared glyphs by a bounded
+16–24px baseline without resizing hit regions. Provenance and the regeneration command are in
+`assets/icons/README.md`. The profile popout keeps its 300px Discord-style card.
 
 Shortcut capture also accepts egui's browser, media and system keys, including Caps Lock,
 Pause and the macOS Fn key, when the OS delivers them to the focused window. These bindings
@@ -156,6 +165,63 @@ of dark pills (mute with settings chevron, camera, screen share, activities, sou
 and a red hang-up button, a green "In a call" badge in the header, mute/deafen toggles in the
 account card, and a "Voice Connected" panel above it while connected. Camera, screen share,
 activities and soundboard are shown disabled: Serein has no such features.
+
+## Profile and channel presentation
+
+Settings > Appearance > Profile presentation optionally opens the existing fully expanded card,
+hides other users' loaded theme colors, draws cached platform indicators, and paints cached row
+banners behind member names. Webhooks and docked DM cards remain compact. These features use the
+existing bounded profile/artwork caches; rows never trigger a new profile or banner fetch. The
+account menu's View Server Profile action requests only the signed-in account with a guild-scoped
+cache key. All switches default off and survive restart locally.
+
+Settings > Chat > Channel list controls channel-name normalization, type badges and unresolved
+no-role headers. Name cleanup is a bounded local display transform, not full NFKC and never a
+service write. A context-menu Keep original option is bounded to 200 IDs, and an open channel
+settings dialog always uses the original name for editing. Only known channel kinds get badges;
+NSFW/locked/rules metadata is not inferred. Hiding pseudo-role headers requires loaded role data
+and leaves online/offline and real-role headers intact. Resource-channel rows cannot be inferred
+from a missing service marker.
+
+Reading & Layout offers one-folder-open, close-on-Home and close-on-outside-folder behavior. It
+reuses inline expansion, keeps the existing 256-folder preference bound and does not serialize a
+separate sidebar or folder cache. Selecting a server outside a loaded folder closes the expanded
+rows if requested. No extra service request is generated merely by enabling these preferences.
+
+## Native composer, playback and notification tools
+
+GIF picks can either keep their normal explicit-send behavior or insert the validated provider
+URL plus a space into the current draft. Sticker staging is channel/session scoped and preserves
+the original draft/reply when validation or sending is rejected. Invite creation reuses bounded
+saved expiry, use-count and temporary-membership defaults. Message-menu Mention only edits the
+draft. Previous/next quick reply and own-message edit actions are unassigned until the owner binds
+them in Keybind settings, and skip blocked or ignored authors.
+
+Inline audio and video expose session-local playback rates from 0.25x through 3.5x, defaulting to
+1x for every player. The native backend resamples decoded PCM and scales its presentation clock;
+this is not pitch-preserving and adds no persisted per-media defaults. Participant and stream
+sliders allow explicit local-only gain through 400 percent, with a clipping/hearing warning above
+200; canonical Discord, extension and global-speaker limits remain unchanged.
+
+Notification Tools adds bounded watched-author alerts, literal case-insensitive keywords,
+allow/deny scopes, one-ping-per-DM and up to five clickable in-app toasts. Alerts retain normal
+selected/read/mute/DND/block checks and use loaded reply/channel/guild context in titles. These
+are local preferences: no regex execution, synthetic mention, unread-count rewrite, streamer-mode
+integration or persistent keyword-match log is claimed.
+
+## Native persistent message history
+
+The retained-history window is native, not an extension-rendered panel. It pages 100 rows with
+edit/delete/channel/author filters, old-version inspection, attachment metadata and IDs for names
+that are no longer loaded. Its 500-row / 2 MiB cache is separate from durable retention. Deleted
+rows navigate to their retained record, never a fabricated service search. Export explicitly warns
+that old versions and deleted bodies are included; Clear requires confirmation.
+
+A collapsible settings editor exposes capture opt-in/opt-out, retention presets, bounded row caps,
+ghost-alert mode, per-type attachment download opt-ins and user/channel ignore lists. Disabling
+capture uses the confirmed Clear flow, while Apply only queues validated native settings. Alerts
+and toasts never display retained bodies. Storage failure is reported rather than confusing viewer
+cache eviction, download completion or queued work with successful persistence.
 
 ## Verification notes
 

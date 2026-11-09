@@ -101,6 +101,7 @@ struct ProxyState {
 
 enum RequestContent {
 	Json(serde_json::Value),
+	Send(serde_json::Value),
 	Multipart { content_type: String, body: Vec<u8> },
 }
 
@@ -174,8 +175,8 @@ fn invite_captcha(bytes: &[u8]) -> Option<client_core::captcha::Challenge> {
 		c.should_serve_invisible,
 	)
 }
-/// Headers Discord's web client sends on every REST call; without them a normal-user
-/// session is classified as automated and quarantined (spam flag, attachment limits).
+/// Browser-shaped headers used by Serein's authenticated REST adapter. Current service
+/// acceptance and any relationship to account enforcement remain unverified.
 fn fingerprint_headers() -> Result<reqwest::header::HeaderMap, Failure> {
 	let mut headers = reqwest::header::HeaderMap::new();
 	headers.insert(
@@ -388,6 +389,26 @@ impl DiscordApi {
 		)
 		.await
 	}
+	/// The only request whose structured Discord 429 may reach execute_write's limited resend.
+	async fn request_send_with_captcha(
+		&self,
+		method: Method,
+		path: &str,
+		body: Option<serde_json::Value>,
+		max_bytes: usize,
+		retry: Option<&client_core::captcha::Retry>,
+		challenge: Option<&mut Option<client_core::captcha::Challenge>>,
+	) -> Result<Vec<u8>, Failure> {
+		self.request_with_content(
+			method,
+			path,
+			body.map(RequestContent::Send),
+			max_bytes,
+			retry,
+			challenge,
+		)
+		.await
+	}
 	/// The REST origin for the next attempt and whether it is still discord.com.
 	#[cfg(not(test))]
 	fn api_origin(&self) -> (&'static str, bool) {
@@ -428,6 +449,7 @@ impl DiscordApi {
 		{
 			return Err(Failure::Protocol);
 		}
+		let resendable_send = matches!(&body, Some(RequestContent::Send(_)));
 		let speculative = SPECULATIVE.try_with(|()| ()).is_ok();
 		let _permit = if speculative {
 			// A hover preload takes only spare capacity, so it never delays a click.
@@ -491,7 +513,7 @@ impl DiscordApi {
 			}
 			if let Some(content) = body.take() {
 				request = match content {
-					RequestContent::Json(body) => request.json(&body),
+					RequestContent::Json(body) | RequestContent::Send(body) => request.json(&body),
 					RequestContent::Multipart { content_type, body } => request
 						.header(
 							CONTENT_TYPE,
@@ -531,13 +553,18 @@ impl DiscordApi {
 				self.stop();
 				return Err(Failure::Expired);
 			}
-			let cloudflare_block = response
+			let content_type = response
 				.headers()
 				.get(CONTENT_TYPE)
-				.and_then(|value| value.to_str().ok())
-				.is_some_and(|value| {
-					value.starts_with("text/html") || value.starts_with("text/plain")
-				});
+				.and_then(|value| value.to_str().ok());
+			let cloudflare_block = content_type.is_some_and(|value| {
+				value.starts_with("text/html") || value.starts_with("text/plain")
+			});
+			let json_content = content_type.is_some_and(|value| {
+				value
+					.get(..16)
+					.is_some_and(|prefix| prefix.eq_ignore_ascii_case("application/json"))
+			});
 			if response
 				.content_length()
 				.is_some_and(|n| n > max_bytes as u64)
@@ -560,7 +587,12 @@ impl DiscordApi {
 				bytes.extend_from_slice(&chunk);
 			}
 			if !status.is_success() {
-				let error = decode::<ErrorBody>(&bytes).unwrap_or_default();
+				let decoded_error = decode::<ErrorBody>(&bytes).ok();
+				let structured_rate_limit = status == StatusCode::TOO_MANY_REQUESTS
+					&& json_content && decoded_error
+					.as_ref()
+					.is_some_and(|error| error.retry_after.is_some());
+				let error = decoded_error.unwrap_or_default();
 				if error.captcha_key.is_some() || matches!(error.code, Some(60003 | 50014)) {
 					let auth_challenge = matches!(error.code, Some(60003 | 50014));
 					if !auth_challenge
@@ -594,21 +626,48 @@ impl DiscordApi {
 						if idempotent {
 							continue;
 						}
-						return Err(Failure::RateLimited);
+						return Err(if resendable_send {
+							Failure::Ambiguous
+						} else {
+							Failure::RateLimited
+						});
 					}
 					// A block page has no JSON penalty. The short read retry must not run.
-					let delay = safe_delay(retry_header.or(reset).or(Some(60.0)))?;
+					let delay =
+						safe_delay(retry_header.or(reset).or(Some(60.0))).map_err(|failure| {
+							if resendable_send {
+								Failure::Ambiguous
+							} else {
+								failure
+							}
+						})?;
 					let mut next = self.cooldown.lock().await;
 					*next = (*next).max(Instant::now() + delay);
-					return Err(Failure::RateLimited);
+					return Err(if resendable_send {
+						Failure::Ambiguous
+					} else {
+						Failure::RateLimited
+					});
 				}
 				if status == StatusCode::TOO_MANY_REQUESTS {
 					// The body is the penalty Discord documents. A missing or shorter reset
-					// header must not send the retry early.
-					let delay = safe_delay(error.retry_after.or(retry_header).or(reset))?;
+					// header must not send the retry early. Only a decoded, valid body delay
+					// establishes that a write was rejected without being processed.
+					let delay = safe_delay(error.retry_after.or(retry_header).or(reset)).map_err(
+						|failure| {
+							if resendable_send {
+								Failure::Ambiguous
+							} else {
+								failure
+							}
+						},
+					)?;
 					{
 						let mut next = self.cooldown.lock().await;
 						*next = (*next).max(Instant::now() + delay);
+					}
+					if resendable_send && !structured_rate_limit {
+						return Err(Failure::Ambiguous);
 					}
 					if idempotent
 						&& delay <= MAX_READ_RATE_LIMIT_WAIT
@@ -885,10 +944,10 @@ impl DiscordApi {
 	}
 	/// Runs one typed command and returns its typed event.
 	/// [`Self::execute`] for the write queue. Like the official client, a message Discord
-	/// rate-limits (documented: a 429 request is not processed, so nothing was created) stays
-	/// pending and is resent with the same nonce once the service's wait has passed; `execute`
-	/// sleeps out that shared cooldown first. `throttled` hears each wait. Ambiguous outcomes are
-	/// never resent.
+	/// rate-limits with an understood JSON 429 (documented: the request is not processed, so
+	/// nothing was created) stays pending and is resent with the same nonce once the service's
+	/// wait has passed; `execute` sleeps out that shared cooldown first. `throttled` hears each
+	/// wait. Edge, unclassified and other ambiguous outcomes are never resent.
 	pub async fn execute_write(&self, command: Command, mut throttled: impl FnMut(&str)) -> Event {
 		/// Resends of one message, each after the wait Discord asked for.
 		const MAX_SEND_RETRIES: usize = 30;
@@ -2083,7 +2142,7 @@ impl DiscordApi {
 			body["attachments"] = serde_json::json!(attachment);
 		}
 		// No enforce_nonce claim until normal-user semantics are live verified. Never auto-retry writes.
-		self.request_with_captcha(
+		self.request_send_with_captcha(
 			Method::POST,
 			&format!("/channels/{channel}/messages"),
 			Some(body),
@@ -3545,7 +3604,7 @@ mod tests {
 				socket
 					.write_all(
 						format!(
-							"HTTP/1.1 {status}\r\n{exhausted}Content-Length: {}\r\nConnection: close\r\n\r\n{body}",
+							"HTTP/1.1 {status}\r\n{exhausted}Content-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
 							body.len()
 						)
 						.as_bytes(),
@@ -3579,6 +3638,88 @@ mod tests {
 		assert!(matches!(event, Event::SendResult { result: Ok(_), .. }));
 		assert_eq!(throttled, ["spam"]);
 		assert_eq!(server.await.unwrap(), [true, true]);
+	}
+	#[tokio::test]
+	async fn edge_429_send_is_ambiguous_and_not_replayed_on_the_fallback() {
+		use std::sync::atomic::AtomicUsize;
+		use tokio::{
+			io::{AsyncReadExt, AsyncWriteExt},
+			net::TcpListener,
+		};
+		let stable = TcpListener::bind("127.0.0.1:0").await.unwrap();
+		let fallback = TcpListener::bind("127.0.0.1:0").await.unwrap();
+		let stable_address = stable.local_addr().unwrap();
+		let fallback_address = fallback.local_addr().unwrap();
+		let posts = Arc::new(AtomicUsize::new(0));
+		let serve = |listener: TcpListener, response: String| {
+			let posts = posts.clone();
+			tokio::spawn(async move {
+				let (mut socket, _) = listener.accept().await.unwrap();
+				let mut request = Vec::new();
+				while !request.windows(4).any(|window| window == b"\r\n\r\n") {
+					let mut bytes = [0; 1024];
+					let n = socket.read(&mut bytes).await.unwrap();
+					assert!(n > 0 && request.len() < 8192);
+					request.extend_from_slice(&bytes[..n]);
+				}
+				assert!(request.starts_with(b"POST /channels/2/messages HTTP/1.1\r\n"));
+				posts.fetch_add(1, Ordering::AcqRel);
+				socket.write_all(response.as_bytes()).await.unwrap();
+			})
+		};
+		let edge = "<html>synthetic edge block</html>";
+		let stable_server = serve(
+			stable,
+			format!(
+				"HTTP/1.1 429 Too Many Requests\r\nContent-Type: text/html\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{edge}",
+				edge.len()
+			),
+		);
+		let sent = r#"{"id":"6","channel_id":"2","author":{"id":"1","username":"Synthetic"},"content":"once","nonce":"edge"}"#;
+		let fallback_server = serve(
+			fallback,
+			format!(
+				"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{sent}",
+				sent.len()
+			),
+		);
+		let mut api = DiscordApi::new(Arc::new(
+			SessionSecret::from_owner_input("SYNTHETIC_EDGE_TOKEN".into()).unwrap(),
+		))
+		.unwrap();
+		api.base = format!("http://{stable_address}");
+		api.test_host = Some((format!("http://{fallback_address}"), AtomicBool::new(false)));
+		let mut throttled = Vec::new();
+		let event = tokio::time::timeout(
+			Duration::from_secs(5),
+			api.execute_write(
+				Command::Send {
+					sticker: None,
+					channel: model::Id(2),
+					content: "once".into(),
+					nonce: "edge".into(),
+					reply: None,
+				},
+				|nonce| throttled.push(nonce.to_owned()),
+			),
+		)
+		.await
+		.expect("an edge response finishes without a fallback replay");
+		let ambiguous = matches!(
+			event,
+			Event::SendResult {
+				result: Err(Failure::Ambiguous),
+				nonce,
+				..
+			} if nonce == "edge"
+		);
+		stable_server.await.unwrap();
+		let total_posts = posts.load(Ordering::Acquire);
+		fallback_server.abort();
+		let _ = fallback_server.await;
+		assert!(ambiguous, "edge responses cannot establish non-processing");
+		assert!(throttled.is_empty(), "no automatic resend was announced");
+		assert_eq!(total_posts, 1, "no request reached the fallback origin");
 	}
 	#[tokio::test]
 	async fn local_http_checks_redirect_expiry_rate_limits_and_response_cap() {

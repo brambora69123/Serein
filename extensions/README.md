@@ -11,6 +11,7 @@ covers writing your own.
 | `themes/` | Declarative theme packages |
 | `plugins/<id>/` | Plugin source and manifest ([build instructions](plugins/README.md)) |
 | `plugins/packages/` | Reviewed plugin packages clients install |
+| `licenses/` | Third-party extension license texts, including Equicord/Vencord GPL terms |
 | `previews/` | Catalog preview images ([provenance](previews/README.md)) |
 | `catalog.json` | Generated; never edit by hand |
 
@@ -46,6 +47,14 @@ installation, and CI runs the committed packages through the same code.
 PNG previews share the package file stem and must fit 256 KiB. Full-size covers stay
 embedded in their packages.
 
+## Live owner development
+
+A non-release, non-demo `cargo run` loads the 31 reviewed Equicord development artifacts as local
+starters. Their exact package bytes and manifests retain reviewed identity, so Message History can
+exercise its real consent gate before the packages have a post-merge remote pin. Unreviewed imports
+still cannot enable that host retention. Release builds, demo fixtures and ordinary imports retain
+their existing catalog/consent flow; no development package is silently published by this path.
+
 ## History
 
 These packages were maintained in `ViceVerse-cz/Serein-extensions` until they moved
@@ -74,6 +83,28 @@ Package bytes and stable IDs are preserved from the existing client/theme reposi
 - Forest Piano and Soft White originate from the owner's desktop packages normalized for Serein import at `a217f86c56b13ee51c4eb956f235b13eafb7609f`.
 - All eleven theme packages are also recorded in `ViceVerse-cz/Serein-themes` at `6d2a97be4f8b0040aa9eada5648bceff55acb612`.
 - Existing authors, license labels, and source URLs remain in every manifest. Serein's MIT and Apache-2.0 notices are retained at the repository root and do not replace individual artwork terms.
+- Offline Composer Tools, Text Commands, ViewRaw — safe message view, and External Search Tools
+  are independent Rust adaptations of workflows from `Equicord/Equicord` at
+  `200dba124066146a8f043fde7fc8b05e3dc5e68e`, covering ClearURLs, Unindent, UnitConverter,
+  MoreCommands, CharacterCounter, TextReplace, CustomCommands, ViewRaw, Translate and
+  ReplaceGoogleSearch. Their upstream Vencord notices and `GPL-3.0-or-later` terms are retained in
+  each source and in `licenses/Equicord-GPL-3.0.txt`. The ports are intentionally user-invoked,
+  least-privilege packages with no JavaScript injection, no arbitrary network/filesystem access,
+  and no automatic Discord sends. Browser-based search/translation additionally requires the
+  separate `external_navigation` grant and native Apply/link confirmation.
+- Additional independent Rust adaptations cover BaseDecoder, WriteUpperCase, SplitLargeMessages,
+  BlockKeywords, MessageBurst, CopyUserURLs, CopyUserMention, ClickableRoles, InRole, MessageLogger,
+  GoogleThat, FindReply, Husk, TalkInReverse, Signature, PolishWording, StatusPresets,
+  CustomStatusTimeouts, CommandPalette, BetterRoleContext, BetterRoleDot, PendingFriendRequest,
+  NormalizeMessageLinks, RepeatMessages, Ingtoninator and SedEnhanced at the same upstream commit. Their package READMEs record
+  exact safe adaptations and omissions. Typed proposals replace JavaScript injection, arbitrary
+  network/filesystem access and automatic writes. Message History uses reviewed consent for bounded,
+  persistent, account-scoped capture of subsequently loaded readable chats, with native retention,
+  supported attachment opt-ins, ghost alerts and export; no deleted-before-load recovery is claimed.
+  Further independent package and native subsets are enumerated with their exact grants and
+  omissions in [plugins/README.md](plugins/README.md) and `equicord-workflows.json`, all guided by
+  the same pinned upstream commit. The 373-directory upstream inventory is not a claim that every
+  plugin or unsafe behavior is ported.
 - Forest Piano and Soft White retain supplied `CC0-1.0` metadata; this is not independent verification of image rights. Consult their original sources for artwork provenance.
 
 This repository does not relicense third-party artwork or assert additional redistribution rights.

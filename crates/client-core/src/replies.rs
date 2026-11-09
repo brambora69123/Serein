@@ -1656,6 +1656,7 @@ mod tests {
 						},
 						mentions: vec![],
 						excerpt: "Synthetic".into(),
+						preview_limited: false,
 						attachments: vec![],
 						embeds: vec![],
 					}],

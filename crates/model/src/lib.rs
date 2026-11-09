@@ -7,11 +7,15 @@ pub mod public_upload;
 pub mod registered_games;
 pub use image_sharing::ImageShare;
 pub mod archives;
+pub mod channel_display;
+pub use channel_display::ChannelDisplayPreferences;
 mod channel_preferences;
 pub mod keybinds;
 pub mod messaging_permissions;
 pub mod notification_preferences;
+pub mod notification_tools;
 pub mod onboarding;
+pub use notification_tools::NotificationTools;
 pub mod voice_settings;
 pub use channel_preferences::{ChannelPreferences, PreferenceEdit, Shortcut};
 pub use keybinds::{CustomBinding, KeyChord, KeybindAction, Keybinds};
@@ -23,6 +27,7 @@ pub use graphics::{GpuPreference, GraphicsApi};
 mod time_format;
 pub use time_format::TimeFormat;
 pub mod guild_folders;
+pub mod message_logger;
 pub mod message_options;
 pub mod permissions;
 mod reading_preferences;
@@ -34,11 +39,108 @@ pub mod server_roles;
 pub mod server_settings;
 pub use reading_preferences::ReadingPreferences;
 mod cache_preferences;
+/// Device-local suppression of this account's outbound typing indicators. `locations` holds
+/// channel or guild IDs whose behaviour differs from `default_hidden`; the list is capped and
+/// duplicate-free so one preference cannot grow without bound.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct SilentTyping {
+	pub enabled: bool,
+	/// Suppress unless a listed channel or guild is typing; otherwise suppress only listed ones.
+	pub default_hidden: bool,
+	pub locations: Vec<Id>,
+}
+impl SilentTyping {
+	pub const MAX_LOCATIONS: usize = 64;
+	pub const MAX_LOCATIONS_TEXT: usize = 1024;
+
+	pub fn is_valid(&self) -> bool {
+		self.locations.len() <= Self::MAX_LOCATIONS
+			&& self.locations.iter().all(|id| id.0 != 0)
+			&& self
+				.locations
+				.iter()
+				.enumerate()
+				.all(|(index, id)| !self.locations[..index].contains(id))
+	}
+
+	/// Whether this account may send a typing indicator in `channel`.
+	pub fn allows(&self, channel: Id, guild: Option<Id>) -> bool {
+		if !self.enabled {
+			return true;
+		}
+		let listed = self.locations.contains(&channel)
+			|| guild.is_some_and(|guild| self.locations.contains(&guild));
+		if self.default_hidden { listed } else { !listed }
+	}
+
+	/// Parse comma- or whitespace-separated location IDs. Any invalid, duplicate or oversized
+	/// value rejects the entire edit and leaves the previous preference untouched.
+	pub fn set_locations_text(&mut self, text: &str) -> bool {
+		if text.len() > Self::MAX_LOCATIONS_TEXT {
+			return false;
+		}
+		let mut locations = Vec::new();
+		for token in text.split(|c: char| c == ',' || c.is_whitespace()) {
+			let token = token.trim();
+			if token.is_empty() {
+				continue;
+			}
+			let Ok(id) = token.parse::<Id>() else {
+				return false;
+			};
+			if locations.len() >= Self::MAX_LOCATIONS || locations.contains(&id) {
+				return false;
+			}
+			locations.push(id);
+		}
+		self.locations = locations;
+		true
+	}
+
+	pub fn locations_text(&self) -> String {
+		self.locations
+			.iter()
+			.map(Id::to_string)
+			.collect::<Vec<_>>()
+			.join(", ")
+	}
+}
+#[cfg(test)]
+mod silent_typing_tests {
+	use super::*;
+	#[test]
+	fn quiet_locations_parse_whole_edits_and_respect_the_default() {
+		let mut quiet = SilentTyping {
+			enabled: true,
+			default_hidden: true,
+			..SilentTyping::default()
+		};
+		assert!(!quiet.allows(Id(10), Some(Id(20))));
+		assert!(quiet.set_locations_text("10, 20\n30"));
+		assert!(quiet.allows(Id(10), Some(Id(20))) && quiet.allows(Id(30), None));
+		assert!(!quiet.allows(Id(11), Some(Id(22))));
+		assert_eq!(quiet.locations_text(), "10, 20, 30");
+		// Invalid, duplicate or oversized edits keep the previous list.
+		let oversized = "1,".repeat(SilentTyping::MAX_LOCATIONS);
+		for text in ["10, nope", "10, 10", "0", oversized.as_str()] {
+			assert!(!quiet.set_locations_text(text));
+			assert_eq!(quiet.locations, vec![Id(10), Id(20), Id(30)]);
+		}
+		quiet.default_hidden = false;
+		assert!(quiet.allows(Id(11), Some(Id(22))));
+		assert!(!quiet.allows(Id(11), Some(Id(20))));
+		quiet.enabled = false;
+		assert!(quiet.allows(Id(10), Some(Id(20))));
+	}
+}
 pub use cache_preferences::*;
 pub mod badges;
 mod cosmetics;
 pub use cosmetics::*;
 mod profile;
+mod profile_preferences;
+pub use profile_preferences::ProfilePreferences;
 mod system_messages;
 pub use profile::*;
 pub use system_messages::{Segment, SystemMessage};

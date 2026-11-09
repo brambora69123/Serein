@@ -20,6 +20,10 @@ pub(super) struct FolderUi {
 	generation: u64,
 	key: Option<(u64, u64)>,
 	rows: Box<[Row]>,
+	/// Bounded server-list indicator counts, recomputed only when their inputs change.
+	indicator_key: Option<(u64, u64, u64, bool, usize)>,
+	online_friends: u32,
+	guild_count: u32,
 }
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Item {
@@ -95,6 +99,43 @@ impl FolderUi {
 		}
 		self.key = None;
 	}
+
+	/// Collapse every expanded folder, keeping the close animation.
+	fn collapse_all(&mut self) {
+		for id in std::mem::take(&mut self.expanded) {
+			self.closing.insert(id);
+		}
+		self.key = None;
+	}
+
+	/// Collapse every expanded folder except `keep`.
+	fn collapse_others(&mut self, keep: u64) {
+		let others: Vec<_> = self
+			.expanded
+			.iter()
+			.copied()
+			.filter(|id| *id != keep)
+			.collect();
+		let changed = !others.is_empty();
+		for id in others {
+			self.expanded.remove(&id);
+			self.closing.insert(id);
+		}
+		if changed {
+			self.key = None;
+		}
+	}
+}
+
+/// Whether `guild` belongs to any folder in the loaded layout. Servers joined after
+/// the layout loaded are outside folders and follow the same rule.
+fn guild_in_folder(settings: Option<&Settings>, guild: Id) -> bool {
+	settings.is_some_and(|settings| {
+		settings
+			.folders
+			.iter()
+			.any(|folder| folder.guild_ids.contains(&guild))
+	})
 }
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Placement {
@@ -289,14 +330,20 @@ fn guild_voice(
 	guild: Id,
 	streaming: bool,
 ) -> impl Clone + Iterator<Item = &client_core::voice::RosterEntry> {
-	state
-		.voice
-		.roster
-		.iter()
-		.filter(move |entry| entry.guild == guild && (!streaming || entry.participant.streaming))
+	state.voice.roster.iter().filter(move |entry| {
+		entry.guild == guild
+			&& state.can_view(entry.channel)
+			&& (!streaming || entry.participant.streaming)
+	})
 }
 
 impl MessagingUi {
+	/// Collapse expanded folders and persist the bounded device preference.
+	pub(crate) fn collapse_server_folders(&mut self) {
+		self.folder_ui.collapse_all();
+		self.expanded_folders = self.folder_ui.expanded.iter().copied().take(256).collect();
+	}
+
 	fn guild_rail_name(&mut self, response: &egui::Response, state: &State, guild: &model::Guild) {
 		let voice = guild_voice(state, guild.id, false);
 		if voice.clone().next().is_none() {
@@ -352,6 +399,67 @@ impl MessagingUi {
 					});
 				}
 			});
+	}
+
+	/// Counts only already-loaded friends, presences and guilds; a compact rail tile names both.
+	pub(super) fn server_list_indicators(&mut self, ui: &mut egui::Ui, state: &State) {
+		let key = (
+			state.generation,
+			state.relationship_view(),
+			state.direct_presence_epoch(),
+			state.gateway_connected,
+			state.guilds.len(),
+		);
+		if self.folder_ui.indicator_key != Some(key) {
+			let online = state
+				.friends()
+				.filter(|user| {
+					matches!(
+						crate::profiles::presence(state, user.id, None).0,
+						Some("online" | "idle" | "dnd")
+					)
+				})
+				.count()
+				.min(u32::MAX as usize) as u32;
+			self.folder_ui.online_friends = online;
+			self.folder_ui.guild_count = state.guilds.len().min(u32::MAX as usize) as u32;
+			self.folder_ui.indicator_key = Some(key);
+		}
+		let (online, guilds) = (self.folder_ui.online_friends, self.folder_ui.guild_count);
+		if online == 0 && guilds == 0 {
+			return;
+		}
+		let colors = design::palette(ui);
+		let (rect, response) = ui.allocate_exact_size(egui::Vec2::splat(RAIL_TILE), Sense::hover());
+		ui.painter().rect_filled(rect, 12, colors.raised);
+		for (index, (icon, count)) in [(Icon::People, online), (Icon::Servers, guilds)]
+			.into_iter()
+			.enumerate()
+		{
+			let y = rect.top() + 13.0 + index as f32 * 16.0;
+			let icon_rect = egui::Rect::from_center_size(
+				egui::pos2(rect.left() + 11.0, y),
+				egui::Vec2::splat(12.0),
+			);
+			icons::paint(ui.painter(), icon, icon_rect, colors.text);
+			ui.painter().text(
+				egui::pos2(rect.left() + 19.0, y),
+				egui::Align2::LEFT_CENTER,
+				count.to_string(),
+				egui::FontId::proportional(9.5),
+				colors.text_strong,
+			);
+		}
+		let tooltip = crate::i18n::translate_args(
+			"server-list-indicators-tooltip",
+			&[
+				("friends", &online.to_string()),
+				("servers", &guilds.to_string()),
+			],
+		);
+		response
+			.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Label, true, tooltip.clone()));
+		response.on_hover_text(tooltip);
 	}
 
 	pub(super) fn server_folders(
@@ -503,6 +611,11 @@ impl MessagingUi {
 								if let Some(command) = state.select_guild(id) {
 									commands.push(command);
 								}
+								if self.close_folders_outside
+									&& !guild_in_folder(state.guild_folders.as_ref(), id)
+								{
+									self.collapse_server_folders();
+								}
 							}
 							response
 						}
@@ -605,6 +718,9 @@ impl MessagingUi {
 								)
 							});
 							if response.clicked() {
+								if !open && self.one_folder_open {
+									self.folder_ui.collapse_others(id);
+								}
 								self.folder_ui.toggle(id);
 								self.expanded_folders =
 									self.folder_ui.expanded.iter().copied().take(256).collect();
@@ -621,7 +737,9 @@ impl MessagingUi {
 							ui.set_width(232.0);
 							// The invite dialog belongs to the active server, so choosing it
 							// from the rail also opens that server, like settings do.
-							let invite = self.server_menu.invite_item(ui, state, id);
+							let invite =
+								self.server_menu
+									.invite_item(ui, state, id, self.invite_defaults);
 							if invite {
 								self.guild = Some(id);
 							}
@@ -1528,5 +1646,56 @@ mod tests {
 			!has_voice_badge_failed,
 			"Collapsed folder must not render a voice badge when call phase is Failed"
 		);
+	}
+
+	#[test]
+	fn guild_voice_tooltip_retains_only_viewable_channel_rosters() {
+		let mut state = test_support::voice_demo_state();
+		let mut visible = state.voice.roster[0].clone();
+		visible.channel = Id(26);
+		state.voice.roster.push(visible);
+		state.apply(client_core::Envelope {
+			generation: state.generation,
+			event: client_core::Event::Permissions(client_core::permissions::Event::Channel {
+				channel: Id(25),
+				guild: Some(Id(10)),
+				overwrites: model::Patch::Value(vec![model::permissions::Overwrite {
+					id: Id(10),
+					kind: 0,
+					allow: 0,
+					deny: model::permissions::VIEW_CHANNEL,
+				}]),
+			}),
+		});
+		let retained: Vec<_> = guild_voice(&state, Id(10), false)
+			.map(|entry| entry.channel)
+			.collect();
+		assert_eq!(retained, [Id(26)]);
+		assert!(guild_voice(&state, Id(10), true).next().is_none());
+	}
+
+	#[test]
+	fn folder_preferences_collapse_only_the_requested_state() {
+		let mut ui = FolderUi::default();
+		ui.expanded.extend([7, 9]);
+		ui.closing.insert(3);
+		ui.collapse_others(7);
+		assert_eq!(ui.expanded, BTreeSet::from([7]));
+		assert_eq!(ui.closing, BTreeSet::from([3, 9]));
+		ui.collapse_all();
+		assert!(ui.expanded.is_empty());
+		assert_eq!(ui.closing, BTreeSet::from([3, 7, 9]));
+
+		let settings = Settings {
+			folders: vec![Folder {
+				id: Some(7),
+				guild_ids: vec![Id(10), Id(11)],
+				..Folder::default()
+			}],
+			..Settings::default()
+		};
+		assert!(guild_in_folder(Some(&settings), Id(10)));
+		assert!(!guild_in_folder(Some(&settings), Id(12)));
+		assert!(!guild_in_folder(None, Id(10)));
 	}
 }

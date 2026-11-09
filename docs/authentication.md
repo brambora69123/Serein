@@ -34,9 +34,10 @@ Queries are at least 100 ms apart, with one cancellable evaluation and one secre
 frame can only request a query of the main frame. The Linux login and verification webviews
 disable HTML media and Web Audio: a machine without a GStreamer audio sink otherwise crashes
 the web process right after login, which surfaces as a distinct "stopped unexpectedly" status.
-The Linux login webview presents the same browser identity as `client_core::fingerprint`;
-WebKitGTK's default "Safari on Linux" user agent made hCaptcha and Discord reject solved
-login challenges.
+The Linux login webview presents the same browser identity as `client_core::fingerprint`.
+This retains an owner-reported workaround for WebKitGTK's default "Safari on Linux" user agent
+being rejected during solved login challenges. That result was not independently reproduced;
+it does not establish Discord or hCaptcha enforcement criteria.
 
 Close/drop invalidates pending results, clears the secret/scripts/handler, cancels evaluation,
 stops loading, terminates the ephemeral web process and destroys the GTK window. GLib pumping

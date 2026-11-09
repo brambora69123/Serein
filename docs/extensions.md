@@ -127,7 +127,8 @@ Unknown API versions and invalid packages are rejected before installation.
 
 Each capability is independent and requires user consent. An update requests
 renewed consent; adding a read grant does not grant commands. The SDK currently
-supports 53 capabilities, with at most 64 distinct declarations per manifest.
+supports 54 capabilities, with at most 64 distinct declarations per manifest.
+`external_navigation` and `style.icon_size` are Preview APIs from PR #937, not yet released.
 
 > **Preview SDK — PR #411, not yet released.** `channel_control`,
 > `server_control`, `role_control`, `moderation_control` and `media_control`, plus
@@ -166,6 +167,7 @@ supports 53 capabilities, with at most 64 distinct declarations per manifest.
 | `local_settings` | Read and propose changing seven local reading preferences | Zoom/sidebar/member list/GIFs/media links/smooth scrolling/scroll speed; changes require Apply |
 | `notification_settings` | Read and propose changing device-local notification preferences | Sound volume, sound toggles and unread badge; changes require Apply; no Discord notification settings |
 | `navigation` | Propose channel, Home, view, profile, message or search navigation | Existing native paths; each command requires Apply |
+| `external_navigation` | Propose opening one reviewed absolute HTTPS URL in the browser | Preview; full 2,048-byte maximum URL shown and revalidated at Apply; native link-confirmation setting applies; no plugin networking |
 | `local_notices` | Propose an in-app toast | At most 1,024 text bytes; requires Apply |
 | `clipboard_write` | Propose replacing clipboard text | At most 4,096 bytes; requires Apply; no clipboard read |
 | `voice_control` | Propose mute/deafen, leaving or watching/stopping a participant stream | Each command requires Apply and the same current call |
@@ -261,7 +263,9 @@ values and waits for **Apply**. Closing it does nothing. Apply rechecks the plug
 grants, account/conversation, permissions and the specific voice call before using
 the existing UI path. Navigation/search may then load ordinary service data, but
 the plugin never receives a generic Discord command API. Clipboard writes never
-read the clipboard; local notices are in-app toasts, not OS notifications.
+read the clipboard; local notices are in-app toasts, not OS notifications. External-navigation
+proposals show and revalidate one absolute HTTPS URL before handing it to the native browser flow;
+they do not expose an HTTP client or DNS/public-IP pinning because the OS browser owns that request.
 
 Supported local preference patches are zoom 50–150%, sidebar width 190–360 logical
 pixels, member-list visibility, GIF animation, hiding media links, smooth scrolling
@@ -283,7 +287,7 @@ Four opt-in additions extend the same ABI without changing existing SDK structs:
 - `messaging_settings` adds the loaded account privacy snapshot and approved updates
   for DM, message-request, friend-source and game-DM preferences.
 - `guild_folders` adds the loaded server-folder layout and an approved whole-layout
-  update through the existing versioned, 200-folder/200-server native path. Updates
+  update through the existing versioned, 1,000-folder/1,000-server native path. Updates
   carry the snapshot's `base_version` and reject stale full-layout replacements.
 - `action_feedback` adds `tracked_app_action`. Supply a unique `request_id`; after
   **Apply**, the app-event handler receives `action_result` with `accepted` or
@@ -357,6 +361,21 @@ payloads. The optional `preserve_deleted_messages` activation output is accepted
 for package compatibility; successful activation with the granted capability enables
 retention, including existing protector packages with no-op activation. Input is
 restricted to the granted context and bounded form values.
+
+The Message History package uses an `enable-history` activation action, a live message-event action
+and the confirmed `message_events` grant as its explicit opt-in. Activation itself produces no
+output and logs nothing. On the enabled transition, the host seeds only ordinary messages already
+loaded in the selected conversation. Its native store records at most 256 messages, 1,024 changes,
+eight edit/delete records per message and 2 MiB, with each body/version capped at 16 KiB. Edit
+records retain bounded before/after text; deletes retain only the last loaded body. Older/newer
+pages are additive. Edit/delete events for unknown or evicted messages are discarded rather than
+reconstructing deleted-before-load content.
+The history viewer is native local UI in an ordinary message's context menu; retained history is
+never sent back to Wasm or written to plugin storage. Account/session/channel changes, disablement,
+logout, resync/access loss and real timeline capacity eviction release affected bodies. Thirty
+minutes without history activity also releases the store. This is not a durable/offline
+MessageLogger, attachment logger, audit export or complete-cross-channel message archive.
+
 Results can propose a composer replacement or return native headings, text, rows,
 separators, buttons, text inputs, checkboxes, dropdowns and integer sliders. Standalone
 panel actions are available from Settings > Extensions. Composer actions appear in the composer Tools menu. Composer proposals require Apply, retain
@@ -478,7 +497,7 @@ invocation input/output, panel complexity, queues and plugin storage.
 | Execution fuel | 10,000,000 | Shared by parsing and execution; a valid-sized input can still exhaust it. |
 | Wasm call depth / interpreter stack | 128 calls / 256 KiB | Avoid deep recursion. |
 | Serialized input and output | 256 KiB each | Count UTF-8 and JSON escaping, including nested storage JSON. |
-| Manifest actions / capabilities | 16 / 64 distinct | Only the 53 supported capability names are currently accepted. |
+| Manifest actions / capabilities | 16 / 64 distinct | Only the 54 supported capability names are currently accepted. |
 | Panel | 64 elements / 8 row levels | Includes nested children; text and input values are at most 4 KiB each. |
 | Plugin storage on disk | 1 MiB | Its practical size must also fit the smaller invocation/output budget. |
 | App snapshot | 64 KiB | Individual lists have smaller budgets; see the [data reference](extension-sdk-reference.md#app-data). |
@@ -518,8 +537,9 @@ This is a connection plugin, available in Settings > Extensions before login.
 Consent applies across accounts on this device. Its package and bounded local
 storage live in `extensions/proxy-plugins`, survive account switching/logout, and
 are removed when explicitly disabled. Other plugins keep their account isolation.
-A manifest requesting `api_proxy` must be a plugin with only `api_proxy` and
-optional `storage`, and only panel/activation actions. It receives no account data,
+Rust authors declare the same grant with `Capability::ApiProxy` in the typed manifest mirror;
+its string form remains `api_proxy`. A manifest requesting `api_proxy` must be a plugin with
+only `api_proxy` and optional `storage`, and only panel/activation actions. It receives no account data,
 tokens or requests and has no networking API.
 
 Custom proxy origins must use HTTP or HTTPS, have a host, and be at most 2048 bytes.

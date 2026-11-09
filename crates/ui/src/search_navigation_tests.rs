@@ -124,6 +124,9 @@ fn frame_with_width(
 	(commands, labels)
 }
 fn page(state: &mut State, total: u64) {
+	page_with(state, total, "Synthetic result to revisit", false);
+}
+fn page_with(state: &mut State, total: u64, excerpt: &str, preview_limited: bool) {
 	let request = state.search.as_ref().unwrap().request;
 	state.apply_search(
 		Id(10),
@@ -134,7 +137,8 @@ fn page(state: &mut State, total: u64) {
 				channel: Id(10),
 				author: test_support::message(90, Id(10)).author,
 				mentions: vec![],
-				excerpt: "Synthetic result to revisit".into(),
+				excerpt: excerpt.into(),
+				preview_limited,
 				attachments: vec![],
 				embeds: vec![],
 			}],
@@ -439,4 +443,408 @@ fn result_jump_and_numeric_pager_keep_scope_and_allow_explicit_retry() {
 			);
 		}
 	}
+}
+
+/// One results-pane frame that returns the drawn text and the text it copied.
+fn pane_frame(
+	ctx: &egui::Context,
+	view: &mut MessagingUi,
+	state: &mut State,
+	events: Vec<egui::Event>,
+) -> (Vec<(String, egui::Rect)>, Vec<String>) {
+	let mut commands = Vec::new();
+	let output = ctx.run_ui(
+		egui::RawInput {
+			screen_rect: Some(egui::Rect::from_min_size(
+				egui::Pos2::ZERO,
+				egui::vec2(420.0, 700.0),
+			)),
+			events,
+			..Default::default()
+		},
+		|ui| {
+			view.search.sync(ctx, state, &mut commands);
+			view.search.pane(
+				ui,
+				state,
+				&mut commands,
+				&mut view.avatars,
+				search::MediaUi {
+					download: &mut view.timeline.download,
+					audio: &mut view.timeline.audio,
+					video: &mut view.timeline.video,
+				},
+				&mut view.profile,
+			);
+		},
+	);
+	let copied = output
+		.platform_output
+		.commands
+		.iter()
+		.filter_map(|command| match command {
+			egui::OutputCommand::CopyText(text) => Some(text.clone()),
+			_ => None,
+		})
+		.collect();
+	let mut labels = Vec::new();
+	let mut stack: Vec<_> = output.shapes.iter().map(|clipped| &clipped.shape).collect();
+	while let Some(shape) = stack.pop() {
+		match shape {
+			egui::Shape::Text(text) => labels.push((
+				text.galley.text().to_owned(),
+				egui::Rect::from_min_size(text.pos, text.galley.size()),
+			)),
+			egui::Shape::Vec(shapes) => stack.extend(shapes),
+			_ => {}
+		}
+	}
+	output.drop_without_applying_deltas();
+	(labels, copied)
+}
+
+/// Checks that right-clicking a result opens its menu, that each copy entry copies the
+/// result's text, ID or link, and that a plugin message action is requested for that message.
+#[test]
+fn result_context_menu_copies_and_offers_plugin_message_actions() {
+	let ctx = egui::Context::default();
+	let mut state = state();
+	let mut view = MessagingUi::default();
+	view.search
+		.open_extension(Id(10), false, Some("needle".into()));
+	state.request_search("needle".into(), None).unwrap();
+	page(&mut state, 1);
+	let plugin = crate::extensions_ui::MenuAction {
+		plugin: "synthetic.words".into(),
+		action: "count".into(),
+		label: "Synthetic · Count words".into(),
+	};
+	view.search.extension_actions = std::sync::Arc::new(vec![plugin.clone()]);
+	let mut labels = Vec::new();
+	for _ in 0..3 {
+		labels = pane_frame(&ctx, &mut view, &mut state, vec![]).0;
+	}
+	let result = labels
+		.iter()
+		.find(|(text, _)| text == "Synthetic result to revisit")
+		.expect("result is drawn")
+		.1;
+	// The card's own background, right of the excerpt, receives the secondary click.
+	let card = egui::pos2(result.right() + 8.0, result.center().y);
+	let press = |button, at: egui::Pos2| {
+		[true, false]
+			.into_iter()
+			.map(|pressed| egui::Event::PointerButton {
+				pos: at,
+				button,
+				pressed,
+				modifiers: egui::Modifiers::NONE,
+			})
+			.collect::<Vec<_>>()
+	};
+	let open = |view: &mut MessagingUi, state: &mut State| {
+		// A menu closed by the last click still counts as open for one frame.
+		pane_frame(&ctx, view, state, vec![]);
+		let mut events = vec![egui::Event::PointerMoved(card)];
+		events.extend(press(egui::PointerButton::Secondary, card));
+		pane_frame(&ctx, view, state, events);
+		pane_frame(&ctx, view, state, vec![]).0
+	};
+	let entry = |labels: &[(String, egui::Rect)], key: &str| {
+		let label = crate::i18n::translate(key);
+		labels
+			.iter()
+			.find(|(text, _)| *text == label)
+			.unwrap_or_else(|| panic!("{label} in menu"))
+			.1
+			.center()
+	};
+	for (key, expected) in [
+		(
+			"message-menu-copy",
+			"Synthetic result to revisit".to_owned(),
+		),
+		("timeline-message-actions-copy-message-id", "90".to_owned()),
+		(
+			"timeline-message-actions-copy-message-link",
+			"https://discord.com/channels/@me/10/90".to_owned(),
+		),
+	] {
+		let labels = open(&mut view, &mut state);
+		let (_, copied) = pane_frame(
+			&ctx,
+			&mut view,
+			&mut state,
+			press(egui::PointerButton::Primary, entry(&labels, key)),
+		);
+		assert_eq!(copied, vec![expected], "{key}");
+	}
+	assert!(view.search.extension_request.is_none());
+	let labels = open(&mut view, &mut state);
+	let submenu = entry(&labels, "timeline-message-actions-extensions");
+	let mut events = vec![egui::Event::PointerMoved(submenu)];
+	events.extend(press(egui::PointerButton::Primary, submenu));
+	let mut labels = pane_frame(&ctx, &mut view, &mut state, events).0;
+	for _ in 0..3 {
+		if labels.iter().any(|(text, _)| *text == plugin.label) {
+			break;
+		}
+		labels = pane_frame(&ctx, &mut view, &mut state, vec![]).0;
+	}
+	let item = labels
+		.iter()
+		.find(|(text, _)| *text == plugin.label)
+		.expect("plugin action listed")
+		.1
+		.center();
+	pane_frame(
+		&ctx,
+		&mut view,
+		&mut state,
+		press(egui::PointerButton::Primary, item),
+	);
+	let (action, text, target) = view
+		.search
+		.extension_request
+		.clone()
+		.expect("plugin action requested");
+	// A full client frame hands the request to the plugin host with the message's IDs.
+	frame(&ctx, &mut view, &mut state, vec![], false, false);
+	assert!(view.search.extension_request.is_none());
+	let [crate::extensions_ui::ExtensionRequest::Invoke { id, invocation, .. }] =
+		view.extensions.requests.as_slice()
+	else {
+		panic!("one plugin invocation queued")
+	};
+	assert_eq!(id, "synthetic.words");
+	assert_eq!(invocation.action, "count");
+	assert_eq!(
+		invocation.selected_message.as_deref(),
+		Some("Synthetic result to revisit")
+	);
+	let reference = invocation.selected_message_ref.as_deref().unwrap();
+	assert_eq!(
+		(reference.channel_id.as_str(), reference.message_id.as_str()),
+		("10", "90")
+	);
+	assert_eq!(reference.guild_id, None);
+	assert_eq!(
+		(action.plugin, action.action),
+		(plugin.plugin.clone(), plugin.action.clone())
+	);
+	assert_eq!(text, "Synthetic result to revisit");
+	assert_eq!(
+		(target.channel, target.message, target.author),
+		(Id(10), Id(90), test_support::message(90, Id(10)).author.id)
+	);
+}
+
+/// Checks the explicit preview-limit flag rather than inferring truncation from the notice:
+/// a real message whose text equals the notice retains its text and plugin actions.
+#[test]
+fn result_menu_uses_the_preview_limit_flag_instead_of_the_notice_text() {
+	for preview_limited in [true, false] {
+		let ctx = egui::Context::default();
+		let mut state = state();
+		let mut view = MessagingUi::default();
+		view.search
+			.open_extension(Id(10), false, Some("needle".into()));
+		state.request_search("needle".into(), None).unwrap();
+		page_with(&mut state, 1, model::PREVIEW_LIMIT_NOTICE, preview_limited);
+		view.search.extension_actions =
+			std::sync::Arc::new(vec![crate::extensions_ui::MenuAction {
+				plugin: "synthetic.words".into(),
+				action: "count".into(),
+				label: "Synthetic · Count words".into(),
+			}]);
+		let mut labels = Vec::new();
+		for _ in 0..3 {
+			labels = pane_frame(&ctx, &mut view, &mut state, vec![]).0;
+		}
+		let result = labels
+			.iter()
+			.find(|(text, _)| text == model::PREVIEW_LIMIT_NOTICE)
+			.expect("notice text is drawn")
+			.1;
+		let card = egui::pos2(result.right() + 8.0, result.center().y);
+		let press = |button| {
+			let mut events = vec![egui::Event::PointerMoved(card)];
+			events.extend([true, false].map(|pressed| egui::Event::PointerButton {
+				pos: card,
+				button,
+				pressed,
+				modifiers: egui::Modifiers::NONE,
+			}));
+			events
+		};
+		let id_label = crate::i18n::translate("timeline-message-actions-copy-message-id");
+		let has = |labels: &[(String, egui::Rect)], key: &str| {
+			let label = crate::i18n::translate(key);
+			labels.iter().any(|(text, _)| *text == label)
+		};
+		pane_frame(
+			&ctx,
+			&mut view,
+			&mut state,
+			press(egui::PointerButton::Primary),
+		);
+		let labels = pane_frame(&ctx, &mut view, &mut state, vec![]).0;
+		assert!(
+			!labels.iter().any(|(text, _)| *text == id_label),
+			"a primary click does not open the menu"
+		);
+		pane_frame(
+			&ctx,
+			&mut view,
+			&mut state,
+			press(egui::PointerButton::Secondary),
+		);
+		let labels = pane_frame(&ctx, &mut view, &mut state, vec![]).0;
+		assert!(has(&labels, "timeline-message-actions-copy-message-id"));
+		assert!(has(&labels, "timeline-message-actions-copy-message-link"));
+		assert_eq!(
+			has(&labels, "message-menu-copy"),
+			!preview_limited,
+			"text copy follows the source flag"
+		);
+		assert_eq!(
+			has(&labels, "timeline-message-actions-extensions"),
+			!preview_limited,
+			"plugin actions follow the source flag"
+		);
+		if !preview_limited {
+			let copy = crate::i18n::translate("message-menu-copy");
+			let copy = labels
+				.iter()
+				.find(|(text, _)| *text == copy)
+				.expect("literal notice has a text-copy action")
+				.1
+				.center();
+			let (_, copied) = pane_frame(&ctx, &mut view, &mut state, {
+				let mut events = vec![egui::Event::PointerMoved(copy)];
+				events.extend([true, false].map(|pressed| egui::Event::PointerButton {
+					pos: copy,
+					button: egui::PointerButton::Primary,
+					pressed,
+					modifiers: egui::Modifiers::NONE,
+				}));
+				events
+			});
+			assert_eq!(copied, [model::PREVIEW_LIMIT_NOTICE.to_owned()]);
+		}
+	}
+}
+
+/// Checks that a text selection dragged in a result counts as that result's selection, which
+/// its menu may copy, and not as a selection of any other item.
+#[test]
+fn a_selection_belongs_to_the_result_it_was_made_in() {
+	let ctx = egui::Context::default();
+	// The client's style installs the selection pointer that records where a range began.
+	crate::design::apply(&ctx);
+	let mut state = state();
+	let mut view = MessagingUi::default();
+	view.search
+		.open_extension(Id(10), false, Some("needle".into()));
+	state.request_search("needle".into(), None).unwrap();
+	page(&mut state, 1);
+	let mut labels = Vec::new();
+	for _ in 0..3 {
+		labels = pane_frame(&ctx, &mut view, &mut state, vec![]).0;
+	}
+	let text = labels
+		.iter()
+		.find(|(text, _)| text == "Synthetic result to revisit")
+		.expect("result is drawn")
+		.1;
+	let (start, end) = (
+		egui::pos2(text.left() + 1.0, text.center().y),
+		egui::pos2(text.right() - 1.0, text.center().y),
+	);
+	let button = |at: egui::Pos2, button, pressed| egui::Event::PointerButton {
+		pos: at,
+		button,
+		pressed,
+		modifiers: egui::Modifiers::NONE,
+	};
+	for events in [
+		vec![
+			egui::Event::PointerMoved(start),
+			button(start, egui::PointerButton::Primary, true),
+		],
+		vec![egui::Event::PointerMoved(text.center())],
+		vec![egui::Event::PointerMoved(end)],
+		vec![button(end, egui::PointerButton::Primary, false)],
+	] {
+		pane_frame(&ctx, &mut view, &mut state, events);
+	}
+	assert!(
+		crate::select::has_selection(&ctx),
+		"the result text is selected"
+	);
+	assert!(crate::select::has_selection_in(&ctx, text.expand(4.0)));
+	let elsewhere = egui::Rect::from_min_size(egui::pos2(0.0, 0.0), egui::vec2(4.0, 4.0));
+	assert!(
+		!crate::select::has_selection_in(&ctx, elsewhere),
+		"the selection does not belong to another item"
+	);
+}
+
+/// Checks that a keyboard-focused result opens the same menu and keeps it open after the
+/// Shift modifier used to invoke it has been released.
+#[test]
+fn a_focused_result_opens_its_menu_with_shift_f10() {
+	let ctx = egui::Context::default();
+	let mut state = state();
+	let mut view = MessagingUi::default();
+	view.search
+		.open_extension(Id(10), false, Some("needle".into()));
+	state.request_search("needle".into(), None).unwrap();
+	page(&mut state, 1);
+	let mut labels = Vec::new();
+	for _ in 0..3 {
+		labels = pane_frame(&ctx, &mut view, &mut state, vec![]).0;
+	}
+	let result = labels
+		.iter()
+		.find(|(text, _)| text == "Synthetic result to revisit")
+		.expect("result is drawn")
+		.1;
+	// Use frame padding rather than a child label/avatar so the card background takes focus.
+	let card = egui::pos2(result.left() - 45.0, result.center().y);
+	// Pressing gives the card keyboard focus. Do not release and open the jump target before
+	// invoking its context menu; the behavior under test is Shift+F10, not result navigation.
+	let click = vec![
+		egui::Event::WindowFocused(true),
+		egui::Event::PointerMoved(card),
+		egui::Event::PointerButton {
+			pos: card,
+			button: egui::PointerButton::Primary,
+			pressed: true,
+			modifiers: egui::Modifiers::NONE,
+		},
+	];
+	pane_frame(&ctx, &mut view, &mut state, click);
+	pane_frame(
+		&ctx,
+		&mut view,
+		&mut state,
+		vec![egui::Event::WindowFocused(true)],
+	);
+	pane_frame(
+		&ctx,
+		&mut view,
+		&mut state,
+		vec![
+			egui::Event::WindowFocused(true),
+			key(egui::Key::F10, egui::Modifiers::SHIFT),
+		],
+	);
+	let labels = pane_frame(&ctx, &mut view, &mut state, vec![]).0;
+	assert!(
+		labels.iter().any(|(text, _)| {
+			*text == crate::i18n::translate("timeline-message-actions-copy-message-id")
+		}),
+		"Shift+F10 did not paint the focused result's menu: {labels:?}"
+	);
 }
