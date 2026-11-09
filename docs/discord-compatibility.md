@@ -1218,7 +1218,7 @@ Server identity tags (September 19): Discord's documented [User object](https://
 | User profile cards | Normal session `/users/{id}/profile`; documented [User object](https://docs.discord.com/developers/resources/user#user-object); [public implementation](https://github.com/dolfies/discord.py-self/blob/master/discord/http.py) | Base server identity shape documented; extended route and normal-session delivery unofficial/live-unverified | Anchored popout with banner/avatar/bio/pronouns/badge artwork/server tag/theme colors/connections/mutual servers and retained presence/custom status, cancellable requests and visible failures. Bounded base-user identity supplies compact badge/tag chips in profile, member and direct-message rows while the extended profile is unavailable; badge CDN paths are observed, not documented; evidence |
 | History, send, edit, delete, replies | Normal session; [message resource](https://docs.discord.com/developers/resources/message) and Abaddon | Documented bot-facing resource; user compatibility unofficial | Experimental text adapter; owner permissions remain server-authoritative |
 | Realtime, resume | Normal session; [Gateway](https://docs.discord.com/developers/events/gateway), Abaddon Identify/READY | Documented lifecycle; normal-user Identify and dispatch differences unofficial | Bounded JSON transport with `zlib-stream` enabled in the Gateway URL; Identify-level `compress:false` is independent; incompatible snapshots fail |
-| Rate limits | Credential-specific response headers/body; [rate limits](https://docs.discord.com/developers/topics/rate-limits) | Documented; do not assume bot quotas | Conservative shared cooldown; a message send rejected with an understood JSON 429 carrying a valid `retry_after` (documented as not processed) stays pending and is resent with its nonce after the service's wait, at most 30 times, with the official client's "sending too quickly" notice. HTML, plain-text and otherwise unclassified 429 writes are ambiguous and never resent. No other write is retried. Idempotent reads wait out up to two short JSON 429 responses. An HTML or plain-text 429 from `discord.com` (a Cloudflare block, unofficial) moves this process to `ptb.discord.com` and retries one idempotent read there; whether every Cloudflare ban is limited to one hostname is unverified |
+| Rate limits | Credential-specific response headers/body; [rate limits](https://docs.discord.com/developers/topics/rate-limits) | Documented; do not assume bot quotas | Conservative shared cooldown; a message send rejected with an understood JSON 429 carrying a valid `retry_after` (documented as not processed) stays pending and is resent with its nonce after the service's wait, at most 30 times, with the official client's "sending too quickly" notice. HTML, plain-text and otherwise unclassified 429 message responses are ambiguous and the message is never resent; other writes keep their existing rejection handling. No other write is retried. Idempotent reads wait out up to two short JSON 429 responses. An HTML or plain-text 429 from `discord.com` (a Cloudflare block, unofficial) moves this process to `ptb.discord.com` and retries one idempotent read there; whether every Cloudflare ban is limited to one hostname is unverified |
 | Nonce correlation | Message nonce; message resource | Documented finite deduplication; user applicability unverified | Correlate confirmations only; no automatic ambiguous resend or indefinite idempotency claim |
 | Native message formatting | Existing message content; [pulldown-cmark source](https://github.com/pulldown-cmark/pulldown-cmark) and [egui LayoutJob](https://docs.rs/egui/0.36.2/egui/text/struct.LayoutJob.html) | Local rendering; no additional service capability | Bounded emphasis/code/quotes/lists/strike, inert HTML, explicit HTTP(S) link confirmation, up to 32 inline text spoilers with separate media reveal; CommonMark differs from Discord Markdown; no automatic previews |
 | Read markers | Normal session; [discord.py-self HTTP](https://github.com/dolfies/discord.py-self/blob/master/discord/http.py) and [dispatch implementation](https://github.com/dolfies/discord.py-self/blob/master/discord/state.py) | Unofficial and unstable | Explicit per-message acknowledgement, optional manual mark-unread (`ack_message(manual=True)` plus the previous snowflake), guild `POST /guilds/{id}/ack`, bounded READY read state, MESSAGE_ACK and PASSIVE_UPDATE_V2; synthetic checks only, actual cross-device behavior unverified |
@@ -3140,3 +3140,54 @@ No trusted-client persona, cookie, launch/session identifier, CAPTCHA token or c
 mechanism was added. No authenticated official-client/Serein differential was captured, none of these
 checks establishes suspicious-activity causation, and no change can guarantee avoidance of account
 enforcement.
+
+## discord-client-rs and selective upstream sync — November 9, 2026
+
+The static transport comparison also reviewed [UwUDev/discord-client-rs](https://github.com/UwUDev/discord-client-rs)
+at `5a8e38b6e3669c782aa118a7b4ca38e6327bf0bd`. Its manifests declare MIT, but that revision contains no
+standalone license text; no source block was copied. Its advertised anti-detection and CAPTCHA behavior,
+clearance payloads, browser/TLS impersonation and "undetectable" claims were not used as evidence or
+adopted. Normal-user interoperability and those claims remain unverified for both implementations.
+
+| Reference item | Static comparison and action |
+|---|---|
+| Hello and packet normalization | The reference can proceed after missing/malformed Hello and handles pre-Hello Reconnect unsafely; plaintext text frames bypass its session/heartbeat side effects. Serein already handles text and decompressed input through one bounded lifecycle, requires valid Hello and preserves Resume after opcode 7. No reference lifecycle code was imported. |
+| Heartbeats and recovery | The reference starts sequence zero rather than null, shortens the supplied interval, treats READY as heartbeat acknowledgement and retries all Close codes. Serein already emits null before a sequence, uses the supplied interval, clears ACK only on opcode 11 and classifies Close/Invalid Session. No behavior was copied. |
+| Commands and subscriptions | The reference serializes writes but has no Gateway command budget; its member request can emit an array-valued guild ID plus conflicting query/user IDs. Serein keeps its bounded writer and mutually exclusive scalar request shapes. Normal-user opcode 14/37 semantics remain unofficial and live-unverified. |
+| REST throttling | Reference path-keyed limiters are unbounded, can shorten an older global deadline, and retry every 429 indefinitely. Serein retains validated, monotonic waits and bounded read/send retry policy. Its one shared route cooldown remains an acknowledged over-throttling limitation, not a proven anti-abuse defense. |
+| Edge 429 sends | A Serein-specific defect could reinterpret an HTML/plain-text edge 429 as permission to replay a message on the fallback origin. Only an understood `application/json` Discord 429 with a decoded body `retry_after` can enter the existing limited same-nonce resend path. Edge and other unclassified message responses are now ambiguous and are not replayed; unrelated writes retain their previous rejection types. A two-HTTP-origin regression asserts exactly one POST and no throttle notification. |
+| External-review follow-up | `https://docs.discord.com/developers/events/gateway` and `/developers/topics/rate-limits` were the documentary contracts for the changes above. The external code served only as a secondary comparison, never as an approval, bypass or current-request trace. |
+
+The same review enumerated upstream `origin/main..upstream/main` through
+`8babeff999d61b8986379867e54511d320bf9e15`. Upstream #941, #925 and #611 were already imported and
+required no duplicate cherry-pick. This sync additionally imports the scoped SQLite advisory update
+from `90e35849`, `8babeff9`'s remote-decoder state consolidation, #947, #949, profile-effect corner
+clipping and #929. There is no blanket upstream merge or assertion that upstream PR review covers the
+fork's adaptations.
+
+- `rusqlite` 0.41.1 / `libsqlite3-sys` 0.39.1 addresses RUSTSEC-2026-0459. Local-store tests and the
+  full workspace gate run after the lockfile-pinned dependency is fetched; no `cargo-audit` executable
+  is installed locally, so a fresh advisory database scan is not claimed here.
+- Hidden-channel rosters are retained and updated in bounded session memory. Sidebar rows appear only
+  with the existing hidden-channel opt-in; the selected-stage access fallback, voice-entry permission
+  checks and non-viewable rail indicators remain intact. Follow-up review also gates guild-rail hover
+  and voice-invite rosters on current channel visibility, preventing retained entries from leaking
+  through those alternate presentations. Mixed-roster and invite-specific regressions cover both paths.
+  This does not expose persisted history or let a hidden channel be joined.
+- Long voice-channel names use one elided row with full hover/accessibility text. Profile effects clip
+  to rounded card outlines; a mesh regression checks area and every vertex against that outline.
+- Search and pinned results reuse existing message copy/link/ID and permitted plugin actions, including
+  Shift+F10 anchoring and selection-owned Copy. An explicit `preview_limited` flag replaces notice-text
+  comparison, so a literal message equal to the notice still permits text actions. The oversized-search
+  preview remains bounded and non-authoritative; full text arrives only through the existing message read.
+- The Windows audio replacement remains deferred because its historical PID collections are unbounded.
+  The separate #928/#937 SDK expansion, generated catalog pin and the Rust/egui/RTL/Twemoji migration
+  train also remain deferred pending their own conflict, SDK-wiki, native-evidence and migration work.
+  The earlier superseded Windows whole-output fallback and its revert were not imported.
+
+Offline screenshots for the three visible changes are under `docs/pr-evidence/upstream-sync-20261109`.
+The hidden-channel pair was not captured successfully: device access was disabled and the temporary
+fixture did not consistently establish the required public guild/dialog state. The passing
+`hidden_voice_participants_are_cached_only_with_hidden_channels_opted_in` test and selected-stage guard
+are the evidence for that behavior; no failed or misleading pair is committed. No live account,
+microphone, upstream-secret session or official-request differential was used for this sync.

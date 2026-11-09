@@ -1727,6 +1727,11 @@ impl SearchUi {
 				&& !egui::Popup::is_any_open(ui.ctx())
 				&& (ui.input(|i| i.pointer.secondary_clicked())
 					|| crate::select::open_menu(ui.ctx()));
+			if response.is_pointer_button_down_on()
+				&& ui.input(|input| input.pointer.primary_pressed())
+			{
+				response.request_focus();
+			}
 			// The focused card owns Shift+F10 and keeps the menu anchored after Shift is released.
 			let keyboard_menu = response.has_focus()
 				&& !egui::Popup::is_any_open(ui.ctx())

@@ -330,11 +330,11 @@ fn guild_voice(
 	guild: Id,
 	streaming: bool,
 ) -> impl Clone + Iterator<Item = &client_core::voice::RosterEntry> {
-	state
-		.voice
-		.roster
-		.iter()
-		.filter(move |entry| entry.guild == guild && (!streaming || entry.participant.streaming))
+	state.voice.roster.iter().filter(move |entry| {
+		entry.guild == guild
+			&& state.can_view(entry.channel)
+			&& (!streaming || entry.participant.streaming)
+	})
 }
 
 impl MessagingUi {
@@ -1646,6 +1646,32 @@ mod tests {
 			!has_voice_badge_failed,
 			"Collapsed folder must not render a voice badge when call phase is Failed"
 		);
+	}
+
+	#[test]
+	fn guild_voice_tooltip_retains_only_viewable_channel_rosters() {
+		let mut state = test_support::voice_demo_state();
+		let mut visible = state.voice.roster[0].clone();
+		visible.channel = Id(26);
+		state.voice.roster.push(visible);
+		state.apply(client_core::Envelope {
+			generation: state.generation,
+			event: client_core::Event::Permissions(client_core::permissions::Event::Channel {
+				channel: Id(25),
+				guild: Some(Id(10)),
+				overwrites: model::Patch::Value(vec![model::permissions::Overwrite {
+					id: Id(10),
+					kind: 0,
+					allow: 0,
+					deny: model::permissions::VIEW_CHANNEL,
+				}]),
+			}),
+		});
+		let retained: Vec<_> = guild_voice(&state, Id(10), false)
+			.map(|entry| entry.channel)
+			.collect();
+		assert_eq!(retained, [Id(26)]);
+		assert!(guild_voice(&state, Id(10), true).next().is_none());
 	}
 
 	#[test]

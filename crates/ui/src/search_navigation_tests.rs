@@ -810,23 +810,35 @@ fn a_focused_result_opens_its_menu_with_shift_f10() {
 		.find(|(text, _)| text == "Synthetic result to revisit")
 		.expect("result is drawn")
 		.1;
-	let card = egui::pos2(result.right() + 8.0, result.center().y);
-	let click = [egui::Event::PointerMoved(card)]
-		.into_iter()
-		.chain([true, false].map(|pressed| egui::Event::PointerButton {
+	// Use frame padding rather than a child label/avatar so the card background takes focus.
+	let card = egui::pos2(result.left() - 45.0, result.center().y);
+	// Pressing gives the card keyboard focus. Do not release and open the jump target before
+	// invoking its context menu; the behavior under test is Shift+F10, not result navigation.
+	let click = vec![
+		egui::Event::WindowFocused(true),
+		egui::Event::PointerMoved(card),
+		egui::Event::PointerButton {
 			pos: card,
 			button: egui::PointerButton::Primary,
-			pressed,
+			pressed: true,
 			modifiers: egui::Modifiers::NONE,
-		}))
-		.collect::<Vec<_>>();
+		},
+	];
 	pane_frame(&ctx, &mut view, &mut state, click);
-	pane_frame(&ctx, &mut view, &mut state, vec![]);
 	pane_frame(
 		&ctx,
 		&mut view,
 		&mut state,
-		vec![key(egui::Key::F10, egui::Modifiers::SHIFT)],
+		vec![egui::Event::WindowFocused(true)],
+	);
+	pane_frame(
+		&ctx,
+		&mut view,
+		&mut state,
+		vec![
+			egui::Event::WindowFocused(true),
+			key(egui::Key::F10, egui::Modifiers::SHIFT),
+		],
 	);
 	let labels = pane_frame(&ctx, &mut view, &mut state, vec![]).0;
 	assert!(

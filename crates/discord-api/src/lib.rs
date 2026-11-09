@@ -101,6 +101,7 @@ struct ProxyState {
 
 enum RequestContent {
 	Json(serde_json::Value),
+	Send(serde_json::Value),
 	Multipart { content_type: String, body: Vec<u8> },
 }
 
@@ -388,6 +389,26 @@ impl DiscordApi {
 		)
 		.await
 	}
+	/// The only request whose structured Discord 429 may reach execute_write's limited resend.
+	async fn request_send_with_captcha(
+		&self,
+		method: Method,
+		path: &str,
+		body: Option<serde_json::Value>,
+		max_bytes: usize,
+		retry: Option<&client_core::captcha::Retry>,
+		challenge: Option<&mut Option<client_core::captcha::Challenge>>,
+	) -> Result<Vec<u8>, Failure> {
+		self.request_with_content(
+			method,
+			path,
+			body.map(RequestContent::Send),
+			max_bytes,
+			retry,
+			challenge,
+		)
+		.await
+	}
 	/// The REST origin for the next attempt and whether it is still discord.com.
 	#[cfg(not(test))]
 	fn api_origin(&self) -> (&'static str, bool) {
@@ -428,6 +449,7 @@ impl DiscordApi {
 		{
 			return Err(Failure::Protocol);
 		}
+		let resendable_send = matches!(&body, Some(RequestContent::Send(_)));
 		let speculative = SPECULATIVE.try_with(|()| ()).is_ok();
 		let _permit = if speculative {
 			// A hover preload takes only spare capacity, so it never delays a click.
@@ -491,7 +513,7 @@ impl DiscordApi {
 			}
 			if let Some(content) = body.take() {
 				request = match content {
-					RequestContent::Json(body) => request.json(&body),
+					RequestContent::Json(body) | RequestContent::Send(body) => request.json(&body),
 					RequestContent::Multipart { content_type, body } => request
 						.header(
 							CONTENT_TYPE,
@@ -531,13 +553,18 @@ impl DiscordApi {
 				self.stop();
 				return Err(Failure::Expired);
 			}
-			let cloudflare_block = response
+			let content_type = response
 				.headers()
 				.get(CONTENT_TYPE)
-				.and_then(|value| value.to_str().ok())
-				.is_some_and(|value| {
-					value.starts_with("text/html") || value.starts_with("text/plain")
-				});
+				.and_then(|value| value.to_str().ok());
+			let cloudflare_block = content_type.is_some_and(|value| {
+				value.starts_with("text/html") || value.starts_with("text/plain")
+			});
+			let json_content = content_type.is_some_and(|value| {
+				value
+					.get(..16)
+					.is_some_and(|prefix| prefix.eq_ignore_ascii_case("application/json"))
+			});
 			if response
 				.content_length()
 				.is_some_and(|n| n > max_bytes as u64)
@@ -560,7 +587,12 @@ impl DiscordApi {
 				bytes.extend_from_slice(&chunk);
 			}
 			if !status.is_success() {
-				let error = decode::<ErrorBody>(&bytes).unwrap_or_default();
+				let decoded_error = decode::<ErrorBody>(&bytes).ok();
+				let structured_rate_limit = status == StatusCode::TOO_MANY_REQUESTS
+					&& json_content && decoded_error
+					.as_ref()
+					.is_some_and(|error| error.retry_after.is_some());
+				let error = decoded_error.unwrap_or_default();
 				if error.captcha_key.is_some() || matches!(error.code, Some(60003 | 50014)) {
 					let auth_challenge = matches!(error.code, Some(60003 | 50014));
 					if !auth_challenge
@@ -594,7 +626,7 @@ impl DiscordApi {
 						if idempotent {
 							continue;
 						}
-						return Err(if write {
+						return Err(if resendable_send {
 							Failure::Ambiguous
 						} else {
 							Failure::RateLimited
@@ -602,16 +634,16 @@ impl DiscordApi {
 					}
 					// A block page has no JSON penalty. The short read retry must not run.
 					let delay =
-						safe_delay(retry_header.or(reset).or(Some(60.0))).map_err(|_| {
-							if write {
+						safe_delay(retry_header.or(reset).or(Some(60.0))).map_err(|failure| {
+							if resendable_send {
 								Failure::Ambiguous
 							} else {
-								Failure::Protocol
+								failure
 							}
 						})?;
 					let mut next = self.cooldown.lock().await;
 					*next = (*next).max(Instant::now() + delay);
-					return Err(if write {
+					return Err(if resendable_send {
 						Failure::Ambiguous
 					} else {
 						Failure::RateLimited
@@ -621,19 +653,20 @@ impl DiscordApi {
 					// The body is the penalty Discord documents. A missing or shorter reset
 					// header must not send the retry early. Only a decoded, valid body delay
 					// establishes that a write was rejected without being processed.
-					let delay =
-						safe_delay(error.retry_after.or(retry_header).or(reset)).map_err(|_| {
-							if write {
+					let delay = safe_delay(error.retry_after.or(retry_header).or(reset)).map_err(
+						|failure| {
+							if resendable_send {
 								Failure::Ambiguous
 							} else {
-								Failure::Protocol
+								failure
 							}
-						})?;
+						},
+					)?;
 					{
 						let mut next = self.cooldown.lock().await;
 						*next = (*next).max(Instant::now() + delay);
 					}
-					if write && error.retry_after.is_none() {
+					if resendable_send && !structured_rate_limit {
 						return Err(Failure::Ambiguous);
 					}
 					if idempotent
@@ -2109,7 +2142,7 @@ impl DiscordApi {
 			body["attachments"] = serde_json::json!(attachment);
 		}
 		// No enforce_nonce claim until normal-user semantics are live verified. Never auto-retry writes.
-		self.request_with_captcha(
+		self.request_send_with_captcha(
 			Method::POST,
 			&format!("/channels/{channel}/messages"),
 			Some(body),
@@ -3571,7 +3604,7 @@ mod tests {
 				socket
 					.write_all(
 						format!(
-							"HTTP/1.1 {status}\r\n{exhausted}Content-Length: {}\r\nConnection: close\r\n\r\n{body}",
+							"HTTP/1.1 {status}\r\n{exhausted}Content-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
 							body.len()
 						)
 						.as_bytes(),

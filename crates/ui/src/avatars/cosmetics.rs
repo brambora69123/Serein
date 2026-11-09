@@ -747,4 +747,49 @@ mod tests {
 		avatars.accept(&ctx, key.clone(), None);
 		assert!(!avatars.effect_decoding.contains(&key));
 	}
+
+	#[test]
+	fn rounded_effect_mesh_removes_square_corners_and_stays_inside_the_card() {
+		let ctx = egui::Context::default();
+		let texture = ctx.load_texture(
+			"synthetic profile effect",
+			ColorImage::filled([2, 2], Color32::WHITE),
+			egui::TextureOptions::LINEAR,
+		);
+		let card = Rect::from_min_size(pos2(10.0, 20.0), Vec2::splat(100.0));
+		let radius = 20.0;
+		let Some(Shape::Mesh(mesh)) = clipped_rounded(
+			&texture,
+			card,
+			card.expand(10.0),
+			(card, radius),
+			Color32::WHITE,
+		) else {
+			panic!("rounded effect clip did not create a mesh")
+		};
+		let outline = rounded_outline(card, radius);
+		for vertex in &mesh.vertices {
+			assert!(card.contains(vertex.pos));
+			for (index, start) in outline.iter().enumerate() {
+				let end = outline[(index + 1) % outline.len()];
+				let edge = end - *start;
+				let side = edge.x * (vertex.pos.y - start.y) - edge.y * (vertex.pos.x - start.x);
+				assert!(side >= -0.001, "vertex escaped rounded outline");
+			}
+		}
+		let area: f32 = mesh
+			.indices
+			.as_chunks::<3>()
+			.0
+			.iter()
+			.map(|triangle| {
+				let a = mesh.vertices[triangle[0] as usize].pos;
+				let b = mesh.vertices[triangle[1] as usize].pos;
+				let c = mesh.vertices[triangle[2] as usize].pos;
+				((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)).abs() * 0.5
+			})
+			.sum();
+		assert!(area < card.area(), "square corners were not removed");
+		assert!(area > card.area() * 0.95, "too much artwork was discarded");
+	}
 }
