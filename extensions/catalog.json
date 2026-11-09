@@ -14,12 +14,12 @@
         "capabilities": [],
         "actions": []
       },
-      "release_url": "https://raw.githubusercontent.com/ViceVerse-cz/Serein/3abae434ebd9545fdbed044613653f917a27c19f/extensions/themes/forest-piano.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/themes/forest-piano.serein-extension",
       "sha256": "3fffa784b2f406b4ad435fa5804baa1bed9ead9682254546ccf332c2bae12505",
       "download_bytes": 6452658,
-      "source_commit": "3abae434ebd9545fdbed044613653f917a27c19f",
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d",
       "preview": {
-        "url": "https://raw.githubusercontent.com/ViceVerse-cz/Serein/3abae434ebd9545fdbed044613653f917a27c19f/extensions/previews/forest-piano.png",
+        "url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/previews/forest-piano.png",
         "sha256": "f3e8df1046c03eeed4a477530c5dec114ee582caa0ec4bb28e24b4131b8ce29f",
         "download_bytes": 147517
       }
@@ -35,12 +35,12 @@
         "source": "https://github.com/ViceVerse-cz/Serein",
         "kind": "theme"
       },
-      "release_url": "https://raw.githubusercontent.com/ViceVerse-cz/Serein/3abae434ebd9545fdbed044613653f917a27c19f/extensions/themes/forest.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/themes/forest.serein-extension",
       "sha256": "f576fbcb73f452da4ecddda35f92932cdd3ef7b46959a38837fe3491784d6038",
       "download_bytes": 1454,
-      "source_commit": "3abae434ebd9545fdbed044613653f917a27c19f",
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d",
       "preview": {
-        "url": "https://raw.githubusercontent.com/ViceVerse-cz/Serein/3abae434ebd9545fdbed044613653f917a27c19f/extensions/previews/forest.png",
+        "url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/previews/forest.png",
         "sha256": "a55d6c1dedee9e9696bd7a634aca41977f20eb428580d32da12a0dc477b543a9",
         "download_bytes": 66398
       }
@@ -56,12 +56,12 @@
         "source": "https://github.com/ViceVerse-cz/Serein",
         "kind": "theme"
       },
-      "release_url": "https://raw.githubusercontent.com/ViceVerse-cz/Serein/3abae434ebd9545fdbed044613653f917a27c19f/extensions/themes/golden.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/themes/golden.serein-extension",
       "sha256": "0018a46e9c5e4d0431ba02a860b3d7deffab9c159c5d52e04928421ccb3be586",
       "download_bytes": 1794,
-      "source_commit": "3abae434ebd9545fdbed044613653f917a27c19f",
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d",
       "preview": {
-        "url": "https://raw.githubusercontent.com/ViceVerse-cz/Serein/3abae434ebd9545fdbed044613653f917a27c19f/extensions/previews/golden.png",
+        "url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/previews/golden.png",
         "sha256": "1e9df1eaf7fe9906d9088924403f8cf4f4cd71527ce0af97681c600704536a1b",
         "download_bytes": 66164
       }
@@ -77,12 +77,12 @@
         "source": "https://github.com/ViceVerse-cz/Serein",
         "kind": "theme"
       },
-      "release_url": "https://raw.githubusercontent.com/ViceVerse-cz/Serein/3abae434ebd9545fdbed044613653f917a27c19f/extensions/themes/katana.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/themes/katana.serein-extension",
       "sha256": "cf4ef3755d9208e700ee721b66edad3fceb4f26e52d09b82e645bf49070f1a15",
       "download_bytes": 994,
-      "source_commit": "3abae434ebd9545fdbed044613653f917a27c19f",
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d",
       "preview": {
-        "url": "https://raw.githubusercontent.com/ViceVerse-cz/Serein/3abae434ebd9545fdbed044613653f917a27c19f/extensions/previews/katana.png",
+        "url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/previews/katana.png",
         "sha256": "693726039bd2edac1d44bdaa624c7b2bb3cf3e5245b87316a925418902097b06",
         "download_bytes": 66257
       }
@@ -98,12 +98,12 @@
         "source": "https://github.com/ViceVerse-cz/Serein",
         "kind": "theme"
       },
-      "release_url": "https://raw.githubusercontent.com/ViceVerse-cz/Serein/3abae434ebd9545fdbed044613653f917a27c19f/extensions/themes/latte.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/themes/latte.serein-extension",
       "sha256": "a3c3ac481e6d4039a5df26a0e58583add79e638f7a58a6fae309d1beb74a468d",
       "download_bytes": 1452,
-      "source_commit": "3abae434ebd9545fdbed044613653f917a27c19f",
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d",
       "preview": {
-        "url": "https://raw.githubusercontent.com/ViceVerse-cz/Serein/3abae434ebd9545fdbed044613653f917a27c19f/extensions/previews/latte.png",
+        "url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/previews/latte.png",
         "sha256": "3c0a7016eb6994d1be6fb27368a06cd717657f4a042db7647255d7cbd6387275",
         "download_bytes": 65904
       }
@@ -119,12 +119,12 @@
         "source": "https://github.com/ViceVerse-cz/Serein",
         "kind": "theme"
       },
-      "release_url": "https://raw.githubusercontent.com/ViceVerse-cz/Serein/3abae434ebd9545fdbed044613653f917a27c19f/extensions/themes/midnight.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/themes/midnight.serein-extension",
       "sha256": "f7ffb0acdb7269f1e2fdb235536870cef344f3fac761543174ddc091bb2aebb6",
       "download_bytes": 1458,
-      "source_commit": "3abae434ebd9545fdbed044613653f917a27c19f",
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d",
       "preview": {
-        "url": "https://raw.githubusercontent.com/ViceVerse-cz/Serein/3abae434ebd9545fdbed044613653f917a27c19f/extensions/previews/midnight.png",
+        "url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/previews/midnight.png",
         "sha256": "81eb4c6bd634cc7e624a7d9714ae2503e8e05260470b7ff0af63daa3e0a98c16",
         "download_bytes": 65740
       }
@@ -140,12 +140,12 @@
         "source": "https://github.com/ViceVerse-cz/Serein",
         "kind": "theme"
       },
-      "release_url": "https://raw.githubusercontent.com/ViceVerse-cz/Serein/3abae434ebd9545fdbed044613653f917a27c19f/extensions/themes/obsidian.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/themes/obsidian.serein-extension",
       "sha256": "e42cb1ad38f0c495375343bb8e64852ccb98a5a860293cd9ce3a86bbec1f0dd5",
       "download_bytes": 1838,
-      "source_commit": "3abae434ebd9545fdbed044613653f917a27c19f",
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d",
       "preview": {
-        "url": "https://raw.githubusercontent.com/ViceVerse-cz/Serein/3abae434ebd9545fdbed044613653f917a27c19f/extensions/previews/obsidian.png",
+        "url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/previews/obsidian.png",
         "sha256": "8860202e554147302139d5664714d65bdf6b94e8729228d4937a25c55f405588",
         "download_bytes": 66162
       }
@@ -161,12 +161,12 @@
         "source": "https://github.com/ViceVerse-cz/Serein",
         "kind": "theme"
       },
-      "release_url": "https://raw.githubusercontent.com/ViceVerse-cz/Serein/3abae434ebd9545fdbed044613653f917a27c19f/extensions/themes/ocean.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/themes/ocean.serein-extension",
       "sha256": "7309d84495dc4487ccb3e3355fd704c79dd8f68b14a3441ccc7ea5bda5ef9be8",
       "download_bytes": 958,
-      "source_commit": "3abae434ebd9545fdbed044613653f917a27c19f",
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d",
       "preview": {
-        "url": "https://raw.githubusercontent.com/ViceVerse-cz/Serein/3abae434ebd9545fdbed044613653f917a27c19f/extensions/previews/ocean.png",
+        "url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/previews/ocean.png",
         "sha256": "7fd9532d983c52ec9f86a345d23e2c6822597ca29a34833958be816e0bcc1913",
         "download_bytes": 85376
       }
@@ -182,12 +182,12 @@
         "source": "https://github.com/ViceVerse-cz/Serein",
         "kind": "theme"
       },
-      "release_url": "https://raw.githubusercontent.com/ViceVerse-cz/Serein/3abae434ebd9545fdbed044613653f917a27c19f/extensions/themes/rose.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/themes/rose.serein-extension",
       "sha256": "bf8ad0dc259c375fbce786591530f0c2121cf336e63fc39daac11a2fc000087c",
       "download_bytes": 1450,
-      "source_commit": "3abae434ebd9545fdbed044613653f917a27c19f",
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d",
       "preview": {
-        "url": "https://raw.githubusercontent.com/ViceVerse-cz/Serein/3abae434ebd9545fdbed044613653f917a27c19f/extensions/previews/rose.png",
+        "url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/previews/rose.png",
         "sha256": "c5b3380a76863535afb52314db03240cf86f481e7805f73ac3cd6789a404980b",
         "download_bytes": 65114
       }
@@ -205,12 +205,12 @@
         "capabilities": [],
         "actions": []
       },
-      "release_url": "https://raw.githubusercontent.com/ViceVerse-cz/Serein/3abae434ebd9545fdbed044613653f917a27c19f/extensions/themes/soft-white.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/themes/soft-white.serein-extension",
       "sha256": "e981bf8d1230bf540e531d49eecde1f06769e635b55ba2b4eb376dab668248a0",
       "download_bytes": 5860518,
-      "source_commit": "3abae434ebd9545fdbed044613653f917a27c19f",
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d",
       "preview": {
-        "url": "https://raw.githubusercontent.com/ViceVerse-cz/Serein/3abae434ebd9545fdbed044613653f917a27c19f/extensions/previews/soft-white.png",
+        "url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/previews/soft-white.png",
         "sha256": "dbe0d64360c5eba021b03122cae6776a9f05585f5335c47580684e7d3ac73e60",
         "download_bytes": 110890
       }
@@ -226,15 +226,83 @@
         "source": "https://github.com/ViceVerse-cz/Serein",
         "kind": "theme"
       },
-      "release_url": "https://raw.githubusercontent.com/ViceVerse-cz/Serein/3abae434ebd9545fdbed044613653f917a27c19f/extensions/themes/teal.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/themes/teal.serein-extension",
       "sha256": "1c794d14b12bb470164e2c220051de7c20b13de8175390595a559f551bb6409a",
       "download_bytes": 1827,
-      "source_commit": "3abae434ebd9545fdbed044613653f917a27c19f",
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d",
       "preview": {
-        "url": "https://raw.githubusercontent.com/ViceVerse-cz/Serein/3abae434ebd9545fdbed044613653f917a27c19f/extensions/previews/teal.png",
+        "url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/previews/teal.png",
         "sha256": "07f686309198ce01ddf28bbc9e1d07b91fac27949e4e4c769c3c88e084b6c36c",
         "download_bytes": 65843
       }
+    },
+    {
+      "manifest": {
+        "api_version": 1,
+        "id": "account-navigation-tools",
+        "name": "Account & navigation tools",
+        "version": "1.0.0",
+        "author": "Equicord/Vencord contributors; Serein port contributors",
+        "license": "GPL-3.0-or-later",
+        "source": "https://github.com/ViceVerse-cz/Serein/tree/main/extensions/plugins/account-navigation-tools",
+        "kind": "plugin",
+        "capabilities": [
+          "app_events",
+          "app_context",
+          "account_profile",
+          "channel_directory",
+          "account_control",
+          "navigation",
+          "voice_connect",
+          "storage"
+        ],
+        "actions": [
+          {
+            "id": "open",
+            "label": "Open account and navigation tools",
+            "surface": "panel"
+          },
+          {
+            "id": "save-profile",
+            "label": "Save profile preset",
+            "surface": "panel"
+          },
+          {
+            "id": "apply-profile",
+            "label": "Apply selected profile preset",
+            "surface": "panel"
+          },
+          {
+            "id": "delete-profile",
+            "label": "Delete selected profile preset",
+            "surface": "panel"
+          },
+          {
+            "id": "switch-dm",
+            "label": "Switch to previous direct message",
+            "surface": "panel"
+          },
+          {
+            "id": "clear-dm-history",
+            "label": "Clear recent direct-message history",
+            "surface": "panel"
+          },
+          {
+            "id": "join-voice",
+            "label": "Join next loaded voice channel",
+            "surface": "panel"
+          },
+          {
+            "id": "track",
+            "label": "Track recent direct messages",
+            "surface": "app_event"
+          }
+        ]
+      },
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/account-navigation-tools.serein-extension",
+      "sha256": "9da3d19e3268533edb7f2fa3f112aed592014bea848ae76553992927bbc5fd30",
+      "download_bytes": 1346239,
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
     },
     {
       "manifest": {
@@ -268,15 +336,112 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/ViceVerse-cz/Serein/3abae434ebd9545fdbed044613653f917a27c19f/extensions/plugins/packages/api-proxy.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/api-proxy.serein-extension",
       "sha256": "e6ce691505357f3e19d5db33762e8d54da355a35b19fde309edec04fc0a7a85c",
       "download_bytes": 920979,
-      "source_commit": "3abae434ebd9545fdbed044613653f917a27c19f",
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d",
       "preview": {
-        "url": "https://raw.githubusercontent.com/ViceVerse-cz/Serein/3abae434ebd9545fdbed044613653f917a27c19f/extensions/previews/api-proxy.png",
+        "url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/previews/api-proxy.png",
         "sha256": "3764a08ea4cfda49a365bdf79480b61753130c6cf623083ef64410a88ddb64a1",
         "download_bytes": 69881
       }
+    },
+    {
+      "manifest": {
+        "api_version": 1,
+        "id": "better-search-tools",
+        "name": "Better Search Tools",
+        "version": "1.0.0",
+        "author": "Equicord/Vencord contributors; Serein port contributors",
+        "license": "GPL-3.0-or-later",
+        "source": "https://github.com/ViceVerse-cz/Serein/tree/main/extensions/plugins/better-search-tools",
+        "kind": "plugin",
+        "capabilities": [
+          "navigation"
+        ],
+        "actions": [
+          {
+            "id": "open",
+            "label": "Build an extended search",
+            "surface": "panel"
+          },
+          {
+            "id": "search",
+            "label": "Search with these filters",
+            "surface": "panel"
+          }
+        ]
+      },
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/better-search-tools.serein-extension",
+      "sha256": "e2fde696cc2ec992250791cb86b2efa681a5db0f691c0f3bd4f740dab6e42741",
+      "download_bytes": 1218517,
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+    },
+    {
+      "manifest": {
+        "api_version": 1,
+        "id": "command-palette",
+        "name": "Command Palette (bounded launcher)",
+        "version": "1.0.0",
+        "author": "Equicord/Vencord contributors; Serein port contributors",
+        "license": "GPL-3.0-or-later",
+        "source": "https://github.com/ViceVerse-cz/Serein/tree/main/extensions/plugins/command-palette",
+        "kind": "plugin",
+        "capabilities": [
+          "app_context",
+          "channel_directory",
+          "guild_directory",
+          "read_state",
+          "navigation",
+          "storage"
+        ],
+        "actions": [
+          {
+            "id": "show",
+            "label": "Open the bounded command palette",
+            "surface": "panel"
+          },
+          {
+            "id": "filter",
+            "label": "Filter loaded channels",
+            "surface": "panel"
+          },
+          {
+            "id": "navigate",
+            "label": "Propose opening the selected loaded channel",
+            "surface": "panel"
+          },
+          {
+            "id": "pin-channel",
+            "label": "Pin the selected loaded channel",
+            "surface": "panel"
+          },
+          {
+            "id": "unpin-channel",
+            "label": "Unpin the selected channel",
+            "surface": "panel"
+          },
+          {
+            "id": "go-destination",
+            "label": "Propose a fixed native destination",
+            "surface": "panel"
+          },
+          {
+            "id": "search",
+            "label": "Propose searching the current conversation",
+            "surface": "panel"
+          },
+          {
+            "id": "open-profile",
+            "label": "Propose opening your profile",
+            "surface": "panel"
+          }
+        ]
+      },
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/command-palette.serein-extension",
+      "sha256": "6905a57c995e8900ac41d3679e6d1649899c9033bceb5bdea91cb622babd226f",
+      "download_bytes": 1589556,
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
     },
     {
       "manifest": {
@@ -325,15 +490,124 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/ViceVerse-cz/Serein/3abae434ebd9545fdbed044613653f917a27c19f/extensions/plugins/packages/custom-rpc.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/custom-rpc.serein-extension",
       "sha256": "f6f70f0f537052910a6e5497bf4d40a6d8d7e5ece3be4d4678a09d872e31b0ac",
       "download_bytes": 409132,
-      "source_commit": "3abae434ebd9545fdbed044613653f917a27c19f",
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d",
       "preview": {
-        "url": "https://raw.githubusercontent.com/ViceVerse-cz/Serein/3abae434ebd9545fdbed044613653f917a27c19f/extensions/previews/custom-rpc.png",
+        "url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/previews/custom-rpc.png",
         "sha256": "32a89d15bce3c35b0d2d176f4a0fc2c30dc1be01bdd0db6a634910fdacb1bac9",
         "download_bytes": 43030
       }
+    },
+    {
+      "manifest": {
+        "api_version": 1,
+        "id": "draft-style-tools",
+        "name": "Draft Style Tools",
+        "version": "1.0.0",
+        "author": "Equicord/Vencord contributors; Serein port contributors",
+        "license": "GPL-3.0-or-later",
+        "source": "https://github.com/ViceVerse-cz/Serein/tree/main/extensions/plugins/draft-style-tools",
+        "kind": "plugin",
+        "capabilities": [
+          "composer",
+          "storage"
+        ],
+        "actions": [
+          {
+            "id": "open",
+            "label": "Configure draft style tools",
+            "surface": "panel"
+          },
+          {
+            "id": "save",
+            "label": "Save draft style settings",
+            "surface": "panel"
+          },
+          {
+            "id": "reverse",
+            "label": "Reverse draft text safely",
+            "surface": "composer"
+          },
+          {
+            "id": "signature",
+            "label": "Append signature to draft",
+            "surface": "composer"
+          },
+          {
+            "id": "polish",
+            "label": "Polish draft wording locally",
+            "surface": "composer"
+          }
+        ]
+      },
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/draft-style-tools.serein-extension",
+      "sha256": "3c1254fc47f3d1e4fafee2669cb037c1b9cb376815d04c638b2ac9e169ba1e3a",
+      "download_bytes": 694390,
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+    },
+    {
+      "manifest": {
+        "api_version": 1,
+        "id": "equicord-community-tools",
+        "name": "Equicord Community Tools",
+        "version": "1.0.0",
+        "author": "Equicord/Vencord contributors; Serein port contributors",
+        "license": "GPL-3.0-or-later",
+        "source": "https://github.com/ViceVerse-cz/Serein/tree/main/extensions/plugins/equicord-community-tools",
+        "kind": "plugin",
+        "capabilities": [
+          "app_context",
+          "channel_control",
+          "clipboard_write",
+          "external_navigation",
+          "selected_message",
+          "storage",
+          "voice_connect"
+        ],
+        "actions": [
+          {
+            "id": "open",
+            "label": "Open community tools",
+            "surface": "panel"
+          },
+          {
+            "id": "save-hopon",
+            "label": "Save HopOn triggers and HTTPS link",
+            "surface": "panel"
+          },
+          {
+            "id": "delete-channel",
+            "label": "Propose deleting the current channel",
+            "surface": "panel"
+          },
+          {
+            "id": "toggle-ignored-call",
+            "label": "Toggle the current conversation in the local call ignore list",
+            "surface": "panel"
+          },
+          {
+            "id": "decline-ignored-call",
+            "label": "Propose declining the call in an ignored conversation",
+            "surface": "panel"
+          },
+          {
+            "id": "export-message",
+            "label": "Copy the selected message as text",
+            "surface": "message"
+          },
+          {
+            "id": "hopon-message",
+            "label": "Check the selected message for a HopOn trigger",
+            "surface": "message"
+          }
+        ]
+      },
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/equicord-community-tools.serein-extension",
+      "sha256": "b9d0d05bdbeb5f4a99299cb3bee81029f2f6791cc74e94a0b5cbf8ee90124f5b",
+      "download_bytes": 1373963,
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
     },
     {
       "manifest": {
@@ -373,10 +647,235 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/ViceVerse-cz/Serein/3abae434ebd9545fdbed044613653f917a27c19f/extensions/plugins/packages/external-search-tools.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/external-search-tools.serein-extension",
       "sha256": "4cf8ebba8c82731a7478b874fbe54556e03d239a74eae49c4114f1cafdff8e8d",
       "download_bytes": 1853128,
-      "source_commit": "3abae434ebd9545fdbed044613653f917a27c19f"
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+    },
+    {
+      "manifest": {
+        "api_version": 1,
+        "id": "greet-sticker-tools",
+        "name": "Greet Sticker Tools",
+        "version": "1.0.0",
+        "author": "Equicord/Vencord contributors; Serein port contributors",
+        "license": "GPL-3.0-or-later",
+        "source": "https://github.com/ViceVerse-cz/Serein/tree/main/extensions/plugins/greet-sticker-tools",
+        "kind": "plugin",
+        "capabilities": [
+          "selected_message",
+          "message_content",
+          "message_send"
+        ],
+        "actions": [
+          {
+            "id": "open",
+            "label": "Choose a sticker to re-send",
+            "surface": "message"
+          },
+          {
+            "id": "send",
+            "label": "Send selected sticker",
+            "surface": "panel"
+          }
+        ]
+      },
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/greet-sticker-tools.serein-extension",
+      "sha256": "bc852dc05f6a0bd1b20c4f8a187dab68767b928db307e448341aa94ca0466be5",
+      "download_bytes": 1239146,
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+    },
+    {
+      "manifest": {
+        "api_version": 1,
+        "id": "identity-tools",
+        "name": "Identity Tools",
+        "version": "1.0.0",
+        "author": "Equicord/Vencord contributors; Serein port contributors",
+        "license": "GPL-3.0-or-later",
+        "source": "https://github.com/ViceVerse-cz/Serein/tree/main/extensions/plugins/identity-tools",
+        "kind": "plugin",
+        "capabilities": [
+          "selected_message",
+          "clipboard_write"
+        ],
+        "actions": [
+          {
+            "id": "copy-user-url",
+            "label": "Copy author profile URL",
+            "surface": "message"
+          },
+          {
+            "id": "copy-user-mention",
+            "label": "Copy author mention",
+            "surface": "message"
+          }
+        ]
+      },
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/identity-tools.serein-extension",
+      "sha256": "59139d94dae5482db0e0b269cb9b87c145871184e7a6b4a1cac137fe14e8e17f",
+      "download_bytes": 1221711,
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+    },
+    {
+      "manifest": {
+        "api_version": 1,
+        "id": "ingtoninator",
+        "name": "Ingtoninator",
+        "version": "1.0.0",
+        "author": "Equicord/Vencord contributors; Serein port contributors",
+        "license": "GPL-3.0-or-later",
+        "source": "https://github.com/ViceVerse-cz/Serein/tree/main/extensions/plugins/ingtoninator",
+        "kind": "plugin",
+        "capabilities": [
+          "composer"
+        ],
+        "actions": [
+          {
+            "id": "ingtoninate",
+            "label": "Append Ington suffix to a draft word",
+            "surface": "composer"
+          }
+        ]
+      },
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/ingtoninator.serein-extension",
+      "sha256": "9a8f0a0ca79048f19eddd326bb76a4c8819fd62c9cb11a55390d38c67df53da3",
+      "download_bytes": 481265,
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+    },
+    {
+      "manifest": {
+        "api_version": 1,
+        "id": "linked-message-tools",
+        "name": "Linked Message Tools",
+        "version": "1.0.0",
+        "author": "Equicord/Vencord contributors; Serein port contributors",
+        "license": "GPL-3.0-or-later",
+        "source": "https://github.com/ViceVerse-cz/Serein/tree/main/extensions/plugins/linked-message-tools",
+        "kind": "plugin",
+        "capabilities": [
+          "selected_message",
+          "timeline",
+          "navigation"
+        ],
+        "actions": [
+          {
+            "id": "preview",
+            "label": "Preview linked messages",
+            "surface": "message"
+          },
+          {
+            "id": "jump",
+            "label": "Open selected linked message",
+            "surface": "panel"
+          }
+        ]
+      },
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/linked-message-tools.serein-extension",
+      "sha256": "4ead29fc20744727c6013b899d86ea373c91125acc47211f931c9a893c55a6aa",
+      "download_bytes": 1263602,
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+    },
+    {
+      "manifest": {
+        "api_version": 1,
+        "id": "loaded-role-members",
+        "name": "Loaded Role Members",
+        "version": "1.0.0",
+        "author": "Equicord/Vencord contributors; Serein port contributors",
+        "license": "GPL-3.0-or-later",
+        "source": "https://github.com/ViceVerse-cz/Serein/tree/main/extensions/plugins/loaded-role-members",
+        "kind": "plugin",
+        "capabilities": [
+          "member_details",
+          "storage",
+          "navigation",
+          "clipboard_write"
+        ],
+        "actions": [
+          {
+            "id": "show",
+            "label": "Show loaded role members",
+            "surface": "panel"
+          },
+          {
+            "id": "select-role",
+            "label": "Use selected loaded role",
+            "surface": "panel"
+          },
+          {
+            "id": "open-profile",
+            "label": "Propose opening a loaded member profile",
+            "surface": "panel"
+          },
+          {
+            "id": "copy-role-color",
+            "label": "Copy selected loaded role color",
+            "surface": "panel"
+          }
+        ]
+      },
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/loaded-role-members.serein-extension",
+      "sha256": "7d0063cdf3156ffa91e3661307b979e34a4a8bab3d55d70fb2c41be7660f5654",
+      "download_bytes": 1516204,
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+    },
+    {
+      "manifest": {
+        "api_version": 1,
+        "id": "message-composition-tools",
+        "name": "Message Composition Tools",
+        "version": "1.1.0",
+        "author": "Equicord/Vencord contributors; Serein port contributors",
+        "license": "GPL-3.0-or-later",
+        "source": "https://github.com/ViceVerse-cz/Serein/tree/main/extensions/plugins/message-composition-tools",
+        "kind": "plugin",
+        "capabilities": [
+          "composer",
+          "storage",
+          "app_context",
+          "timeline",
+          "channel_details",
+          "message_details",
+          "message_manage"
+        ],
+        "actions": [
+          {
+            "id": "open",
+            "label": "Configure message composition tools",
+            "surface": "panel"
+          },
+          {
+            "id": "save",
+            "label": "Save message composition settings",
+            "surface": "panel"
+          },
+          {
+            "id": "split",
+            "label": "Review split draft segments",
+            "surface": "composer"
+          },
+          {
+            "id": "filter-keywords",
+            "label": "Filter keyword lines from draft",
+            "surface": "composer"
+          },
+          {
+            "id": "burst-disperse",
+            "label": "Review burst segments for draft",
+            "surface": "composer"
+          },
+          {
+            "id": "burst-merge",
+            "label": "Propose merging this draft into my latest loaded message",
+            "surface": "composer"
+          }
+        ]
+      },
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/message-composition-tools.serein-extension",
+      "sha256": "116b64b33a6532769b0c115305672ce8dada004d62e5d26bbceac0ece333d4e7",
+      "download_bytes": 1403456,
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
     },
     {
       "manifest": {
@@ -399,12 +898,12 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/ViceVerse-cz/Serein/3abae434ebd9545fdbed044613653f917a27c19f/extensions/plugins/packages/message-delete-protector.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/message-delete-protector.serein-extension",
       "sha256": "dffd601e3b85b17ae9bacc6deedc526e225c3ee81072ee5e8e64981da03bf6f9",
       "download_bytes": 338103,
-      "source_commit": "3abae434ebd9545fdbed044613653f917a27c19f",
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d",
       "preview": {
-        "url": "https://raw.githubusercontent.com/ViceVerse-cz/Serein/3abae434ebd9545fdbed044613653f917a27c19f/extensions/previews/message-delete-protector.png",
+        "url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/previews/message-delete-protector.png",
         "sha256": "729063ad60d977fef21d630e07e09677ce07836b1a6bd18d447c3541af5a938c",
         "download_bytes": 65905
       }
@@ -412,9 +911,245 @@
     {
       "manifest": {
         "api_version": 1,
+        "id": "message-history",
+        "name": "Message history",
+        "version": "0.2.0",
+        "author": "Equicord/Vencord contributors; Serein port contributors",
+        "license": "GPL-3.0-or-later",
+        "source": "https://github.com/ViceVerse-cz/Serein/tree/main/extensions/plugins/message-history",
+        "kind": "plugin",
+        "capabilities": [
+          "message_events"
+        ],
+        "actions": [
+          {
+            "id": "enable-history",
+            "label": "Enable persistent local message history",
+            "surface": "activation"
+          },
+          {
+            "id": "observe",
+            "label": "Observe loaded message events",
+            "surface": "message_event"
+          }
+        ]
+      },
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/message-history.serein-extension",
+      "sha256": "681ab8423d2d4fb7e5320ab66e43fd499d2b6b122c069c334d36a9bdb0253b14",
+      "download_bytes": 420981,
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+    },
+    {
+      "manifest": {
+        "api_version": 1,
+        "id": "message-inspector-tools",
+        "name": "Message Inspector Tools",
+        "version": "1.0.0",
+        "author": "Equicord/Vencord contributors; Serein port contributors",
+        "license": "GPL-3.0-or-later",
+        "source": "https://github.com/ViceVerse-cz/Serein/tree/main/extensions/plugins/message-inspector-tools",
+        "kind": "plugin",
+        "capabilities": [
+          "selected_message",
+          "member_details",
+          "clipboard_write",
+          "storage"
+        ],
+        "actions": [
+          {
+            "id": "open",
+            "label": "Configure role exclusions",
+            "surface": "panel"
+          },
+          {
+            "id": "save",
+            "label": "Save role exclusions",
+            "surface": "panel"
+          },
+          {
+            "id": "show-role",
+            "label": "Show author's highest loaded role",
+            "surface": "message"
+          },
+          {
+            "id": "copy-magnets",
+            "label": "Copy parsed magnet links",
+            "surface": "message"
+          }
+        ]
+      },
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/message-inspector-tools.serein-extension",
+      "sha256": "4403539befc829b736283523bf59fef0e5bde60ec33a98ed7b6d3a9aa4fb2673",
+      "download_bytes": 1313304,
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+    },
+    {
+      "manifest": {
+        "api_version": 1,
+        "id": "message-navigation-tools",
+        "name": "Message Navigation Tools",
+        "version": "1.0.0",
+        "author": "Equicord/Vencord contributors; Serein port contributors",
+        "license": "GPL-3.0-or-later",
+        "source": "https://github.com/ViceVerse-cz/Serein/tree/main/extensions/plugins/message-navigation-tools",
+        "kind": "plugin",
+        "capabilities": [
+          "app_context",
+          "timeline",
+          "channel_details",
+          "selected_message",
+          "navigation"
+        ],
+        "actions": [
+          {
+            "id": "jump-latest",
+            "label": "Jump to the latest message",
+            "surface": "panel"
+          },
+          {
+            "id": "jump-oldest-loaded",
+            "label": "Jump to the oldest loaded message",
+            "surface": "panel"
+          },
+          {
+            "id": "jump-me-latest",
+            "label": "Jump to my latest loaded message",
+            "surface": "panel"
+          },
+          {
+            "id": "jump-author-latest",
+            "label": "Jump to this author's latest loaded message",
+            "surface": "message"
+          },
+          {
+            "id": "jump-author-oldest",
+            "label": "Jump to this author's earliest loaded message",
+            "surface": "message"
+          }
+        ]
+      },
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/message-navigation-tools.serein-extension",
+      "sha256": "ee4bcec4335c18da6fb7e30dc3b58ac5fb6e919f438ffa5dab814b3c8e532375",
+      "download_bytes": 1228384,
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+    },
+    {
+      "manifest": {
+        "api_version": 1,
+        "id": "message-reference-tools",
+        "name": "Message Reference Tools",
+        "version": "1.0.0",
+        "author": "Equicord/Vencord contributors; Serein port contributors",
+        "license": "GPL-3.0-or-later",
+        "source": "https://github.com/ViceVerse-cz/Serein/tree/main/extensions/plugins/message-reference-tools",
+        "kind": "plugin",
+        "capabilities": [
+          "selected_message",
+          "timeline",
+          "message_details",
+          "navigation",
+          "external_navigation",
+          "reactions_control"
+        ],
+        "actions": [
+          {
+            "id": "find-reply",
+            "label": "Jump to loaded original or reply",
+            "surface": "message"
+          },
+          {
+            "id": "search",
+            "label": "Google That — search selected text in browser",
+            "surface": "message"
+          },
+          {
+            "id": "husk",
+            "label": "Add Husk reaction",
+            "surface": "message"
+          }
+        ]
+      },
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/message-reference-tools.serein-extension",
+      "sha256": "9d484ebc6fa7ce0f6d65e574c48215c1c4e060a57de685391a10aff06d21c50e",
+      "download_bytes": 1927969,
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+    },
+    {
+      "manifest": {
+        "api_version": 1,
+        "id": "more-quick-reactions-tools",
+        "name": "More Quick Reactions Tools",
+        "version": "1.0.0",
+        "author": "Equicord/Vencord contributors; Serein port contributors",
+        "license": "GPL-3.0-or-later",
+        "source": "https://github.com/ViceVerse-cz/Serein/tree/main/extensions/plugins/more-quick-reactions-tools",
+        "kind": "plugin",
+        "capabilities": [
+          "timeline",
+          "reactions_control",
+          "storage"
+        ],
+        "actions": [
+          {
+            "id": "open",
+            "label": "Configure quick reactions",
+            "surface": "panel"
+          },
+          {
+            "id": "save",
+            "label": "Save quick reaction list",
+            "surface": "panel"
+          },
+          {
+            "id": "react",
+            "label": "Add selected quick reaction",
+            "surface": "panel"
+          }
+        ]
+      },
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/more-quick-reactions-tools.serein-extension",
+      "sha256": "3f99cf3a03b4fdb932b0c23052cbe91aff4d729c2eedbe6b9afc164a34d3faf9",
+      "download_bytes": 1435419,
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+    },
+    {
+      "manifest": {
+        "api_version": 1,
+        "id": "music-link-tools",
+        "name": "Music Link Tools",
+        "version": "1.0.0",
+        "author": "Equicord/Vencord contributors; Serein port contributors",
+        "license": "GPL-3.0-or-later",
+        "source": "https://github.com/ViceVerse-cz/Serein/tree/main/extensions/plugins/music-link-tools",
+        "kind": "plugin",
+        "capabilities": [
+          "selected_message",
+          "external_navigation"
+        ],
+        "actions": [
+          {
+            "id": "open",
+            "label": "Open music link tools",
+            "surface": "panel"
+          },
+          {
+            "id": "link",
+            "label": "Review Songlink browser page",
+            "surface": "message"
+          }
+        ]
+      },
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/music-link-tools.serein-extension",
+      "sha256": "78db26dafae7f006ffd4d2bf540b57af05bbfe0ad838dbbd2bb5d6af45723663",
+      "download_bytes": 1774839,
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+    },
+    {
+      "manifest": {
+        "api_version": 1,
         "id": "offline-composer-tools",
         "name": "Offline Composer Tools",
-        "version": "1.0.2",
+        "version": "1.1.1",
         "author": "Equicord/Vencord contributors; Serein port contributors",
         "license": "GPL-3.0-or-later",
         "source": "https://github.com/ViceVerse-cz/Serein/tree/main/extensions/plugins/offline-composer-tools",
@@ -450,10 +1185,273 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/ViceVerse-cz/Serein/3abae434ebd9545fdbed044613653f917a27c19f/extensions/plugins/packages/offline-composer-tools.serein-extension",
-      "sha256": "4341b10ba13b0c0ac6a358792be121db5af6a936f0a75bcca0e8bf24e507a1cf",
-      "download_bytes": 1157194,
-      "source_commit": "3abae434ebd9545fdbed044613653f917a27c19f"
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/offline-composer-tools.serein-extension",
+      "sha256": "db4c0da974cc9bc9fba70841530483a7ea2079ad6e9eeacbc1b67d8f22c792f9",
+      "download_bytes": 1203304,
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+    },
+    {
+      "manifest": {
+        "api_version": 1,
+        "id": "own-message-sed",
+        "name": "Own message sed",
+        "version": "1.0.0",
+        "author": "Equicord/Vencord contributors; Serein port contributors",
+        "license": "GPL-3.0-or-later",
+        "source": "https://github.com/ViceVerse-cz/Serein/tree/main/extensions/plugins/own-message-sed",
+        "kind": "plugin",
+        "capabilities": [
+          "app_context",
+          "timeline",
+          "message_details",
+          "message_manage"
+        ],
+        "actions": [
+          {
+            "id": "show",
+            "label": "Open own-message sed editor",
+            "surface": "panel"
+          },
+          {
+            "id": "apply",
+            "label": "Review literal sed replacement",
+            "surface": "panel"
+          }
+        ]
+      },
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/own-message-sed.serein-extension",
+      "sha256": "7daeb504a240f3210e23f49a0202e43e9d7fb1f22b3b66c1a83a43f54faf0183",
+      "download_bytes": 1234041,
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+    },
+    {
+      "manifest": {
+        "api_version": 1,
+        "id": "permissions-tools",
+        "name": "Loaded Permissions Viewer",
+        "version": "1.0.0",
+        "author": "Equicord/Vencord contributors; Serein port contributors",
+        "license": "GPL-3.0-or-later",
+        "source": "https://github.com/ViceVerse-cz/Serein/tree/main/extensions/plugins/permissions-tools",
+        "kind": "plugin",
+        "capabilities": [
+          "channel_metadata",
+          "member_details"
+        ],
+        "actions": [
+          {
+            "id": "show",
+            "label": "Open the loaded permissions viewer",
+            "surface": "panel"
+          },
+          {
+            "id": "select-member",
+            "label": "Show one loaded member's role order",
+            "surface": "panel"
+          }
+        ]
+      },
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/permissions-tools.serein-extension",
+      "sha256": "b6867648e96b1aca73b2f657cb4041ddb87a8b44f69a7044b3740fb3fabe38fa",
+      "download_bytes": 1424071,
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+    },
+    {
+      "manifest": {
+        "api_version": 1,
+        "id": "plus-reacts-tools",
+        "name": "Plus Reacts (loaded timeline)",
+        "version": "1.0.0",
+        "author": "Equicord/Vencord contributors; Serein port contributors",
+        "license": "GPL-3.0-or-later",
+        "source": "https://github.com/ViceVerse-cz/Serein/tree/main/extensions/plugins/plus-reacts-tools",
+        "kind": "plugin",
+        "capabilities": [
+          "composer",
+          "timeline",
+          "reactions_control"
+        ],
+        "actions": [
+          {
+            "id": "plus-react",
+            "label": "React to an earlier loaded message using leading plus signs",
+            "surface": "composer"
+          }
+        ]
+      },
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/plus-reacts-tools.serein-extension",
+      "sha256": "aef98bb192ed39b7e6f5205c5d8950027104f1329e4ed3fb51e7097b2323e6fd",
+      "download_bytes": 1350653,
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+    },
+    {
+      "manifest": {
+        "api_version": 1,
+        "id": "server-info-tools",
+        "name": "Server Info Tools",
+        "version": "1.0.0",
+        "author": "Equicord/Vencord contributors; Serein port contributors",
+        "license": "GPL-3.0-or-later",
+        "source": "https://github.com/ViceVerse-cz/Serein/tree/main/extensions/plugins/server-info-tools",
+        "kind": "plugin",
+        "capabilities": [
+          "guild_directory",
+          "channel_directory",
+          "relationships",
+          "storage"
+        ],
+        "actions": [
+          {
+            "id": "show",
+            "label": "Show loaded server info",
+            "surface": "panel"
+          },
+          {
+            "id": "select-guild",
+            "label": "Use selected loaded server",
+            "surface": "panel"
+          }
+        ]
+      },
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/server-info-tools.serein-extension",
+      "sha256": "1b99d5aee81e0693d6fb5b990f01ed6c3ce37e8e29e0ec0ac414b32a97951f3d",
+      "download_bytes": 1475051,
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+    },
+    {
+      "manifest": {
+        "api_version": 1,
+        "id": "social-link-tools",
+        "name": "Social Link Tools",
+        "version": "1.1.0",
+        "author": "Equicord/Vencord contributors; Serein port contributors",
+        "license": "GPL-3.0-or-later",
+        "source": "https://github.com/ViceVerse-cz/Serein/tree/main/extensions/plugins/social-link-tools",
+        "kind": "plugin",
+        "capabilities": [
+          "relationships",
+          "relationship_control",
+          "selected_message",
+          "clipboard_write",
+          "message_send"
+        ],
+        "actions": [
+          {
+            "id": "open",
+            "label": "Review outgoing friend requests",
+            "surface": "panel"
+          },
+          {
+            "id": "cancel",
+            "label": "Cancel selected outgoing friend request",
+            "surface": "panel"
+          },
+          {
+            "id": "normalize-links",
+            "label": "Copy normalized Discord message links",
+            "surface": "message"
+          },
+          {
+            "id": "repeat",
+            "label": "Send selected message with neutralized mentions",
+            "surface": "message"
+          },
+          {
+            "id": "repeat-reply",
+            "label": "Reply with selected message and neutralized mentions",
+            "surface": "message"
+          }
+        ]
+      },
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/social-link-tools.serein-extension",
+      "sha256": "4962435865842c25ed3e59b888e92cb61b2edb499f25167a8c97a87beeff5895",
+      "download_bytes": 1284771,
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+    },
+    {
+      "manifest": {
+        "api_version": 1,
+        "id": "status-presets",
+        "name": "Status presets",
+        "version": "1.0.0",
+        "author": "Equicord/Vencord contributors; Serein port contributors",
+        "license": "GPL-3.0-or-later",
+        "source": "https://github.com/ViceVerse-cz/Serein/tree/main/extensions/plugins/status-presets",
+        "kind": "plugin",
+        "capabilities": [
+          "account_control",
+          "storage"
+        ],
+        "actions": [
+          {
+            "id": "open",
+            "label": "Manage status presets",
+            "surface": "panel"
+          },
+          {
+            "id": "list",
+            "label": "List saved status presets",
+            "surface": "panel"
+          },
+          {
+            "id": "save",
+            "label": "Save status preset",
+            "surface": "panel"
+          },
+          {
+            "id": "delete",
+            "label": "Delete selected status preset",
+            "surface": "panel"
+          },
+          {
+            "id": "apply",
+            "label": "Apply selected status preset",
+            "surface": "panel"
+          }
+        ]
+      },
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/status-presets.serein-extension",
+      "sha256": "94b99903f282ba354725a3610c2b77f82015acf38aef9d7861bdf47d8d53c9ae",
+      "download_bytes": 622216,
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+    },
+    {
+      "manifest": {
+        "api_version": 1,
+        "id": "text-codecs",
+        "name": "Text Codecs",
+        "version": "1.1.0",
+        "author": "Equicord/Vencord contributors; Serein port contributors",
+        "license": "GPL-3.0-or-later",
+        "source": "https://github.com/ViceVerse-cz/Serein/tree/main/extensions/plugins/text-codecs",
+        "kind": "plugin",
+        "capabilities": [
+          "composer",
+          "selected_message",
+          "clipboard_write"
+        ],
+        "actions": [
+          {
+            "id": "decode",
+            "label": "Decode Base64 text",
+            "surface": "composer"
+          },
+          {
+            "id": "uppercase",
+            "label": "Capitalize sentence starts",
+            "surface": "composer"
+          },
+          {
+            "id": "decode-message",
+            "label": "Decode Base64 in message and copy",
+            "surface": "message"
+          }
+        ]
+      },
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/text-codecs.serein-extension",
+      "sha256": "d6bc6df1441ba87823b64eefab75b7d5ab7acee175feb4ea6093945bfede9718",
+      "download_bytes": 1283125,
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
     },
     {
       "manifest": {
@@ -517,10 +1515,10 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/ViceVerse-cz/Serein/3abae434ebd9545fdbed044613653f917a27c19f/extensions/plugins/packages/text-commands.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/text-commands.serein-extension",
       "sha256": "a6d2f111abb5cfdbc4906ca0503c3ab4c8fd5a0bccc2e25cf4cfb1933e5e7abe",
       "download_bytes": 596352,
-      "source_commit": "3abae434ebd9545fdbed044613653f917a27c19f"
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
     },
     {
       "manifest": {
@@ -543,10 +1541,155 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/ViceVerse-cz/Serein/3abae434ebd9545fdbed044613653f917a27c19f/extensions/plugins/packages/view-raw-message.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/view-raw-message.serein-extension",
       "sha256": "b0c45fcd93f9efb209b0a44df745f15e7ffc46ce1498e69ffe46dd4001fe3349",
       "download_bytes": 1358624,
-      "source_commit": "3abae434ebd9545fdbed044613653f917a27c19f"
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+    },
+    {
+      "manifest": {
+        "api_version": 1,
+        "id": "voice-and-chat-tools",
+        "name": "Voice & Chat Tools (bounded)",
+        "version": "1.0.0",
+        "author": "Equicord/Vencord contributors; Serein port contributors",
+        "license": "GPL-3.0-or-later",
+        "source": "https://github.com/ViceVerse-cz/Serein/tree/main/extensions/plugins/voice-and-chat-tools",
+        "kind": "plugin",
+        "capabilities": [
+          "voice_state",
+          "app_events",
+          "storage",
+          "audio_settings",
+          "relationship_control",
+          "relationships",
+          "members",
+          "account_profile",
+          "composer"
+        ],
+        "actions": [
+          {
+            "id": "open",
+            "label": "Open bounded voice participant tools",
+            "surface": "panel"
+          },
+          {
+            "id": "apply-participant-audio",
+            "label": "Propose local volume or mute for the selected participant",
+            "surface": "panel"
+          },
+          {
+            "id": "open-participant-dm",
+            "label": "Propose opening a DM with the selected friend",
+            "surface": "panel"
+          },
+          {
+            "id": "voice-log",
+            "label": "View the current-call session voice log",
+            "surface": "panel"
+          },
+          {
+            "id": "clear-voice-log",
+            "label": "Clear the stored session voice log",
+            "surface": "panel"
+          },
+          {
+            "id": "mention-all-voice",
+            "label": "Mention all current voice participants in the draft",
+            "surface": "composer"
+          },
+          {
+            "id": "observe-voice",
+            "label": "Record current-call voice activity",
+            "surface": "app_event"
+          }
+        ]
+      },
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/voice-and-chat-tools.serein-extension",
+      "sha256": "d2780ff5870ec1db59c6b76345b3cf1fe6743b7f068c2fa9bb7f9c89cfb5934e",
+      "download_bytes": 1546059,
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+    },
+    {
+      "manifest": {
+        "api_version": 1,
+        "id": "voice-panel-tools",
+        "name": "Voice Panel Tools",
+        "version": "1.0.0",
+        "author": "Equicord/Vencord contributors; Serein port contributors",
+        "license": "GPL-3.0-or-later",
+        "source": "https://github.com/ViceVerse-cz/Serein/tree/main/extensions/plugins/voice-panel-tools",
+        "kind": "plugin",
+        "capabilities": [
+          "audio_settings"
+        ],
+        "actions": [
+          {
+            "id": "open",
+            "label": "Open voice panel tools",
+            "surface": "panel"
+          },
+          {
+            "id": "apply",
+            "label": "Review volume change",
+            "surface": "panel"
+          }
+        ]
+      },
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/voice-panel-tools.serein-extension",
+      "sha256": "3743fcacc5cc5941803d66f9deef807ce97e305444f32b4ad87e8047d18c168d",
+      "download_bytes": 1209583,
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+    },
+    {
+      "manifest": {
+        "api_version": 1,
+        "id": "voice-rejoin-tools",
+        "name": "Voice Rejoin Tools",
+        "version": "1.0.0",
+        "author": "Equicord/Vencord contributors; Serein port contributors",
+        "license": "GPL-3.0-or-later",
+        "source": "https://github.com/ViceVerse-cz/Serein/tree/main/extensions/plugins/voice-rejoin-tools",
+        "kind": "plugin",
+        "capabilities": [
+          "app_events",
+          "voice_state",
+          "channel_directory",
+          "voice_connect",
+          "storage"
+        ],
+        "actions": [
+          {
+            "id": "observe",
+            "label": "Remember the last voice channel",
+            "surface": "app_event"
+          },
+          {
+            "id": "show",
+            "label": "Show voice rejoin status",
+            "surface": "panel"
+          },
+          {
+            "id": "save-current",
+            "label": "Save the current voice channel",
+            "surface": "panel"
+          },
+          {
+            "id": "forget",
+            "label": "Forget the saved voice channel",
+            "surface": "panel"
+          },
+          {
+            "id": "rejoin",
+            "label": "Propose rejoining the saved voice channel",
+            "surface": "panel"
+          }
+        ]
+      },
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/voice-rejoin-tools.serein-extension",
+      "sha256": "2d71de4c9711bf3ae33c923e78ee940ba590b3d073e0388acbdda79e42c8507d",
+      "download_bytes": 1401571,
+      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
     }
   ]
 }
