@@ -70,11 +70,7 @@ dependencies = [
 
 [[package]]
 name = "external-search-tools"
-<<<<<<< HEAD
 version = "1.0.3"
-=======
-version = "1.0.2"
->>>>>>> e659151e (fix(extensions): validate external search settings controls)
 dependencies = [
  "serde",
  "serde_json",

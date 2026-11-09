@@ -2333,7 +2333,14 @@ fn show_system(
 					.add(egui::Label::new(text).sense(egui::Sense::click()))
 					.on_hover_cursor(egui::CursorIcon::PointingHand);
 				surface.keep(&response);
-				crate::user_menu::show(&response, state, user, profile, user_action);
+				crate::user_menu::show(
+					&response,
+					state,
+					user,
+					crate::user_menu::Place::Open,
+					profile,
+					user_action,
+				);
 				profile.person_click(ui, &response, None, user);
 			}
 			if let Some((_, parent)) = thread {
@@ -3835,6 +3842,7 @@ impl TimelineView {
 												&author,
 												state,
 												&message.author,
+												crate::user_menu::Place::Open,
 												profile,
 												&mut self.user_action,
 											);
@@ -3875,6 +3883,7 @@ impl TimelineView {
 										&avatar,
 										state,
 										&message.author,
+										crate::user_menu::Place::Open,
 										profile,
 										&mut self.user_action,
 									);
@@ -3921,6 +3930,7 @@ impl TimelineView {
 													&author,
 													state,
 													&message.author,
+													crate::user_menu::Place::Open,
 													profile,
 													&mut self.user_action,
 												);
@@ -4624,8 +4634,7 @@ impl TimelineView {
 					};
 					let keyboard_menu = (focus.has_focus()
 						|| focus_within || (hovered && !timeline_keyboard_focus))
-						&& !reaction_menu
-						&& !egui::Popup::is_any_open(ui.ctx())
+						&& !reaction_menu && !egui::Popup::is_any_open(ui.ctx())
 						&& ui.input_mut(|input| {
 							input.consume_key(egui::Modifiers::SHIFT, egui::Key::F10)
 						});

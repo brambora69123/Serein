@@ -1113,7 +1113,6 @@ fn check_safe_ports(catalog_wasm_dir: &Path) -> Result<(), Box<dyn std::error::E
 		assert!(
 			!panel.panel.is_empty(),
 			"settings panel must validate and open"
-
 		);
 	}
 	Ok(())

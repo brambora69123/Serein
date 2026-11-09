@@ -2094,6 +2094,7 @@ fn role_target_name(name: &str) -> String {
 		.collect()
 }
 
+#[allow(dead_code)] // Compatibility entry for extension adapters using the original signature.
 pub(crate) fn role_chips(
 	ui: &mut egui::Ui,
 	theme: &Theme,
@@ -2153,10 +2154,19 @@ fn role_chips_with_expansion(
 				(*width - 21.0).max(0.0),
 			);
 			let size = vec2(*width, galley.size().y + 6.0);
-			let menu = crate::extensions_ui::has_context_actions(ui.ctx(), extensions::Surface::Role);
+			let menu =
+				crate::extensions_ui::has_context_actions(ui.ctx(), extensions::Surface::Role);
 			let id = egui::Id::unique(("profile-role-chip", guild.guild, user, role.id));
-			let (rect, response) = ui.allocate_exact_size(size, egui::Sense::hover());
-			let response = ui.interact(rect, id, if menu { egui::Sense::click() } else { egui::Sense::hover() });
+			let (rect, _) = ui.allocate_exact_size(size, egui::Sense::hover());
+			let response = ui.interact(
+				rect,
+				id,
+				if menu {
+					egui::Sense::click()
+				} else {
+					egui::Sense::hover()
+				},
+			);
 			let target_name = role_target_name(&role.name);
 			if menu {
 				response.widget_info(|| {
@@ -2164,7 +2174,10 @@ fn role_chips_with_expansion(
 					let label = if role.color == 0 {
 						format!("{target_name}, {extensions}")
 					} else {
-						format!("{target_name}, #{:06X}, {extensions}", role.color & 0xff_ffff)
+						format!(
+							"{target_name}, #{:06X}, {extensions}",
+							role.color & 0xff_ffff
+						)
 					};
 					egui::WidgetInfo::labeled(egui::Role::Button, true, label)
 				});

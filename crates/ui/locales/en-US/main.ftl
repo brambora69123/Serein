@@ -1727,6 +1727,8 @@ markdown-confirm-external-link-open-external-link = Open external link?
 # Context: confirm_external_link
 markdown-confirm-external-link-open-in-browser = Open in Browser
 # Context: confirm_external_link
+markdown-confirm-external-link-only-the-start-fits = Only the start of this message fits in the link; the rest is not sent. This destination opens in your default browser.
+# Context: confirm_external_link
 markdown-confirm-external-link-this-destination-opens-in-your-default-browser = This destination opens in your default browser.
 # Context: show_emoji
 markdown-show-emoji-copy-emoji = Copy emoji
@@ -4093,6 +4095,10 @@ timeline-message-actions-delete-message = Delete message…
 timeline-message-actions-edit-message = Edit message
 # Context: message_actions
 timeline-message-actions-extensions = Extensions
+# Context: menu
+extensions-ui-menu-group-user = User
+# Context: menu
+extensions-ui-menu-group-conversation = Conversation
 # Context: message_actions
 timeline-message-actions-forward = Forward
 # Context: message_actions
@@ -4801,6 +4807,8 @@ public-upload-oversized = Files over { $limit } can’t be sent on your plan. Re
 public-upload-error-conversation = Return to the original conversation and review the file again before uploading publicly
 public-upload-error-selection = Selection changed; review the file again before uploading publicly
 public-upload-error-missing = Select the file again before uploading publicly
+
+message-preview-limit = This message exceeds the native text layout limit.
 
 voice-call-moved-to-another-client = This device's call session was replaced
 

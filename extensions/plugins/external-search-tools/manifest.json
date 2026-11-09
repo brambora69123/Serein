@@ -2,11 +2,7 @@
   "api_version": 1,
   "id": "external-search-tools",
   "name": "External Search Tools",
-<<<<<<< HEAD
   "version": "1.0.3",
-=======
-  "version": "1.0.2",
->>>>>>> e659151e (fix(extensions): validate external search settings controls)
   "author": "Equicord/Vencord contributors; Serein port contributors",
   "license": "GPL-3.0-or-later",
   "source": "https://github.com/ViceVerse-cz/Serein/tree/main/extensions/plugins/external-search-tools",

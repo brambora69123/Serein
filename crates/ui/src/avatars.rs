@@ -1095,7 +1095,7 @@ impl Avatars {
 		let Some((_, texture)) = self.textures.get(&key) else {
 			return false;
 		};
-		let source = texture.size_vec2();
+		let source = texture.resolution_vec2();
 		let scale = (rect.width() / source.x).max(rect.height() / source.y);
 		let uv_size = rect.size() / (source * scale);
 		let uv = egui::Rect::from_center_size(egui::pos2(0.5, 0.5), uv_size);
