@@ -10,7 +10,7 @@ Build and package from `extensions/`, the workspace root (Python 3 is used only 
 ```powershell
 rustup target add wasm32-unknown-unknown
 cargo build --locked --release --target wasm32-unknown-unknown
-python pack.py plugins/message-delete-protector/manifest.json target/wasm32-unknown-unknown/release/message_delete_protector.wasm plugins/packages/message-delete-protector.serein-extension
+python pack.py plugins/message-delete-protector/manifest.json target/wasm32-unknown-unknown/release/message_delete_protector.wasm plugins/packages/message-delete-protector.serein-extension --license licenses/Equicord-GPL-3.0.txt
 ```
 
 A rebuilt module is not a release by itself: committed packages are the reviewed bytes
@@ -77,28 +77,28 @@ are internal, already covered, blocked, unsuitable or still candidates, not comp
 Original Vencord notices and GPL-3.0-or-later terms are retained in the sources and
 `../licenses/Equicord-GPL-3.0.txt`. See each plugin README for exact behavior and source commit.
 Every Equicord-derived package below is also built with
-`--license ../licenses/Equicord-GPL-3.0.txt` (from the repository root), which embeds the full text
+`--license licenses/Equicord-GPL-3.0.txt` (from `extensions/`), which embeds the full text
 in an inert `serein.license` Wasm custom section. Package building never executes that section, and
 `test_catalog.py` requires it for each port. Packaging is the same as above; substitute the
 matching lowercase ID, for example:
 
 ```sh
-python pack.py plugins/offline-composer-tools/manifest.json target/wasm32-unknown-unknown/release/offline_composer_tools.wasm plugins/packages/offline-composer-tools.serein-extension
-python pack.py plugins/text-commands/manifest.json target/wasm32-unknown-unknown/release/text_commands.wasm plugins/packages/text-commands.serein-extension
-python pack.py plugins/view-raw-message/manifest.json target/wasm32-unknown-unknown/release/view_raw_message.wasm plugins/packages/view-raw-message.serein-extension
-python pack.py plugins/external-search-tools/manifest.json target/wasm32-unknown-unknown/release/external_search_tools.wasm plugins/packages/external-search-tools.serein-extension
-python pack.py plugins/text-codecs/manifest.json target/wasm32-unknown-unknown/release/text_codecs.wasm plugins/packages/text-codecs.serein-extension
-python pack.py plugins/message-composition-tools/manifest.json target/wasm32-unknown-unknown/release/message_composition_tools.wasm plugins/packages/message-composition-tools.serein-extension
-python pack.py plugins/identity-tools/manifest.json target/wasm32-unknown-unknown/release/identity_tools.wasm plugins/packages/identity-tools.serein-extension
-python pack.py plugins/loaded-role-members/manifest.json target/wasm32-unknown-unknown/release/loaded_role_members.wasm plugins/packages/loaded-role-members.serein-extension
-python pack.py plugins/status-presets/manifest.json target/wasm32-unknown-unknown/release/status_presets.wasm plugins/packages/status-presets.serein-extension
-python pack.py plugins/message-history/manifest.json target/wasm32-unknown-unknown/release/message_history.wasm plugins/packages/message-history.serein-extension
-python pack.py plugins/message-reference-tools/manifest.json target/wasm32-unknown-unknown/release/message_reference_tools.wasm plugins/packages/message-reference-tools.serein-extension
-python pack.py plugins/draft-style-tools/manifest.json target/wasm32-unknown-unknown/release/draft_style_tools.wasm plugins/packages/draft-style-tools.serein-extension
-python pack.py plugins/command-palette/manifest.json target/wasm32-unknown-unknown/release/command_palette.wasm plugins/packages/command-palette.serein-extension
-python pack.py plugins/ingtoninator/manifest.json target/wasm32-unknown-unknown/release/ingtoninator.wasm plugins/packages/ingtoninator.serein-extension
-python pack.py plugins/own-message-sed/manifest.json target/wasm32-unknown-unknown/release/own_message_sed.wasm plugins/packages/own-message-sed.serein-extension
-python pack.py plugins/social-link-tools/manifest.json target/wasm32-unknown-unknown/release/social_link_tools.wasm plugins/packages/social-link-tools.serein-extension
+python pack.py plugins/offline-composer-tools/manifest.json target/wasm32-unknown-unknown/release/offline_composer_tools.wasm plugins/packages/offline-composer-tools.serein-extension --license licenses/Equicord-GPL-3.0.txt
+python pack.py plugins/text-commands/manifest.json target/wasm32-unknown-unknown/release/text_commands.wasm plugins/packages/text-commands.serein-extension --license licenses/Equicord-GPL-3.0.txt
+python pack.py plugins/view-raw-message/manifest.json target/wasm32-unknown-unknown/release/view_raw_message.wasm plugins/packages/view-raw-message.serein-extension --license licenses/Equicord-GPL-3.0.txt
+python pack.py plugins/external-search-tools/manifest.json target/wasm32-unknown-unknown/release/external_search_tools.wasm plugins/packages/external-search-tools.serein-extension --license licenses/Equicord-GPL-3.0.txt
+python pack.py plugins/text-codecs/manifest.json target/wasm32-unknown-unknown/release/text_codecs.wasm plugins/packages/text-codecs.serein-extension --license licenses/Equicord-GPL-3.0.txt
+python pack.py plugins/message-composition-tools/manifest.json target/wasm32-unknown-unknown/release/message_composition_tools.wasm plugins/packages/message-composition-tools.serein-extension --license licenses/Equicord-GPL-3.0.txt
+python pack.py plugins/identity-tools/manifest.json target/wasm32-unknown-unknown/release/identity_tools.wasm plugins/packages/identity-tools.serein-extension --license licenses/Equicord-GPL-3.0.txt
+python pack.py plugins/loaded-role-members/manifest.json target/wasm32-unknown-unknown/release/loaded_role_members.wasm plugins/packages/loaded-role-members.serein-extension --license licenses/Equicord-GPL-3.0.txt
+python pack.py plugins/status-presets/manifest.json target/wasm32-unknown-unknown/release/status_presets.wasm plugins/packages/status-presets.serein-extension --license licenses/Equicord-GPL-3.0.txt
+python pack.py plugins/message-history/manifest.json target/wasm32-unknown-unknown/release/message_history.wasm plugins/packages/message-history.serein-extension --license licenses/Equicord-GPL-3.0.txt
+python pack.py plugins/message-reference-tools/manifest.json target/wasm32-unknown-unknown/release/message_reference_tools.wasm plugins/packages/message-reference-tools.serein-extension --license licenses/Equicord-GPL-3.0.txt
+python pack.py plugins/draft-style-tools/manifest.json target/wasm32-unknown-unknown/release/draft_style_tools.wasm plugins/packages/draft-style-tools.serein-extension --license licenses/Equicord-GPL-3.0.txt
+python pack.py plugins/command-palette/manifest.json target/wasm32-unknown-unknown/release/command_palette.wasm plugins/packages/command-palette.serein-extension --license licenses/Equicord-GPL-3.0.txt
+python pack.py plugins/ingtoninator/manifest.json target/wasm32-unknown-unknown/release/ingtoninator.wasm plugins/packages/ingtoninator.serein-extension --license licenses/Equicord-GPL-3.0.txt
+python pack.py plugins/own-message-sed/manifest.json target/wasm32-unknown-unknown/release/own_message_sed.wasm plugins/packages/own-message-sed.serein-extension --license licenses/Equicord-GPL-3.0.txt
+python pack.py plugins/social-link-tools/manifest.json target/wasm32-unknown-unknown/release/social_link_tools.wasm plugins/packages/social-link-tools.serein-extension --license licenses/Equicord-GPL-3.0.txt
 ```
 
 ## ABI and limits

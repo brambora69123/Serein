@@ -2086,7 +2086,26 @@ fn visible_role_chips(widths: &[f32], max_width: f32, expanded: bool) -> usize {
 		.unwrap_or(0)
 }
 
-fn role_chips(
+/// The role name a plugin receives: control characters removed and Discord's limit retained.
+fn role_target_name(name: &str) -> String {
+	name.chars()
+		.filter(|c| !c.is_control())
+		.take(extensions::MAX_ROLE_NAME_CHARS)
+		.collect()
+}
+
+#[allow(dead_code)] // Compatibility entry for extension adapters using the original signature.
+pub(crate) fn role_chips(
+	ui: &mut egui::Ui,
+	theme: &Theme,
+	state: &State,
+	user: Id,
+	guild: &model::GuildProfile,
+) {
+	role_chips_with_expansion(ui, theme, state, user, guild, false);
+}
+
+fn role_chips_with_expansion(
 	ui: &mut egui::Ui,
 	theme: &Theme,
 	state: &State,
@@ -2135,7 +2154,34 @@ fn role_chips(
 				(*width - 21.0).max(0.0),
 			);
 			let size = vec2(*width, galley.size().y + 6.0);
-			let (rect, response) = ui.allocate_exact_size(size, egui::Sense::hover());
+			let menu =
+				crate::extensions_ui::has_context_actions(ui.ctx(), extensions::Surface::Role);
+			let id = egui::Id::unique(("profile-role-chip", guild.guild, user, role.id));
+			let (rect, _) = ui.allocate_exact_size(size, egui::Sense::hover());
+			let response = ui.interact(
+				rect,
+				id,
+				if menu {
+					egui::Sense::click()
+				} else {
+					egui::Sense::hover()
+				},
+			);
+			let target_name = role_target_name(&role.name);
+			if menu {
+				response.widget_info(|| {
+					let extensions = crate::i18n::translate("timeline-message-actions-extensions");
+					let label = if role.color == 0 {
+						format!("{target_name}, {extensions}")
+					} else {
+						format!(
+							"{target_name}, #{:06X}, {extensions}",
+							role.color & 0xff_ffff
+						)
+					};
+					egui::WidgetInfo::labeled(egui::Role::Button, true, label)
+				});
+			}
 			ui.painter().rect_filled(rect, 6, theme.chip);
 			let color = if role.color == 0 {
 				theme.muted
@@ -2149,7 +2195,23 @@ fn role_chips(
 				galley,
 				theme.text,
 			);
-			response.on_hover_text(&role.name);
+			let response = response.on_hover_text(&role.name);
+			if menu {
+				let mut popup = crate::user_menu::popup(&response, id.with("menu"));
+				if response.clicked() {
+					popup = popup
+						.open_memory(Some(egui::SetOpenCommand::Bool(true)))
+						.at_position(response.rect.left_bottom());
+				}
+				let target = extensions::MenuTarget::Role {
+					guild_id: guild.guild.to_string(),
+					role_id: role.id.to_string(),
+					user_id: Some(user.to_string()),
+					name: target_name,
+					color: role.color & 0xff_ffff,
+				};
+				popup.show(|ui| crate::extensions_ui::context_menu_entries(ui, &target));
+			}
 		}
 		let hidden = roles.len() - visible;
 		if hidden > 0 {
@@ -4079,7 +4141,7 @@ fn card_view(
 											"profiles-show-roles",
 											full,
 										);
-										role_chips(
+										role_chips_with_expansion(
 											ui,
 											&theme,
 											state,
@@ -4793,6 +4855,27 @@ fn synthetic_frame() -> model::ProfileFrame {
 #[cfg(test)]
 mod tests {
 	use super::*;
+
+	#[test]
+	fn role_target_names_always_pass_host_validation() {
+		let long = "x".repeat(extensions::MAX_ROLE_NAME_CHARS + 50);
+		for (name, expected) in [
+			("Mod\u{7}er\nator", "Moderator".to_owned()),
+			(long.as_str(), "x".repeat(extensions::MAX_ROLE_NAME_CHARS)),
+		] {
+			let sanitized = role_target_name(name);
+			assert_eq!(sanitized, expected);
+			extensions::MenuTarget::Role {
+				guild_id: "1".into(),
+				role_id: "2".into(),
+				user_id: Some("3".into()),
+				name: sanitized,
+				color: 0x3498db,
+			}
+			.validate()
+			.expect("sanitized role target is valid");
+		}
+	}
 
 	#[test]
 	fn always_expand_keeps_webhooks_and_the_docked_panel_compact() {

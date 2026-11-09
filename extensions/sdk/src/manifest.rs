@@ -86,6 +86,7 @@ pub enum Capability {
 	MessageDetails,
 	Relationships,
 	ExternalNavigation,
+	ContextMenus,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -98,6 +99,10 @@ pub enum Surface {
 	MessageEvent,
 	AppEvent,
 	Tick,
+	User,
+	Channel,
+	Server,
+	Role,
 }
 
 /// Declared entry point; its ID arrives in `Invocation::action`.

@@ -50,6 +50,21 @@ except ValueError:
     pass
 else:
     raise AssertionError("data events accepted without app events")
+for surface in ("user", "channel", "server", "role"):
+    typed_menu = json.loads(plugin)
+    typed_menu["manifest"].update(
+        capabilities=["context_menus"],
+        actions=[{"id": "open", "label": "Open menu", "surface": surface}],
+    )
+    assert catalog.validate(json.dumps(typed_menu).encode())["capabilities"] == ["context_menus"]
+invalid_port = json.loads(plugin)
+invalid_port["manifest"]["source"] = "https://example.org:8443/source"
+try:
+    catalog.validate(json.dumps(invalid_port).encode())
+except ValueError:
+    pass
+else:
+    raise AssertionError("non-default HTTPS port accepted")
 # Equicord-derived packages distribute their full GPL text in an inert custom section.
 expected_gpl = (catalog.ROOT / "licenses/Equicord-GPL-3.0.txt").read_bytes()
 for stem in [
@@ -74,7 +89,8 @@ for entry in pinned["entries"]:
     commit = entry["source_commit"]
     for value in [entry] + ([entry["preview"]] if "preview" in entry else []):
         key = "release_url" if value is entry else "url"
-        value[key] = value[key].replace("ViceVerse-cz/Serein-extensions/" + commit + "/", "ViceVerse-cz/Serein/" + commit + "/extensions/")
+        value[key] = value[key].replace("ViceVerse-cz/Serein-extensions/" + commit + "/", catalog.REPOSITORY + "/" + commit + "/extensions/")
+        value[key] = value[key].replace("ViceVerse-cz/Serein/" + commit + "/extensions/", catalog.REPOSITORY + "/" + commit + "/extensions/")
 moved = json.loads(json.dumps(pinned))
 for entry in moved["entries"]:
     old = entry["source_commit"]
@@ -82,10 +98,10 @@ for entry in moved["entries"]:
     for value in [entry] + ([entry["preview"]] if "preview" in entry else []):
         key = "release_url" if value is entry else "url"
         value[key] = value[key].replace(old, "f" * 40)
-assert catalog.content(pinned, "ViceVerse-cz/Serein") == catalog.content(moved, "ViceVerse-cz/Serein") is not None
+assert catalog.content(pinned, catalog.REPOSITORY) == catalog.content(moved, catalog.REPOSITORY) is not None
 assert catalog.content(pinned, "ViceVerse-cz/Other") is None
 moved["entries"][0]["sha256"] = "0" * 64
-assert catalog.content(pinned, "ViceVerse-cz/Serein") != catalog.content(moved, "ViceVerse-cz/Serein")
+assert catalog.content(pinned, catalog.REPOSITORY) != catalog.content(moved, catalog.REPOSITORY)
 class OversizedCatalog:
     prefix = ""
 

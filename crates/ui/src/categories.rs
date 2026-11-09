@@ -1141,6 +1141,7 @@ impl MessagingUi {
 											&avatar,
 											state,
 											user,
+											crate::user_menu::Place::Conversation(channel.id),
 											&mut self.profile,
 											&mut self.user_action,
 											Some(ShortcutView::new(
@@ -1188,7 +1189,8 @@ impl MessagingUi {
 								);
 							}
 							let display_name = self.display_channel_name(state, channel);
-							let mut label = display_name.to_string();
+							let mut label =
+								crate::emoji::presentation(display_name.as_ref()).into_owned();
 							if !enabled && visible {
 								label.push_str(" · unavailable");
 							}
@@ -1430,6 +1432,7 @@ impl MessagingUi {
 									&response,
 									state,
 									user,
+									crate::user_menu::Place::Conversation(channel.id),
 									&mut self.profile,
 									&mut self.user_action,
 									Some(ShortcutView::new(

@@ -104,6 +104,7 @@ mod profile_edit;
 mod reactions;
 mod reading;
 mod registered_games;
+pub(crate) mod rtl;
 pub mod screen;
 pub mod scroll;
 mod search;
@@ -1357,7 +1358,7 @@ impl MessagingUi {
 				} else if request
 					.image
 					.as_ref()
-					.is_some_and(|image| image.pixels.len() > 4 * 1024 * 1024)
+					.is_some_and(|image| image.pixels().len() > 4 * 1024 * 1024)
 				{
 					state.status = "Paste an image with at most 4 million pixels";
 				} else {
@@ -2100,6 +2101,7 @@ impl MessagingUi {
 									&avatar,
 									state,
 									&member.user,
+									crate::user_menu::Place::Open,
 									&mut self.profile,
 									&mut self.user_action,
 								);
@@ -2235,6 +2237,7 @@ impl MessagingUi {
 									&response,
 									state,
 									&member.user,
+									crate::user_menu::Place::Open,
 									&mut self.profile,
 									&mut self.user_action,
 								);
@@ -2544,6 +2547,7 @@ impl MessagingUi {
 									&avatar,
 									state,
 									user,
+									crate::user_menu::Place::Nowhere,
 									&mut self.profile,
 									&mut self.user_action,
 								);
@@ -2772,6 +2776,7 @@ impl MessagingUi {
 								&avatar,
 								state,
 								user,
+								crate::user_menu::Place::Conversation(c.id),
 								&mut self.profile,
 								&mut self.user_action,
 								Some(shortcuts::ShortcutView::new(
@@ -4302,6 +4307,26 @@ impl MessagingUi {
                             rich_layout.select_deleted_inline(ctx, composer_id);
                         }
                         let selection = text_menu::selection_for_menu(ctx, composer_id);
+                        // Visual-order drafts reverse horizontal arrows only at the caret's paragraph.
+                        let bidi_draft = rich_layout.bidi_active(draft);
+                        if bidi_draft
+                            && ctx.memory(|m| m.has_focus(composer_id))
+                            && egui::text_edit::TextEditState::load(ctx, composer_id)
+                                .and_then(|edit| edit.cursor.char_range())
+                                .is_some_and(|range| crate::composer_text::paragraph_rtl(draft, range.primary.index.0))
+                        {
+                            ctx.input_mut(|input| {
+                                for event in &mut input.events {
+                                    if let egui::Event::Key { key, .. } = event {
+                                        *key = match *key {
+                                            egui::Key::ArrowLeft => egui::Key::ArrowRight,
+                                            egui::Key::ArrowRight => egui::Key::ArrowLeft,
+                                            other => other,
+                                        };
+                                    }
+                                }
+                            });
+                        }
                         let mut output = egui::ScrollArea::vertical()
                             .id_salt((composer_id, channel, editing_key))
                             .max_height(ui.ctx().viewport_rect().height() * 0.5)
@@ -4335,24 +4360,36 @@ impl MessagingUi {
                                 } else {
                                     egui::WidgetText::default()
                                 };
-                                let output = TextEdit::multiline(draft)
-                                    .interactive(keyboard_enabled)
-                                    .layouter(&mut layouter)
-                                    .id(composer_id)
-                                    .event_filter(egui::EventFilter {
-                                        horizontal_arrows: true, vertical_arrows: true, escape: editing_here,
-                                        ..Default::default()
-                                    })
-                                    .char_limit(max_content + if editing_here { 0 } else { model::message_options::PREFIX_ALLOWANCE })
-                                    .desired_rows(1)
-                                    .desired_width(f32::INFINITY)
-                                    // Horizontal layouts reserve the interaction height, including around icons.
-                                    .min_size(egui::vec2(0.0, ui.spacing().interact_size.y))
-                                    .align(egui::Align2::LEFT_CENTER)
-                                    .frame(egui::Frame::NONE)
-                                    .hint_text(hint)
-                                    .show(ui);
+                                let selection_slot = ui.painter().add(egui::Shape::Noop);
+                                let mut output = ui.scope(|ui| {
+                                    if bidi_draft {
+                                        let visuals = ui.visuals_mut();
+                                        visuals.text_cursor.stroke.color = egui::Color32::TRANSPARENT;
+                                        visuals.selection.bg_fill = egui::Color32::TRANSPARENT;
+                                    }
+                                    TextEdit::multiline(draft)
+                                        .interactive(keyboard_enabled)
+                                        .layouter(&mut layouter)
+                                        .id(composer_id)
+                                        .event_filter(egui::EventFilter {
+                                            horizontal_arrows: true, vertical_arrows: true, escape: editing_here,
+                                            ..Default::default()
+                                        })
+                                        .char_limit(max_content + if editing_here { 0 } else { model::message_options::PREFIX_ALLOWANCE })
+                                        .desired_rows(1)
+                                        .desired_width(f32::INFINITY)
+                                        // Horizontal layouts reserve the interaction height, including around icons.
+                                        .min_size(egui::vec2(0.0, ui.spacing().interact_size.y))
+                                        .align(egui::Align2::LEFT_CENTER)
+                                        .frame(egui::Frame::NONE)
+                                        .hint_text(hint)
+                                        .show(ui)
+                                }).inner;
+                                rich_layout.bidi_pointer(&mut output, ui.ctx());
                                 rich_layout.paint(ui, &output, &mut self.avatars);
+                                if bidi_draft {
+                                    rich_layout.paint_bidi(ui, &output, selection_slot);
+                                }
                                 output
                             }).inner;
                         if !self.ime_active && !ime_this_frame {
@@ -5051,6 +5088,12 @@ impl MessagingUi {
 	/// service layer.
 	pub fn show(&mut self, ui: &mut egui::Ui, state: &mut State) -> Vec<Command> {
 		state.set_prefer_friend_nickname(self.prefer_friend_nickname);
+		crate::rtl::scope(
+			ui.ctx(),
+			state.generation,
+			state.user.as_ref().map(|user| user.id),
+			state.selected,
+		);
 		self.avatars.cosmetics = self.cosmetics;
 		self.avatars.profile_presentation = self.profile_presentation;
 		name_styles::set_enabled(self.cosmetics.name_styles);
@@ -5182,6 +5225,7 @@ impl MessagingUi {
 		let ctx = ui.ctx().clone();
 		user_menu::set_voice_available(&ctx, self.voice_available);
 		self.extensions.reset_theme_shortcut(&ctx);
+		self.extensions.context_menus(&ctx, state);
 		if self.extensions.has_result() {
 			self.settings.open = false;
 		}
@@ -6495,6 +6539,7 @@ impl MessagingUi {
 				None => {}
 			}
 		}
+		crate::select::show_menu(&ctx);
 		self.show_call_switch(&ctx, state, &mut commands);
 		self.apply_ring_request(state, &mut commands);
 		if let Some((guild, channel, user, change)) = self.voice_moderation.take()

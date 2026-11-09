@@ -161,6 +161,8 @@ pub struct TimelineView {
 	pub(super) video: crate::video::VideoUi,
 	pub(super) opening: Option<String>,
 	pub(super) browser_opening: Option<String>,
+	/// The translation link whose text was shortened, valid only while it is the pending URL.
+	pub(super) truncated_translation: Option<String>,
 	text_size: f32,
 	font_revision: (usize, usize, u32),
 	scale: f32,
@@ -2331,7 +2333,14 @@ fn show_system(
 					.add(egui::Label::new(text).sense(egui::Sense::click()))
 					.on_hover_cursor(egui::CursorIcon::PointingHand);
 				surface.keep(&response);
-				crate::user_menu::show(&response, state, user, profile, user_action);
+				crate::user_menu::show(
+					&response,
+					state,
+					user,
+					crate::user_menu::Place::Open,
+					profile,
+					user_action,
+				);
 				profile.person_click(ui, &response, None, user);
 			}
 			if let Some((_, parent)) = thread {
@@ -2387,6 +2396,7 @@ impl TimelineView {
 	/// Build and validate the browser target only when Translate is actually clicked.
 	fn open_translation(&mut self, text: &str) {
 		self.translation_notice = None;
+		self.truncated_translation = None;
 		let Some(target) = translation_url(text) else {
 			self.translation_notice = Some(crate::i18n::translate(
 				"timeline-message-actions-translate-too-long",
@@ -2399,6 +2409,9 @@ impl TimelineView {
 			));
 		}
 		self.browser_opening = crate::markdown::external_url(&target.url);
+		if target.truncated {
+			self.truncated_translation = self.browser_opening.clone();
+		}
 		if self.browser_opening.is_none() {
 			self.translation_notice = Some(crate::i18n::translate(
 				"timeline-message-actions-translate-too-long",
@@ -2690,6 +2703,7 @@ impl TimelineView {
 				},
 				opening: self.opening.take(),
 				browser_opening: self.browser_opening.take(),
+				truncated_translation: self.truncated_translation.take(),
 				pending_viewer: self.pending_viewer.take(),
 				history: std::mem::take(&mut self.history),
 				jump: following,
@@ -3241,12 +3255,10 @@ impl TimelineView {
 			let keyboard_focus = ui
 				.memory(|m| m.focused())
 				.and_then(|id| ui.ctx().read_response(id));
-			let focused_row = keyboard_focus.as_ref().and_then(|response| {
-				self.rows.iter().find_map(|(id, _)| {
-					(ui.make_persistent_id(id.0).with("message-focus") == response.id)
-						.then_some(*id)
-				})
-			});
+			// Focus on a row or one of its controls owns Shift+F10; hover alone must not override it.
+			let timeline_keyboard_focus = keyboard_focus
+				.as_ref()
+				.is_some_and(|response| clip.contains_rect(response.rect));
 			if let Some(id) = self.keyboard_menu_row
 				&& !egui::Popup::is_id_open(
 					ui.ctx(),
@@ -3830,6 +3842,7 @@ impl TimelineView {
 												&author,
 												state,
 												&message.author,
+												crate::user_menu::Place::Open,
 												profile,
 												&mut self.user_action,
 											);
@@ -3870,6 +3883,7 @@ impl TimelineView {
 										&avatar,
 										state,
 										&message.author,
+										crate::user_menu::Place::Open,
 										profile,
 										&mut self.user_action,
 									);
@@ -3916,6 +3930,7 @@ impl TimelineView {
 													&author,
 													state,
 													&message.author,
+													crate::user_menu::Place::Open,
 													profile,
 													&mut self.user_action,
 												);
@@ -4609,12 +4624,17 @@ impl TimelineView {
 						&& !reaction_menu && !egui::Popup::is_any_open(ui.ctx())
 						&& (ui.input(|i| i.pointer.secondary_clicked())
 							|| crate::select::open_menu(ui.ctx()));
-					// A focused row owns Shift+F10. The hovered row is only a fallback
-					// when no message row has focus, so an earlier hover cannot steal it.
-					let row_focused = focused_row == Some(id);
-					let keyboard_menu = !reaction_menu
-						&& !egui::Popup::is_any_open(ui.ctx())
-						&& (row_focused || (focused_row.is_none() && hovered))
+					// Focus on a control inside the row or its toolbar also counts as this row.
+					let focus_within = if retained_toolbar.is_some() {
+						retained && keyboard_focus.is_some()
+					} else {
+						keyboard_focus
+							.as_ref()
+							.is_some_and(|response| rect.contains(response.rect.center()))
+					};
+					let keyboard_menu = (focus.has_focus()
+						|| focus_within || (hovered && !timeline_keyboard_focus))
+						&& !reaction_menu && !egui::Popup::is_any_open(ui.ctx())
 						&& ui.input_mut(|input| {
 							input.consume_key(egui::Modifiers::SHIFT, egui::Key::F10)
 						});

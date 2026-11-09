@@ -913,9 +913,9 @@ fn discovery_is_forward_tolerant_and_does_not_change_legacy_input() {
 	supported.validate().unwrap();
 	assert!(host.supports("rich_presence"));
 	assert!(host.supports("api_proxy"));
-	assert_eq!(caps.len(), 54);
+	assert_eq!(caps.len(), 55);
 	assert_eq!(HostInfo::current().app_events.len(), 21);
-	assert_eq!(std::collections::BTreeSet::from_iter(caps).len(), 54);
+	assert_eq!(std::collections::BTreeSet::from_iter(caps).len(), 55);
 }
 
 #[test]
@@ -1080,6 +1080,7 @@ fn external_navigation_accepts_only_bounded_credential_free_https_urls() {
 		));
 	}
 	let oversized = format!("https://example.org/{}", "a".repeat(2048));
+	let expands = format!("https://example.org/{}", "é".repeat(700));
 	for url in [
 		"http://example.org/",
 		"javascript:alert(1)",
@@ -1097,6 +1098,7 @@ fn external_navigation_accepts_only_bounded_credential_free_https_urls() {
 		"https://example.org\\@evil.test/",
 		"https://example.org/\n",
 		oversized.as_str(),
+		expands.as_str(),
 	] {
 		assert!(action(url).validate().is_err(), "accepted {url:?}");
 	}
