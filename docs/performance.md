@@ -1908,3 +1908,31 @@ Candidate executable SHA-256 is `afb24881fffc27454dfba81707dcd6c07737b1883c762c3
 The required synthetic reducer control used one `cargo replay` warmup followed by five direct optimized `replay-bench` runs per revision, sequentially on the same host. Both retained 401,492–401,977 estimated bytes over 500 records. Exact pre-sync median was 49.284 ms (48.693–50.288 ms) and candidate median was 49.287 ms (48.785–50.361 ms), +0.006% / below useful measurement precision. This is not evidence of a Gateway improvement or regression; the workload constructs no Gateway or WebSocket and does not measure connection latency, connection CPU, UI frame time or live compatibility.
 
 The voice feedback extension remains experimental: a clean workspace gate is not proof of group-call or packet-loss behavior, and its multiplier effect in official clients is not live-verified here. The font test passed locally because upstream CI had not run for #925. The DWM fix relies on its native Windows CI evidence; this Linux environment could not execute its local DWM path. No new UI-speed, startup, call-quality or live-enforcement claim is made.
+
+### Complete upstream migration and 45-entry extension catalog — November 9, 2026
+
+The comparison is between fork `main` at `13ada510305ac0376b27872a1f3f2918897118f3` (the previously
+installed build) and the completed integration at `9b4bfa39219a7c18dc47cb4c553480807421e179`.
+Both standard packages include voice and were produced with locked dependencies using
+`cargo xtask package --format dir` on Linux x86-64. The after build uses Rust 1.99.1, upstream through
+`8babeff999d61b8986379867e54511d320bf9e15`, egui 0.37 and the completed context-menu/RTL migration.
+Compression uses a sorted, normalized `linux-root` tar with uid/gid and the gzip timestamp zeroed.
+
+| Metric | Previously installed `main` | Completed integration | Delta |
+| --- | ---: | ---: | ---: |
+| Executable bytes | 96,083,688 | 96,363,240 | +279,552 (+0.291%) |
+| Installed `linux-root`, 245 files each | 100,783,877 | 101,063,630 | +279,753 (+0.278%) |
+| Compressed normalized `linux-root` (`tar.gz`) bytes | 57,614,856 | 57,617,972 | +3,116 (+0.005%) |
+
+The final executable SHA-256 is
+`f1666410e943cfa28adb554c4f4bde633602820d4648fadbfe4695099ae3b2c8`; the compressed-tree
+SHA-256 is `c4d37d81d0bd13ea866592ee68c08256cbed8db5b8ef0e7ff891e216948d39e0`.
+The two packaged executable paths had identical bytes; `ldd` reported no missing libraries and the
+installation tree had no broken symlinks. All 1,642 workspace tests and all real committed/rebuilt
+Wasm behavior checks passed before packaging. The generated offline catalog validates 11 themes
+and 34 plugins; release bytes do not contain a debug-only substitute for its pinned remote catalog.
+
+An isolated Xvfb `--demo` window was captured with a task-local HOME and inspected. No connected
+Discord session was used. No equivalent-process UI workload was sampled on the previous installed
+binary, so there is no UI-speed, RSS, startup-latency, frame-latency or live interoperability claim.
+These package sizes also do not represent the network cost of downloading optional extensions.
