@@ -56,7 +56,11 @@ fn main() {
 		.textures_delta
 		.set
 		.iter()
-		.filter(|(_, deltas)| deltas.iter().any(|delta| delta.image.size() == [2, 2]))
+		.filter(|(_, deltas)| {
+			deltas
+				.iter()
+				.any(|delta| delta.image.resolution() == [2, 2])
+		})
 		.map(|(id, _)| *id)
 		.collect();
 	assert_eq!(still_ids.len(), 2, "unfocused animations must not upload");
@@ -197,7 +201,11 @@ fn member_row() {
 		.textures_delta
 		.set
 		.iter()
-		.find(|(_, deltas)| deltas.iter().any(|delta| delta.image.size() == [2, 2]))
+		.find(|(_, deltas)| {
+			deltas
+				.iter()
+				.any(|delta| delta.image.resolution() == [2, 2])
+		})
 		.unwrap()
 		.0;
 	let artwork = |output: &egui::FullOutput, id: TextureId| -> Vec<Rect> {
@@ -225,7 +233,10 @@ fn member_row() {
 		.set
 		.iter()
 		.find(|(id, deltas)| {
-			**id != still_id && deltas.iter().any(|delta| delta.image.size() == [2, 2])
+			**id != still_id
+				&& deltas
+					.iter()
+					.any(|delta| delta.image.resolution() == [2, 2])
 		})
 		.expect("hovering the row starts its avatar")
 		.0;

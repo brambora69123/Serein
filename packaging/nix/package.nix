@@ -30,6 +30,7 @@
     libpulseaudio,
     libglvnd,
     alsa-lib,
+    aws-lc,
     gst_all_1,
     pipewire,
     libx11,
@@ -127,7 +128,8 @@ in
             ];
 
         buildInputs =
-            lib.optionals isLinux (toolkitDeps ++ graphicsDeps ++ windowingDeps ++ audioDeps ++ gstPlugins)
+            [aws-lc]
+            ++ lib.optionals isLinux (toolkitDeps ++ graphicsDeps ++ windowingDeps ++ audioDeps ++ gstPlugins)
             ++ lib.optionals isDarwin [
                 apple-sdk_15
                 swiftPackages.stdlib
