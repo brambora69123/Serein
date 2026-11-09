@@ -4178,6 +4178,7 @@ impl Desktop {
 								"Synthetic pinned message: {}",
 								message.content.chars().take(200).collect::<String>()
 							),
+							preview_limited: false,
 							author: message.author,
 							mentions: message.mentions,
 							attachments: message.attachments,
@@ -4285,6 +4286,7 @@ impl Desktop {
 									author: message.author,
 									mentions: message.mentions,
 									excerpt: message.content.clone(),
+									preview_limited: false,
 									attachments: message.attachments,
 									embeds: message.embeds,
 								});
