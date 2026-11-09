@@ -174,8 +174,8 @@ fn invite_captcha(bytes: &[u8]) -> Option<client_core::captcha::Challenge> {
 		c.should_serve_invisible,
 	)
 }
-/// Headers Discord's web client sends on every REST call; without them a normal-user
-/// session is classified as automated and quarantined (spam flag, attachment limits).
+/// Browser-shaped headers used by Serein's authenticated REST adapter. Current service
+/// acceptance and any relationship to account enforcement remain unverified.
 fn fingerprint_headers() -> Result<reqwest::header::HeaderMap, Failure> {
 	let mut headers = reqwest::header::HeaderMap::new();
 	headers.insert(

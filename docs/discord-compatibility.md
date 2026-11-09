@@ -1217,7 +1217,7 @@ Server identity tags (September 19): Discord's documented [User object](https://
 | User mentions | [Message formatting](https://docs.discord.com/developers/reference#message-formatting) | Documented syntax; normal-user notification behavior unverified | Local @ autocomplete, clickable names/profile cards, exact user allowlists, bounded SQLite metadata; tests and limits |
 | User profile cards | Normal session `/users/{id}/profile`; documented [User object](https://docs.discord.com/developers/resources/user#user-object); [public implementation](https://github.com/dolfies/discord.py-self/blob/master/discord/http.py) | Base server identity shape documented; extended route and normal-session delivery unofficial/live-unverified | Anchored popout with banner/avatar/bio/pronouns/badge artwork/server tag/theme colors/connections/mutual servers and retained presence/custom status, cancellable requests and visible failures. Bounded base-user identity supplies compact badge/tag chips in profile, member and direct-message rows while the extended profile is unavailable; badge CDN paths are observed, not documented; evidence |
 | History, send, edit, delete, replies | Normal session; [message resource](https://docs.discord.com/developers/resources/message) and Abaddon | Documented bot-facing resource; user compatibility unofficial | Experimental text adapter; owner permissions remain server-authoritative |
-| Realtime, resume | Normal session; [Gateway](https://docs.discord.com/developers/events/gateway), Abaddon Identify/READY | Documented lifecycle; normal-user Identify and dispatch differences unofficial | Bounded JSON transport; no compression requested; incompatible snapshots fail |
+| Realtime, resume | Normal session; [Gateway](https://docs.discord.com/developers/events/gateway), Abaddon Identify/READY | Documented lifecycle; normal-user Identify and dispatch differences unofficial | Bounded JSON transport with `zlib-stream` enabled in the Gateway URL; Identify-level `compress:false` is independent; incompatible snapshots fail |
 | Rate limits | Credential-specific response headers/body; [rate limits](https://docs.discord.com/developers/topics/rate-limits) | Documented; do not assume bot quotas | Conservative shared cooldown; a message send rejected with 429 (documented as not processed) stays pending and is resent with its nonce after the service's wait, at most 30 times, with the official client's "sending too quickly" notice. No other write is retried. Idempotent reads wait out up to two short JSON 429 responses. An HTML or plain-text 429 from `discord.com` (a Cloudflare block, unofficial) moves this process to `ptb.discord.com` and retries one idempotent read there; whether every Cloudflare ban is limited to one hostname is unverified |
 | Nonce correlation | Message nonce; message resource | Documented finite deduplication; user applicability unverified | Correlate confirmations only; no automatic ambiguous resend or indefinite idempotency claim |
 | Native message formatting | Existing message content; [pulldown-cmark source](https://github.com/pulldown-cmark/pulldown-cmark) and [egui LayoutJob](https://docs.rs/egui/0.36.2/egui/text/struct.LayoutJob.html) | Local rendering; no additional service capability | Bounded emphasis/code/quotes/lists/strike, inert HTML, explicit HTTP(S) link confirmation, up to 32 inline text spoilers with separate media reveal; CommonMark differs from Discord Markdown; no automatic previews |
@@ -1231,7 +1231,7 @@ Server identity tags (September 19): Discord's documented [User object](https://
 | One-to-one DM voice | Normal session + per-call credentials; [Discord voice](https://docs.discord.com/developers/topics/voice-connections), [DAVE](https://daveprotocol.com/), [discord.py-self signaling](https://github.com/dolfies/discord.py-self/blob/master/discord/gateway.py) | Voice transport/DAVE documented; normal-user DM entry/ringing unofficial; implementation live-unverified | Native Opus/CPAL/DAVE v1 path, call controls and bounded resume implemented; synthetic tests only. Physical audio and official-client two-way call gate blocked; voice included in every build |
 | Logout | Local credential/task disposal; OAuth revocation applies only to OAuth tokens | Local behavior implemented; remote session revocation unverified | Local logout only, does not delete sent messages or claim server token revocation |
 
-`messages.read` refers to local RPC; it is not a general REST chat grant. `rpc` needs approved-partner access and depends on the official application. Social SDK relationship access does not establish general desktop-client chat access. No client secret, token broker, fingerprint imitation, native password endpoint, CAPTCHA/MFA workaround, or harvested QR flow is implemented. The owner explicitly requested the official login page in an authentication-only webview and secure saved login; OAuth is not the product login.
+`messages.read` refers to local RPC; it is not a general REST chat grant. `rpc` needs approved-partner access and depends on the official application. Social SDK relationship access does not establish general desktop-client chat access. No client secret, token broker, native password endpoint, CAPTCHA/MFA workaround, or harvested QR flow is implemented. The owner explicitly requested the official login page in an authentication-only webview and secure saved login; OAuth is not the product login. REST, Gateway Identify and the verification webviews do use the explicitly browser-shaped identity values in `client_core::fingerprint`; their scope and evidence limits are audited below.
 
 Discord states DAVE is required for the listed call types from March 1, 2026. libdave supplies encryption components, not capture, playback, codecs, jitter handling, or a complete call engine. No legacy unencrypted fallback is acceptable.
 
@@ -1247,7 +1247,7 @@ The owner superseded the initial storage/login constraints during implementation
 
 The handoff is original code in `crates/platform/src/login-handoff.js` and the Linux WebKit resource observer. It observes an Authorization header only for this temporary webview’s own `https://discord.com/api/v*/` requests, after user-controlled authentication. It reads neither localStorage nor other applications, profiles or tabs, and does not inspect passwords or QR secrets. A random per-webview capability scopes the IPC handoff; Rust validates that capability, the IPC origin, and token length, then verifies the account via `/users/@me` and rejects bot accounts. This handoff is a technical hypothesis with offline tests; Discord’s current page may use an unsupported transport, reject the embedded engine, or change its behavior. Failure must not be called successful login.
 
-Navigation is limited to Discord’s HTTPS origin; new windows and downloads are blocked. Third-party challenge subframes are left to the platform engine; popup-dependent methods may fail. No spoofed official client user agent/properties are supplied. Resume URLs are restricted to recognized Discord gateway hosts.
+Navigation is limited to Discord’s HTTPS origin; new windows and downloads are blocked. Third-party challenge subframes are left to the platform engine; popup-dependent methods may fail. Serein overrides the user agent and supplies fixed browser-shaped REST/Identify properties from `client_core::fingerprint`; this is not evidence of normal-user acceptance or an anti-abuse bypass. Resume URLs are restricted to recognized Discord gateway hosts.
 
 September 10 People/avatar continuation: the member subscription uses the opcode 14 shape found in the current original discord.py-self implementation. [Original lazy-guild research](https://arandomnewaccount.gitlab.io/discord-unofficial-docs/lazy_guilds.html) describes list positions including groups and ambiguous empty SYNC responses; it is unofficial evidence, not a service guarantee. A newer opcode 37 has also been [reported by Userdoccers](https://github.com/discord-userdoccers/discord-userdoccers/issues/191); Serein does not claim opcode 14 works for every account. Channel-specific list identities require the available everyone-role permissions and channel overwrites. The small noncryptographic Murmur3 identity calculation is implemented locally and checked against known vectors; no third-party client code blocks were copied. This identity selects a list; it grants no permissions. No complete member directory is fetched or persisted. Profile cards expose only available name, ID and avatar, not invented bios, roles or relationships. Server-specific custom avatars and full profile endpoints remain unsupported.
 
@@ -3100,3 +3100,43 @@ Synthetic checks cover a rolling identify budget and age-out, command-window del
 bypass, plus a rejected second store lock and successful acquisition after release. No live account
 was used for these checks. These changes do not establish gate fidelity with every official request,
 absence of gateway conflicts after a crash, or absence of suspicious-activity enforcement.
+
+## REST/Gateway public-client comparison — November 8, 2026
+
+This comparison uses Serein's transport call sites, the public
+[Gateway lifecycle](https://docs.discord.com/developers/events/gateway),
+[Gateway events](https://docs.discord.com/developers/events/gateway-events#reconnect), and
+[HTTP rate-limit documentation](https://docs.discord.com/developers/topics/rate-limits). The public,
+unauthenticated `https://discord.com/app` entry point supplied `assets/web.72656029554c0370.js`
+(SHA-256 `5eb1395890449168266ae51aeff381eb368a7686d8da200593b84e763005bcf1`). That artifact reports
+web build `667580`; Serein's fixed `CLIENT_BUILD_NUMBER` remains `634304`. This proves that the fixed
+web identity is stale relative to this retrieval, not that it caused an enforcement incident. The
+artifact was not imported, and its launch, installation, modification or device metadata was not
+copied. This is a **web-client** comparison, not a native-desktop capture or official-request trace.
+
+| Flow | Public/reference behavior or Serein target | Corrected behavior and evidence |
+|---|---|---|
+| Reconnect before Hello | Discord says opcode 7 may occur at any point, even before or instead. | The old pre-Hello parser ended with a protocol error. It now replaces the socket without erasing an existing Resume cursor. A loopback fixture sends opcode 7 before Hello between READY and RESUME. |
+| Reconnect after READY/RESUMED | The public event asks the client to reconnect and resume its existing session. | The old path incurred the ordinary 2–3 second initial recovery backoff, which an existing test-only recovery notification could hide. Opcode 7 now skips that backoff. The new fixture has no recovery notifier and checks the unchanged session ID and sequence. |
+| Command-window writer | Discord documents 120 ordinary Gateway events per 60 seconds; Serein conservatively admits 110 and bypasses heartbeat/control frames. | An empty pending queue previously created a continuously ready sleep and hot select loop. Only a non-empty queue now has a delay future: immediate when capacity exists, otherwise the oldest command's reset delay. Four pending commands remain the bound. |
+| Queued socket failure | Heartbeats and reads must remain responsive; a failed established transport should enter normal Resume recovery. | Each queued socket write now has its own five-second bound, separate from the rate-window wait. Failure breaks the socket loop instead of terminating the whole Gateway task. Synthetic stalled-sink and reconnect fixtures cover these boundaries. |
+| Identify properties | REST decodes the same fixed JSON object that Gateway places in `identify.d.properties`. | A future serialization failure now stops with a protocol error instead of silently sending `properties:null`. The lifecycle fixture compares the complete object rather than two selected fields. |
+| Transport compression | Serein requests `v=10&encoding=json&compress=zlib-stream`; `identify.d.compress` is independently `false`. | Corrected the earlier documentation that said no compression was requested. TLS/WSS remains separate from zlib compression. |
+
+Unresolved differences are deliberately not presented as fixes or incident causes. The web build and
+hard-coded Chrome 128/Safari 18.5 identity have no current-equivalence evidence. The main/voice
+WebSocket HTTP Upgrade does not use the REST user agent or Origin, although Gateway Identify includes
+the shared properties; public documentation does not establish that adding REST headers is required.
+Windows/macOS hosted login currently uses the WebView engine's default user agent while Linux login
+and the verification widgets use explicit overrides. The PTB REST fallback retains stable-origin
+headers and `Sec-Fetch-Site:same-origin`; its desired cross-origin policy needs a targeted fixture and
+decision rather than another blanket identity override.
+
+The REST adapter also applies route cooldowns globally instead of maintaining bounded per-bucket and
+top-level-resource scopes, does not turn `RATE_LIMITED` into a typed member-search result, and has no
+legacy ack-token reset on `USER_UPDATE`. Public/anonymous API and CDN clients intentionally have
+separate credential/header boundaries. These remain review items, not proof of anti-abuse behavior.
+No trusted-client persona, cookie, launch/session identifier, CAPTCHA token or challenge-evasion
+mechanism was added. No authenticated official-client/Serein differential was captured, none of these
+checks establishes suspicious-activity causation, and no change can guarantee avoidance of account
+enforcement.

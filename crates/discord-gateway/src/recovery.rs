@@ -2,7 +2,7 @@
 use client_core::auth::Failure;
 use futures_util::{Sink, SinkExt, Stream, StreamExt};
 use std::collections::VecDeque;
-use tokio::time::{Duration, Instant};
+use tokio::time::{Duration, Instant, timeout};
 use tokio_tungstenite::tungstenite::{Error, Message as Frame};
 
 const IDENTIFY_WINDOW: Duration = Duration::from_secs(60 * 60);
@@ -11,6 +11,7 @@ const COMMAND_WINDOW: Duration = Duration::from_secs(60);
 const MAX_COMMANDS: usize = 110;
 /// Only this many full-window commands wait for their original connection.
 const MAX_PENDING_COMMANDS: usize = 4;
+const COMMAND_WRITE_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// Counts only fresh IDENTIFY handshakes, not successful session resumes.
 #[derive(Default)]
@@ -121,20 +122,30 @@ where
 		Ok(())
 	}
 
-	/// Flush at the actual rate wait; `send` itself covers only the underlying socket write.
+	/// Flush at the actual rate wait, with a separate bound for each underlying socket write.
+	/// The write timeout never covers the command-window delay driven by the select loop.
 	pub async fn flush_pending(&mut self) -> Result<(), Error> {
 		while self.commands.delay(Instant::now()).is_zero() {
 			let Some(frame) = self.pending.pop_front() else {
 				break;
 			};
 			self.commands.reserve(Instant::now());
-			self.socket.send(frame).await?;
+			match timeout(COMMAND_WRITE_TIMEOUT, self.socket.send(frame)).await {
+				Ok(result) => result?,
+				Err(_) => {
+					return Err(Error::Io(std::io::Error::new(
+						std::io::ErrorKind::TimedOut,
+						"Gateway command write timed out",
+					)));
+				}
+			}
 		}
 		Ok(())
 	}
 
-	pub fn delay(&self) -> Duration {
-		self.commands.delay(Instant::now())
+	/// No timer is needed while the queue is empty; an available queued command flushes now.
+	pub fn flush_delay(&self) -> Option<Duration> {
+		(!self.pending.is_empty()).then(|| self.commands.delay(Instant::now()))
 	}
 
 	pub async fn next(&mut self) -> Option<Result<Frame, Error>> {
@@ -194,6 +205,7 @@ mod tests {
 	#[derive(Default)]
 	struct TestSocket {
 		sent: Vec<Frame>,
+		stalled: bool,
 	}
 
 	impl Sink<Frame> for TestSocket {
@@ -202,7 +214,11 @@ mod tests {
 			self: std::pin::Pin<&mut Self>,
 			_: &mut std::task::Context<'_>,
 		) -> std::task::Poll<Result<(), Self::Error>> {
-			std::task::Poll::Ready(Ok(()))
+			if self.stalled {
+				std::task::Poll::Pending
+			} else {
+				std::task::Poll::Ready(Ok(()))
+			}
 		}
 		fn start_send(mut self: std::pin::Pin<&mut Self>, frame: Frame) -> Result<(), Self::Error> {
 			self.sent.push(frame);
@@ -234,6 +250,7 @@ mod tests {
 	#[tokio::test]
 	async fn full_window_queues_bounded_commands_and_flushes_without_a_send_timeout() {
 		let mut socket = CommandSocket::new(TestSocket::default());
+		assert_eq!(socket.flush_delay(), None);
 		let command: Frame = serde_json::json!({"op":3,"d":{}}).to_string().into();
 		for _ in 0..MAX_COMMANDS {
 			socket.send(command.clone()).await.unwrap();
@@ -241,17 +258,44 @@ mod tests {
 		assert_eq!(socket.socket.sent.len(), MAX_COMMANDS);
 		socket.send(command.clone()).await.unwrap();
 		assert_eq!(socket.pending.len(), 1);
-		assert!(socket.delay() > Duration::ZERO);
+		assert!(
+			socket
+				.flush_delay()
+				.is_some_and(|delay| delay > Duration::ZERO)
+		);
 		assert_eq!(socket.socket.sent.len(), MAX_COMMANDS);
-		// No timeout can cancel these writes because the wait is delegated to the select loop.
+		// The rate wait stays in the select loop and does not consume a write timeout.
 		socket.flush_pending().await.unwrap();
 		assert_eq!(socket.socket.sent.len(), MAX_COMMANDS);
 		// Advance the synthetic budget rather than sleeping for a minute.
 		for sent in &mut socket.commands.sent {
 			*sent -= COMMAND_WINDOW;
 		}
+		assert_eq!(socket.flush_delay(), Some(Duration::ZERO));
 		socket.flush_pending().await.unwrap();
 		assert_eq!(socket.socket.sent.len(), MAX_COMMANDS + 1);
 		assert!(socket.pending.is_empty());
+		assert_eq!(socket.flush_delay(), None);
+	}
+
+	#[tokio::test(start_paused = true)]
+	async fn queued_socket_write_has_its_own_bounded_timeout() {
+		let mut socket = CommandSocket::new(TestSocket::default());
+		let command: Frame = serde_json::json!({"op":3,"d":{}}).to_string().into();
+		for _ in 0..MAX_COMMANDS {
+			socket.send(command.clone()).await.unwrap();
+		}
+		socket.send(command).await.unwrap();
+		for sent in &mut socket.commands.sent {
+			*sent -= COMMAND_WINDOW;
+		}
+		socket.socket.stalled = true;
+		let result = timeout(Duration::from_secs(10), socket.flush_pending())
+			.await
+			.expect("the queued write exceeded its own timeout");
+		assert!(matches!(
+			result,
+			Err(Error::Io(error)) if error.kind() == std::io::ErrorKind::TimedOut
+		));
 	}
 }

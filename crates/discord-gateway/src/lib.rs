@@ -20,6 +20,7 @@ use client_core::{
 };
 pub use discord_protocol::activity_sessions::Observation as ActivityObservation;
 use discord_protocol::*;
+use futures_util::FutureExt;
 #[cfg(test)]
 use futures_util::{SinkExt, StreamExt};
 use model::{Freshness, Id, Member, MemberList};
@@ -1282,6 +1283,11 @@ async fn run_recoverable(
 			calls.disconnected();
 			while voice_controls.try_recv().is_ok() {}
 			emit(Event::Disconnected)?;
+			if skip_backoff && let Some(reconnect) = reconnect {
+				// Backoff used to consume a notification emitted by Disconnected. An immediate
+				// server-requested reconnect must consume that redundant request explicitly.
+				let _ = reconnect.notified().now_or_never();
+			}
 			if !std::mem::take(&mut skip_backoff) {
 				let _ = recoverable_wait(
 					sleep(Duration::from_millis(
@@ -1360,6 +1366,13 @@ async fn run_recoverable(
 		};
 		let packet: GatewayPacket =
 			decode_gateway(text.as_bytes()).map_err(|_| Failure::Protocol)?;
+		if packet.op == 7 {
+			// Reconnect is valid before or instead of Hello. Preserve an existing Resume
+			// cursor and replace this socket without the ordinary outage backoff.
+			skip_backoff = true;
+			attempt = next_attempt(attempt, None);
+			continue;
+		}
 		if packet.op != 10 {
 			return Err(Failure::Protocol);
 		}
@@ -1376,7 +1389,8 @@ async fn run_recoverable(
 			// Normal-user Identify remains live-unverified. Preserve the same identity on every
 			// transport rather than inventing per-connection device/session markers.
 			let properties: serde_json::Value =
-				serde_json::from_str(&client_core::fingerprint::properties()).unwrap_or_default();
+				serde_json::from_str(&client_core::fingerprint::properties())
+					.map_err(|_| Failure::ProtocolAt("Gateway login: invalid client identity"))?;
 			serde_json::json!({"op":2,"d":{"token":secret.expose(),"compress":false,"properties":properties,"presence":outgoing_activity.identify_presence()}})
 		};
 		let encoded = Zeroizing::new(handshake.to_string());
@@ -1417,7 +1431,11 @@ async fn run_recoverable(
 		let mut queries = member_search::Search::default();
 		outgoing_activity.reconnect();
 		loop {
-			socket.flush_pending().await.map_err(socket_failure)?;
+			// A queued write failure replaces the socket and resumes an established session;
+			// it is not a terminal error and cannot stall heartbeat/read branches indefinitely.
+			if socket.flush_pending().await.is_err() {
+				break;
+			}
 			if activity_enabled && last_observation != Some(outgoing_activity.observation) {
 				observe(outgoing_activity.observation)?;
 				last_observation = Some(outgoing_activity.observation);
@@ -1534,6 +1552,7 @@ async fn run_recoverable(
 			} else {
 				None
 			};
+			let command_delay = socket.flush_delay();
 			tokio::select! {
 				() = recovery_signal(reconnect), if was_ready => {
 					// READY/RESUMED can reach the transport before the UI drains its events.
@@ -1706,7 +1725,7 @@ async fn run_recoverable(
 					}
 				}
 				_ = tokio::time::sleep_until(ready_deadline), if ready_at.is_none() => break,
-				_ = sleep(socket.delay()) => {}
+				_ = sleep(command_delay.unwrap_or(Duration::ZERO)), if command_delay.is_some() => {}
 				_ = timer.tick() => {
 					if heartbeat.tick(Instant::now(), interval).is_err() { break; }
 					let packet = serde_json::json!({"op":1,"d":state.sequence}).to_string();
@@ -1742,7 +1761,10 @@ async fn run_recoverable(
 									if !matches!(timeout(Duration::from_secs(5), socket.send(Frame::Text(packet.into()))).await, Ok(Ok(()))) { break; }
 									heartbeat.sent(Instant::now());
 								}
-								7 => break,
+								7 => {
+									skip_backoff = true;
+									break;
+								}
 								9 => {
 									let resumable: bool = decode(packet.d.get().as_bytes()).map_err(|_| Failure::Protocol)?;
 									if !resumable { state = ResumeState::default(); }
@@ -2427,6 +2449,82 @@ mod tests {
 		.unwrap();
 	}
 
+	#[tokio::test]
+	async fn server_reconnects_resume_immediately_even_before_hello() {
+		timeout(Duration::from_secs(10), async {
+			let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+			let endpoint = format!("ws://{}/", listener.local_addr().unwrap());
+			let (client_finished, terminal_observed) = tokio::sync::oneshot::channel();
+			let server = async {
+				let (stream, _) = listener.accept().await.unwrap();
+				let mut socket = accept_async(stream).await.unwrap();
+				send(
+					&mut socket,
+					json!({"op":10,"d":{"heartbeat_interval":120000}}),
+				)
+				.await;
+				assert_eq!(packet(&mut socket).await["op"], 2);
+				send(&mut socket, ready(41, "synthetic-reconnect-session")).await;
+				send(&mut socket, json!({"op":7,"d":null})).await;
+				drop(socket);
+
+				// No recovery Notify exists in this fixture: only opcode 7 may skip backoff.
+				let (stream, _) = timeout(Duration::from_millis(1500), listener.accept())
+					.await
+					.expect("runtime Reconnect incurred ordinary backoff")
+					.unwrap();
+				let mut socket = accept_async(stream).await.unwrap();
+				// Discord explicitly permits Reconnect before or instead of Hello.
+				send(&mut socket, json!({"op":7,"d":null})).await;
+				drop(socket);
+
+				let (stream, _) = timeout(Duration::from_millis(1500), listener.accept())
+					.await
+					.expect("pre-Hello Reconnect did not replace the socket")
+					.unwrap();
+				let mut socket = accept_async(stream).await.unwrap();
+				send(
+					&mut socket,
+					json!({"op":10,"d":{"heartbeat_interval":120000}}),
+				)
+				.await;
+				let handshake = packet(&mut socket).await;
+				assert_eq!(handshake["op"], 6);
+				assert_eq!(handshake["d"]["session_id"], "synthetic-reconnect-session");
+				assert_eq!(handshake["d"]["seq"], 41);
+				send(&mut socket, json!({"op":0,"t":"RESUMED","s":42,"d":{}})).await;
+				socket
+					.send(Frame::Close(Some(CloseFrame {
+						code: CloseCode::from(4004),
+						reason: "synthetic expiration".into(),
+					})))
+					.await
+					.unwrap();
+				terminal_observed.await.unwrap();
+			};
+			let client = async {
+				let result = run_inner(
+					Arc::new(
+						SessionSecret::from_owner_input("synthetic-owner-session".into()).unwrap(),
+					),
+					"wss://gateway.discord.gg/".into(),
+					watch::channel(None).1,
+					mpsc::channel(1).1,
+					None,
+					|_| Ok(()),
+					Some(&endpoint),
+				)
+				.await;
+				let _ = client_finished.send(());
+				result
+			};
+			let ((), result) = tokio::join!(server, client);
+			assert_eq!(result, Err(Failure::Expired));
+		})
+		.await
+		.expect("server-requested reconnect lifecycle exceeded its deadline");
+	}
+
 	#[test]
 	fn reaction_dispatch_preserves_burst_and_falls_back_for_unsafe_details() {
 		use client_core::reactions::Event as ReactionEvent;
@@ -2928,12 +3026,11 @@ mod tests {
 							assert_eq!(handshake["op"], 2);
 							assert!(handshake["d"].get("session_id").is_none());
 							assert_eq!(
-								handshake["d"]["properties"]["browser"],
-								client_core::fingerprint::browser()
-							);
-							assert_eq!(
-								handshake["d"]["properties"]["browser_user_agent"],
-								client_core::fingerprint::user_agent()
+								handshake["d"]["properties"],
+								serde_json::from_str::<Value>(
+									&client_core::fingerprint::properties()
+								)
+								.unwrap()
 							);
 							if connection == 0 {
 								send(&mut socket, ready(41, "synthetic-first-session")).await;
