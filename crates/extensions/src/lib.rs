@@ -146,6 +146,8 @@ pub enum Capability {
 	MessageDetails,
 	Relationships,
 	ExternalNavigation,
+	/// User, channel, server and role context-menu actions with bounded typed targets.
+	ContextMenus,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]

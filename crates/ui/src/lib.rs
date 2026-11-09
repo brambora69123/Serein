@@ -5051,6 +5051,12 @@ impl MessagingUi {
 	/// service layer.
 	pub fn show(&mut self, ui: &mut egui::Ui, state: &mut State) -> Vec<Command> {
 		state.set_prefer_friend_nickname(self.prefer_friend_nickname);
+		crate::rtl::scope(
+			ui.ctx(),
+			state.generation,
+			state.user.as_ref().map(|user| user.id),
+			state.selected,
+		);
 		self.avatars.cosmetics = self.cosmetics;
 		self.avatars.profile_presentation = self.profile_presentation;
 		name_styles::set_enabled(self.cosmetics.name_styles);

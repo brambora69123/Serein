@@ -462,6 +462,7 @@ impl MessagingUi {
 		response.on_hover_text(tooltip);
 	}
 
+	/// Draws the server rail with folders, ordering and per-server menu, including plugin actions.
 	pub(super) fn server_folders(
 		&mut self,
 		ui: &mut egui::Ui,

@@ -15,7 +15,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parent
-REPOSITORY = "ViceVerse-cz/Serein"
+REPOSITORY = "brambora69123/Serein"
 PACKAGE_DIRS = ("themes", "plugins/packages")
 CAPABILITIES = {
     "account_control", "account_profile", "action_feedback", "api_proxy", "app_context",
@@ -28,7 +28,7 @@ CAPABILITIES = {
     "moderation_control", "navigation", "notification_settings", "presence", "reactions_control",
     "read_state", "read_state_control", "relationship_control", "relationships", "rich_presence",
     "role_control", "selected_message", "server_control", "storage", "threads_control", "timeline",
-    "voice_connect", "voice_control", "voice_state",
+    "voice_connect", "voice_control", "voice_state", "context_menus",
 }
 SURFACE_CAPABILITIES = {
     "message": "selected_message",
@@ -36,6 +36,10 @@ SURFACE_CAPABILITIES = {
     "message_event": "message_events",
     "app_event": "app_events",
     "tick": "appearance",
+    "user": "context_menus",
+    "channel": "context_menus",
+    "server": "context_menus",
+    "role": "context_menus",
 }
 UNIQUE_SURFACES = {"activation", "message_event", "app_event", "tick"}
 RESERVED = {"con", "prn", "aux", "nul"} | {f"{prefix}{n}" for prefix in ("com", "lpt") for n in range(1, 10)}
@@ -51,6 +55,21 @@ def valid_id(value):
     return isinstance(value, str) and re.fullmatch(r"[a-z0-9][a-z0-9-]{0,63}", value) and value not in RESERVED
 
 
+def valid_https_url(value):
+    """Mirrors the host's URL validation, including bounds and default-port-only sources."""
+    if not isinstance(value, str) or len(value.encode()) > 2048 or any(ord(c) < 32 or 127 <= ord(c) <= 159 or c.isspace() or c == "\\" for c in value):
+        return False
+    authority = value.split("://", 1)[1] if "://" in value else ""
+    if "@" in re.split(r"[/?#]", authority, maxsplit=1)[0]:
+        return False
+    url = urlsplit(value)
+    try:
+        port = url.port
+    except ValueError:
+        return False
+    return url.scheme == "https" and bool(url.hostname) and port in (None, 443)
+
+
 def validate(data):
     require(0 < len(data) <= 16 * 1024 * 1024, "package exceeds 16 MiB")
     package = json.loads(data)
@@ -59,8 +78,7 @@ def validate(data):
     for key in ("name", "version", "author", "license"):
         value = manifest[key]
         require(isinstance(value, str) and 0 < len(value.encode()) <= 128 and not any(ord(c) < 32 or 127 <= ord(c) <= 159 for c in value), f"invalid {key}")
-    source = urlsplit(manifest["source"])
-    require(len(manifest["source"].encode()) <= 2048 and source.scheme == "https" and source.hostname and not source.username and source.password is None, "credential-free HTTPS source required")
+    require(valid_https_url(manifest["source"]), "credential-free HTTPS source on the default port required")
     capabilities = manifest.get("capabilities", [])
     actions = manifest.get("actions", [])
     require(isinstance(capabilities, list) and len(capabilities) <= 64 and len(set(capabilities)) == len(capabilities) and set(capabilities) <= CAPABILITIES, "invalid capabilities")
@@ -72,7 +90,7 @@ def validate(data):
     if "data_events" in capabilities:
         require("app_events" in capabilities, "data events require app events")
     for action in actions:
-        require(valid_id(action["id"]) and action["surface"] in ("message", "composer", "panel", "activation", "message_event", "app_event", "tick"), "invalid action")
+        require(valid_id(action["id"]) and action["surface"] in ("message", "composer", "panel", "activation", "message_event", "app_event", "tick", "user", "channel", "server", "role"), "invalid action")
         label = action["label"]
         require(isinstance(label, str) and 0 < len(label.encode()) <= 128 and not any(ord(c) < 32 or 127 <= ord(c) <= 159 for c in label), "invalid action label")
         capability = SURFACE_CAPABILITIES.get(action["surface"])

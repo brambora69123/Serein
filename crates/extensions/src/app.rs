@@ -1951,7 +1951,10 @@ impl AppAction {
 			Self::OpenServerAdmin { guild_id, .. } => entity_id(guild_id)?,
 			Self::OpenGroupEditor { channel_id } => entity_id(channel_id)?,
 			Self::OpenExternalLink { url } => {
-				if !crate::valid_https_url(url) {
+				// Bound the normalized URL too; percent-encoding may expand the raw value.
+				if !crate::valid_https_url(url)
+					|| url::Url::parse(url).map_or(true, |parsed| parsed.as_str().len() > 2048)
+				{
 					return Err(Error::Invalid);
 				}
 			}
