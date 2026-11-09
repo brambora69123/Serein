@@ -47,7 +47,14 @@ impl RailCache {
 		}
 		self.guild_badges = badges.into_iter().collect();
 		// Voice states advance the rail revision, so this runs per roster change, not per frame.
-		let mut voice: Vec<Id> = state.voice.roster.iter().map(|r| r.guild).collect();
+		// Hidden-channel participants stay off the rail like their hidden-sidebar rows.
+		let mut voice: Vec<Id> = state
+			.voice
+			.roster
+			.iter()
+			.filter(|entry| state.can_view(entry.channel))
+			.map(|entry| entry.guild)
+			.collect();
 		voice.sort_unstable();
 		voice.dedup();
 		self.voice_guilds = voice.into_boxed_slice();

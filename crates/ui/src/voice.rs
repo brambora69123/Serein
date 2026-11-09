@@ -580,9 +580,6 @@ impl MessagingUi {
 		state: &State,
 		entry: &RosterEntry,
 	) {
-		if !state.can_view(entry.channel) {
-			return;
-		}
 		let colors = design::palette(ui);
 		let (user, name) = resolve_member(state, entry);
 		ui.push_id(

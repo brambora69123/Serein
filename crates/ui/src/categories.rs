@@ -664,7 +664,9 @@ impl MessagingUi {
 			}
 			let mut participants = BTreeMap::<Id, Vec<_>>::new();
 			for entry in &state.voice.roster {
-				if Some(entry.guild) == self.guild && state.can_view(entry.channel) {
+				if Some(entry.guild) == self.guild
+					&& (self.show_hidden_channels || state.can_view(entry.channel))
+				{
 					participants.entry(entry.channel).or_default().push(entry);
 				}
 			}
@@ -1928,6 +1930,59 @@ mod tests {
 		assert!(list(false).is_empty());
 		assert_eq!(list(true).len(), 1);
 	}
+	#[test]
+	fn hidden_voice_participants_are_cached_only_with_hidden_channels_opted_in() {
+		use model::permissions as p;
+
+		fn cached_users(ctx: &egui::Context, view: &mut MessagingUi, state: &mut State) -> Vec<Id> {
+			ctx.run_ui(egui::RawInput::default(), |ui| {
+				view.channel_list(ui, state);
+			})
+			.drop_without_applying_deltas();
+			view.channel_cache
+				.rows
+				.iter()
+				.filter_map(|row| match row {
+					CachedRow::Participant(index) => {
+						Some(state.voice.roster[*index].participant.user)
+					}
+					_ => None,
+				})
+				.collect()
+		}
+
+		let mut state = test_support::voice_demo_state();
+		state.voice.active = None;
+		state.apply(client_core::Envelope {
+			generation: state.generation,
+			event: client_core::Event::Permissions(client_core::permissions::Event::Channel {
+				channel: Id(25),
+				guild: Some(Id(10)),
+				overwrites: model::Patch::Value(vec![p::Overwrite {
+					id: Id(10),
+					kind: 0,
+					allow: 0,
+					deny: p::VIEW_CHANNEL,
+				}]),
+			}),
+		});
+		assert!(!state.can_view(Id(25)));
+		assert_eq!(state.voice.roster.len(), 3);
+		let ctx = egui::Context::default();
+		let mut view = MessagingUi {
+			guild: Some(Id(10)),
+			..Default::default()
+		};
+		assert!(
+			cached_users(&ctx, &mut view, &mut state).is_empty(),
+			"Hidden-off must not leak participant rows into the sidebar cache"
+		);
+		view.show_hidden_channels = true;
+		let mut admitted = cached_users(&ctx, &mut view, &mut state);
+		admitted.sort_unstable();
+		assert_eq!(admitted, [Id(1), Id(2), Id(3)]);
+	}
+
 	#[test]
 	fn categories_without_visible_children_follow_hidden_visibility() {
 		let mut state = test_support::demo_state();
