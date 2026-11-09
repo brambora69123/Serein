@@ -32,6 +32,7 @@ mod channel_permissions;
 mod channel_welcome_tests;
 mod components;
 mod composer_text;
+mod connections;
 #[cfg(any(test, all(debug_assertions, feature = "demo")))]
 mod recovery_demo;
 #[cfg(all(debug_assertions, feature = "demo"))]

@@ -14,12 +14,14 @@ pub(super) struct Settings {
 	pub(super) notifications: crate::notification_settings::Navigation,
 	pub(super) messaging_permissions: crate::messaging_permissions::Navigation,
 	pub(super) games: crate::registered_games::Page,
+	connections_requested: bool,
 }
 
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
 enum Page {
 	Account,
 	Profile,
+	Connections,
 	General,
 	#[default]
 	Appearance,
@@ -39,9 +41,10 @@ enum Page {
 }
 impl Page {
 	/// Every page in sidebar order; the narrow-window page picker lists them the same way.
-	const ALL: [Self; 15] = [
+	const ALL: [Self; 16] = [
 		Self::Account,
 		Self::Profile,
+		Self::Connections,
 		Self::MessagingPermissions,
 		Self::Storage,
 		Self::Appearance,
@@ -64,6 +67,7 @@ impl Page {
 			&[
 				Self::Account,
 				Self::Profile,
+				Self::Connections,
 				Self::MessagingPermissions,
 				Self::Storage,
 			],
@@ -88,6 +92,7 @@ impl Page {
 		match self {
 			Self::Account => "page-account",
 			Self::Profile => "page-profile",
+			Self::Connections => "page-connections",
 			Self::General => "page-general",
 			Self::LanguageTime => "page-language-time",
 			Self::Appearance => "page-appearance",
@@ -110,6 +115,7 @@ impl Page {
 		match self {
 			Self::Account => "description-account",
 			Self::Profile => "description-profile",
+			Self::Connections => "description-connections",
 			Self::General => "description-general",
 			Self::LanguageTime => "description-language-time",
 			Self::Appearance => "description-appearance",
@@ -132,6 +138,9 @@ impl Page {
 		let keywords = match self {
 			Self::Account => "my account profile logout",
 			Self::Profile => "profile edit display name about me bio pronouns color colour",
+			Self::Connections => {
+				"connections linked accounts services spotify steam github reddit twitch xbox playstation visibility activity"
+			}
 			Self::General => {
 				"general windows macos linux login menu bar startup autostart automatically open minimized minimize close tray background title bar caption window buttons decorations borderless tiling graphics gpu adapter render discrete integrated hardware acceleration performance battery vrr variable refresh rate steady refresh rate g-sync gsync freesync adaptive sync flicker flickering steady frame rate fps vsync"
 			}
@@ -462,10 +471,22 @@ impl MessagingUi {
 									ui.weak(self.language.text("search-suggestion"));
 									return;
 								}
+								if self.settings.page != Page::Connections {
+									self.settings.connections_requested = false;
+								}
 								match self.settings.page {
 									Page::General => self.general_settings(ui, state.demo),
 									Page::LanguageTime => self.language_time_settings(ui),
 									Page::Account => self.account_page(ui, state),
+									Page::Connections => {
+										if !self.settings.connections_requested {
+											self.settings.connections_requested = true;
+											if let Some(command) = state.request_connections() {
+												commands.push(command);
+											}
+										}
+										self.connections_settings(ui, state, commands);
+									}
 									Page::Profile => self.settings.editor.show(
 										ui,
 										state,
@@ -522,6 +543,7 @@ impl MessagingUi {
 		}
 		if !self.settings.open {
 			self.settings.messaging_permissions.requested = false;
+			self.settings.connections_requested = false;
 		}
 	}
 
