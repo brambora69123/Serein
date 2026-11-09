@@ -4,6 +4,7 @@ mod archives;
 mod badges;
 mod channel_actions;
 mod collectibles;
+mod connections;
 pub mod detectable;
 pub mod external_assets;
 mod forum;
@@ -1273,6 +1274,19 @@ impl DiscordApi {
 				result: self.gifs(query.as_deref()).await,
 			},
 			Command::CancelGifs => Event::Failure(Failure::Protocol),
+			Command::Connections { request } => Event::Connections {
+				request,
+				result: self.connections().await,
+			},
+			Command::SetConnectionVisibility {
+				kind,
+				id,
+				visible,
+				request,
+			} => Event::ConnectionVisibility {
+				request,
+				result: self.set_connection_visibility(&kind, &id, visible).await,
+			},
 			Command::GifFavorites { request, change } => {
 				let (result, frequent_emoji) = match self.gif_favorites(change).await {
 					Ok((gifs, emoji)) => (Ok(gifs), emoji),

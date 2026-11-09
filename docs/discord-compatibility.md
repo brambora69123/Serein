@@ -3221,3 +3221,31 @@ fixture did not consistently establish the required public guild/dialog state. T
 `hidden_voice_participants_are_cached_only_with_hidden_channels_opted_in` test and selected-stage guard
 are the evidence for that behavior; no failed or misleading pair is committed. No live account,
 microphone, upstream-secret session or official-request differential was used for this sync.
+
+## Connected accounts page - November 9, 2026
+
+Settings > Connections performs one explicit, bounded, read-only
+[`GET /users/@me/connections`](https://docs.discord.com/developers/resources/user#get-current-user-connections)
+when the page opens. The public route is documented for OAuth2 applications; normal-session
+delivery and the response fields are documented by
+[Userdoccers Connected Accounts](https://github.com/discord-userdoccers/discord-userdoccers/blob/master/pages/resources/connected-accounts.mdx)
+and remain unofficial/live-unverified. The page defines its own connection model instead of
+reusing profile `connected_accounts` summaries. At most 64 rows are retained, each string and
+metadata set is bounded, and total retained bytes are capped. Missing or unrecognized flags keep
+their unknown state rather than defaulting to `false`; unrecognized visibility integers stay
+unknown. The list is session RAM only and is never written to SQLite or the account cache.
+
+A visibility switch uses one
+[`PATCH /users/@me/connections/{type}/{id}`](https://github.com/discord-userdoccers/discord-userdoccers/blob/master/pages/resources/connected-accounts.mdx)
+attempt with `{"visibility": 0|1}`, the existing limited REST path and no retry. The service
+identifier is a validated kind plus a percent-encoded single path segment; rows that cannot form a
+safe path, are revoked, truncated, or have unknown visibility show no control. The command accepts
+only a returned connection with the same type, ID and requested visibility as readback. A failed,
+rejected or unconfirmed response leaves the previous value in place and shows the explicit rollback
+message. Row rendering also shows verified state, activity sharing, friend sync, two-way link and
+metadata visibility when supplied. The page does not unlink, deauthorize, change friend sync, start
+a new connection authorization, contact domains, purchase anything, intercept callbacks, read
+connection access tokens, or reuse Spotify playback state. Opening it therefore makes no Spotify
+request and Spotify's independent poller is unchanged. Synthetic list, empty, error, pending and
+rejected cases are covered by focused parser, reducer and mock-HTTP tests; no live account response
+or mutation was used. Offline screenshot page: `connections` in `profile_preview`.
