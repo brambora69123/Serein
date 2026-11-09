@@ -594,21 +594,47 @@ impl DiscordApi {
 						if idempotent {
 							continue;
 						}
-						return Err(Failure::RateLimited);
+						return Err(if write {
+							Failure::Ambiguous
+						} else {
+							Failure::RateLimited
+						});
 					}
 					// A block page has no JSON penalty. The short read retry must not run.
-					let delay = safe_delay(retry_header.or(reset).or(Some(60.0)))?;
+					let delay =
+						safe_delay(retry_header.or(reset).or(Some(60.0))).map_err(|_| {
+							if write {
+								Failure::Ambiguous
+							} else {
+								Failure::Protocol
+							}
+						})?;
 					let mut next = self.cooldown.lock().await;
 					*next = (*next).max(Instant::now() + delay);
-					return Err(Failure::RateLimited);
+					return Err(if write {
+						Failure::Ambiguous
+					} else {
+						Failure::RateLimited
+					});
 				}
 				if status == StatusCode::TOO_MANY_REQUESTS {
 					// The body is the penalty Discord documents. A missing or shorter reset
-					// header must not send the retry early.
-					let delay = safe_delay(error.retry_after.or(retry_header).or(reset))?;
+					// header must not send the retry early. Only a decoded, valid body delay
+					// establishes that a write was rejected without being processed.
+					let delay =
+						safe_delay(error.retry_after.or(retry_header).or(reset)).map_err(|_| {
+							if write {
+								Failure::Ambiguous
+							} else {
+								Failure::Protocol
+							}
+						})?;
 					{
 						let mut next = self.cooldown.lock().await;
 						*next = (*next).max(Instant::now() + delay);
+					}
+					if write && error.retry_after.is_none() {
+						return Err(Failure::Ambiguous);
 					}
 					if idempotent
 						&& delay <= MAX_READ_RATE_LIMIT_WAIT
@@ -885,10 +911,10 @@ impl DiscordApi {
 	}
 	/// Runs one typed command and returns its typed event.
 	/// [`Self::execute`] for the write queue. Like the official client, a message Discord
-	/// rate-limits (documented: a 429 request is not processed, so nothing was created) stays
-	/// pending and is resent with the same nonce once the service's wait has passed; `execute`
-	/// sleeps out that shared cooldown first. `throttled` hears each wait. Ambiguous outcomes are
-	/// never resent.
+	/// rate-limits with an understood JSON 429 (documented: the request is not processed, so
+	/// nothing was created) stays pending and is resent with the same nonce once the service's
+	/// wait has passed; `execute` sleeps out that shared cooldown first. `throttled` hears each
+	/// wait. Edge, unclassified and other ambiguous outcomes are never resent.
 	pub async fn execute_write(&self, command: Command, mut throttled: impl FnMut(&str)) -> Event {
 		/// Resends of one message, each after the wait Discord asked for.
 		const MAX_SEND_RETRIES: usize = 30;
@@ -3579,6 +3605,88 @@ mod tests {
 		assert!(matches!(event, Event::SendResult { result: Ok(_), .. }));
 		assert_eq!(throttled, ["spam"]);
 		assert_eq!(server.await.unwrap(), [true, true]);
+	}
+	#[tokio::test]
+	async fn edge_429_send_is_ambiguous_and_not_replayed_on_the_fallback() {
+		use std::sync::atomic::AtomicUsize;
+		use tokio::{
+			io::{AsyncReadExt, AsyncWriteExt},
+			net::TcpListener,
+		};
+		let stable = TcpListener::bind("127.0.0.1:0").await.unwrap();
+		let fallback = TcpListener::bind("127.0.0.1:0").await.unwrap();
+		let stable_address = stable.local_addr().unwrap();
+		let fallback_address = fallback.local_addr().unwrap();
+		let posts = Arc::new(AtomicUsize::new(0));
+		let serve = |listener: TcpListener, response: String| {
+			let posts = posts.clone();
+			tokio::spawn(async move {
+				let (mut socket, _) = listener.accept().await.unwrap();
+				let mut request = Vec::new();
+				while !request.windows(4).any(|window| window == b"\r\n\r\n") {
+					let mut bytes = [0; 1024];
+					let n = socket.read(&mut bytes).await.unwrap();
+					assert!(n > 0 && request.len() < 8192);
+					request.extend_from_slice(&bytes[..n]);
+				}
+				assert!(request.starts_with(b"POST /channels/2/messages HTTP/1.1\r\n"));
+				posts.fetch_add(1, Ordering::AcqRel);
+				socket.write_all(response.as_bytes()).await.unwrap();
+			})
+		};
+		let edge = "<html>synthetic edge block</html>";
+		let stable_server = serve(
+			stable,
+			format!(
+				"HTTP/1.1 429 Too Many Requests\r\nContent-Type: text/html\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{edge}",
+				edge.len()
+			),
+		);
+		let sent = r#"{"id":"6","channel_id":"2","author":{"id":"1","username":"Synthetic"},"content":"once","nonce":"edge"}"#;
+		let fallback_server = serve(
+			fallback,
+			format!(
+				"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{sent}",
+				sent.len()
+			),
+		);
+		let mut api = DiscordApi::new(Arc::new(
+			SessionSecret::from_owner_input("SYNTHETIC_EDGE_TOKEN".into()).unwrap(),
+		))
+		.unwrap();
+		api.base = format!("http://{stable_address}");
+		api.test_host = Some((format!("http://{fallback_address}"), AtomicBool::new(false)));
+		let mut throttled = Vec::new();
+		let event = tokio::time::timeout(
+			Duration::from_secs(5),
+			api.execute_write(
+				Command::Send {
+					sticker: None,
+					channel: model::Id(2),
+					content: "once".into(),
+					nonce: "edge".into(),
+					reply: None,
+				},
+				|nonce| throttled.push(nonce.to_owned()),
+			),
+		)
+		.await
+		.expect("an edge response finishes without a fallback replay");
+		let ambiguous = matches!(
+			event,
+			Event::SendResult {
+				result: Err(Failure::Ambiguous),
+				nonce,
+				..
+			} if nonce == "edge"
+		);
+		stable_server.await.unwrap();
+		let total_posts = posts.load(Ordering::Acquire);
+		fallback_server.abort();
+		let _ = fallback_server.await;
+		assert!(ambiguous, "edge responses cannot establish non-processing");
+		assert!(throttled.is_empty(), "no automatic resend was announced");
+		assert_eq!(total_posts, 1, "no request reached the fallback origin");
 	}
 	#[tokio::test]
 	async fn local_http_checks_redirect_expiry_rate_limits_and_response_cap() {
