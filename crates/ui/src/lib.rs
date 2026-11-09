@@ -879,17 +879,44 @@ impl MessagingUi {
 		})
 	}
 
-	/// Pending profile picture selection: (generation, own user, editor revision).
-	pub fn take_profile_picture_request(&mut self) -> Option<(u64, Id, u64)> {
-		self.settings.editor.avatar_request.take()
+	/// Pending profile image selection: (generation, own user, editor revision, kind).
+	pub fn take_profile_picture_request(
+		&mut self,
+	) -> Option<(u64, Id, u64, model::ProfilePicture)> {
+		self.settings
+			.editor
+			.avatar_request
+			.take()
+			.map(|(generation, user, revision)| {
+				(generation, user, revision, model::ProfilePicture::Avatar)
+			})
+			.or_else(|| {
+				self.settings
+					.editor
+					.banner_request
+					.take()
+					.map(|(generation, user, revision)| {
+						(generation, user, revision, model::ProfilePicture::Banner)
+					})
+			})
 	}
 	pub fn accept_profile_picture(
 		&mut self,
 		ctx: &egui::Context,
-		request: (u64, Id, u64),
+		request: (u64, Id, u64, model::ProfilePicture),
 		result: Result<Option<(String, egui::ColorImage)>, &'static str>,
 	) {
-		if let Err(error) = self.settings.editor.accept_avatar(ctx, request, result) {
+		let kind = request.3;
+		let request = (request.0, request.1, request.2);
+		let accepted = match kind {
+			model::ProfilePicture::Avatar => {
+				self.settings.editor.accept_avatar(ctx, request, result)
+			}
+			model::ProfilePicture::Banner => {
+				self.settings.editor.accept_banner(ctx, request, result)
+			}
+		};
+		if let Err(error) = accepted {
 			self.toasts.push(design::Level::Error, error);
 		}
 	}

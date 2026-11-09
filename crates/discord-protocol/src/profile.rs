@@ -14,6 +14,27 @@ use serde::{
 
 pub const MAX_PROFILE_WIRE: usize = 256 * 1024;
 
+/// Encode an already decoded, bounded image without applying group-icon dimension rules.
+pub fn image_data_uri(png: &[u8], kind: model::ProfilePicture) -> Option<String> {
+	use base64::{Engine as _, engine::general_purpose::STANDARD};
+	if png.len() > 256 * 1024
+		|| !png.starts_with(b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR")
+		|| png.len() < 33
+	{
+		return None;
+	}
+	let dimensions =
+		|offset: usize| Some(u32::from_be_bytes(png[offset..offset + 4].try_into().ok()?));
+	let (width, height) = (dimensions(16)?, dimensions(20)?);
+	let valid = match kind {
+		model::ProfilePicture::Avatar => (1..=512).contains(&width) && (1..=512).contains(&height),
+		model::ProfilePicture::Banner => {
+			(680..=1024).contains(&width) && (240..=1024).contains(&height)
+		}
+	};
+	valid.then(|| format!("data:image/png;base64,{}", STANDARD.encode(png)))
+}
+
 /// Unofficial current-user PATCH fields; omit untouched fields, retain explicit nulls.
 pub fn encode_edit(changes: &model::ProfileEdit) -> Result<serde_json::Value, DecodeError> {
 	if !changes.valid() {
@@ -34,6 +55,9 @@ pub fn encode_edit(changes: &model::ProfileEdit) -> Result<serde_json::Value, De
 	}
 	if let Some(avatar) = &changes.avatar {
 		fields.insert("avatar".into(), serde_json::json!(avatar));
+	}
+	if let Some(banner) = &changes.banner {
+		fields.insert("banner".into(), serde_json::json!(banner));
 	}
 	Ok(serde_json::Value::Object(fields))
 }
@@ -565,6 +589,24 @@ pub fn decode_profile(
 mod tests {
 	use super::*;
 	use serde_json::json;
+
+	#[test]
+	fn profile_image_encoding_obeys_kind_specific_dimensions() {
+		let png = |width: u32, height: u32| {
+			let mut bytes = b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR".to_vec();
+			bytes.extend(width.to_be_bytes());
+			bytes.extend(height.to_be_bytes());
+			bytes.extend([0; 9]);
+			bytes
+		};
+		assert!(image_data_uri(&png(680, 240), model::ProfilePicture::Banner).is_some());
+		assert!(image_data_uri(&png(512, 512), model::ProfilePicture::Avatar).is_some());
+		assert!(image_data_uri(&png(512, 240), model::ProfilePicture::Banner).is_none());
+		assert!(image_data_uri(&png(680, 239), model::ProfilePicture::Banner).is_none());
+		assert!(image_data_uri(&png(513, 512), model::ProfilePicture::Avatar).is_none());
+		assert!(image_data_uri(b"not a PNG", model::ProfilePicture::Banner).is_none());
+	}
+
 	#[test]
 	fn partial_profiles_preserve_identity_and_reject_malformed_lists() {
 		let base = json!({"user":{"id":"1","username":"synthetic","global_name":"Display","avatar":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},"user_profile":{},"badges":[],"guild_badges":[],"connected_accounts":[],"mutual_guilds":[],"mutual_friends":[]});

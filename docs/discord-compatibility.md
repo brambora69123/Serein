@@ -715,13 +715,28 @@ restrictions. Synthetic parser/UI checks are not live normal-account verificatio
 
 ## Own profile editing — September 11, 2026
 
-The native editor updates global display name, bio, pronouns and accent color through
-the unofficial normal-user `PATCH /users/@me` route, then verifies a fresh global
-profile read. Only deliberate changed fields are sent; failures remain visible and
-uncertain saves require reload. Mock HTTP and reducer/UI tests pass; no live profile
-was read or changed. Avatar/banner uploads, username, guild profiles and security
-settings remain outside this editor. Sources, limits and reproduction are in
-in-app profile settings.
+The native editor updates global display name, bio, pronouns, accent color and a static PNG
+avatar through the unofficial normal-user `PATCH /users/@me` route, then verifies a fresh global
+profile read. The preview's display name, pronouns, About Me and avatar targets focus the same
+editor draft; no parallel editor rewrites unsaved values. The same sparse patch supports a static
+profile banner, including explicit removal, through the documented user account's `banner` field.
+Banner selection is enabled only for session-reported Nitro types 1 or 2; free and Nitro Basic
+accounts see a disabled explanatory control. This is a UI hint, never an entitlement override,
+and Discord's response remains authoritative. Profile-frame editing is not exposed until its
+mutation field is supported by evidence.
+
+Only deliberately changed fields are sent, including explicit null clears, in one account-profile
+write rather than a partly applied split save. Failures remain visible and uncertain saves require
+reload; no automatic write retry occurs. Readback confirms requested fields, including added or
+removed images. Geometric validation keeps group icons separate from profile images: avatar crops
+are square, while banners keep their aspect ratio and must be at least 680×240 pixels. Selection
+uses the existing bounded native image worker (at most 8 MiB input), converts a single frame to an
+in-memory PNG of at most 256 KiB, and does not persist a file path or animation. Animated avatar
+and banner uploads are not yet implemented. Username, guild profiles and security settings remain
+outside this editor. Mock HTTP and bounded media/protocol tests pass; no live profile was read or
+changed. Sources are the official [user account fields](https://docs.discord.com/developers/resources/user#modify-current-user),
+the unofficial [profile routes](https://docs.discord.food/resources/user#modify-current-user), and
+Discord's [custom profile guidance](https://support.discord.com/hc/en-us/articles/4403147417623-Custom-Profiles).
 
 ## Outgoing camera capture — September 12, 2026
 

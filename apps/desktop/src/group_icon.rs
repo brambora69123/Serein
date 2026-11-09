@@ -19,6 +19,7 @@ struct Choosing {
 	scope: Scope,
 	result: mpsc::Receiver<Selected>,
 	cancelled: Arc<AtomicBool>,
+	profile_kind: Option<model::ProfilePicture>,
 }
 #[derive(Default)]
 pub struct GroupIcon {
@@ -33,6 +34,58 @@ impl GroupIcon {
 		parent: Arc<winit::window::Window>,
 		title: &'static str,
 		output_edge: u32,
+	) -> Result<(), &'static str> {
+		self.start_with(scope, runtime, context, parent, title, move |path| {
+			read(&path, output_edge)
+		})
+	}
+
+	/// Start one profile-image pick, retaining its kind for the response routed back to the editor.
+	pub fn start_profile(
+		&mut self,
+		scope: Scope,
+		kind: model::ProfilePicture,
+		runtime: &tokio::runtime::Handle,
+		context: &egui::Context,
+		parent: Arc<winit::window::Window>,
+	) -> Result<(), &'static str> {
+		let title = match kind {
+			model::ProfilePicture::Avatar => "Choose profile picture",
+			model::ProfilePicture::Banner => "Choose profile banner",
+		};
+		self.start_with(scope, runtime, context, parent, title, move |path| {
+			read_with(&path, |bytes| match kind {
+				model::ProfilePicture::Avatar => decode(bytes, 256),
+				model::ProfilePicture::Banner => decode_profile_banner(bytes),
+			})
+		})?;
+		if let Some(choosing) = &mut self.choosing {
+			choosing.profile_kind = Some(kind);
+		}
+		Ok(())
+	}
+
+	pub fn poll_profile(
+		&mut self,
+		state: &client_core::State,
+	) -> Option<(Scope, model::ProfilePicture, Selected)> {
+		let kind = self.choosing.as_ref()?.profile_kind?;
+		self.poll_scoped(state.generation, |user| {
+			state.user.as_ref().is_some_and(|own| own.id == user)
+		})
+		.map(|(scope, result)| (scope, kind, result))
+	}
+
+	fn start_with(
+		&mut self,
+		scope: Scope,
+		runtime: &tokio::runtime::Handle,
+		context: &egui::Context,
+		parent: Arc<winit::window::Window>,
+		title: &'static str,
+		prepare: impl FnOnce(std::path::PathBuf) -> Result<(String, egui::ColorImage), &'static str>
+		+ Send
+		+ 'static,
 	) -> Result<(), &'static str> {
 		if self.choosing.is_some() {
 			return Err("Close the previous image picker first");
@@ -50,7 +103,7 @@ impl GroupIcon {
 						if decode_flag.load(Ordering::Acquire) {
 							Ok(None)
 						} else {
-							read(&path, output_edge).map(Some)
+							prepare(path).map(Some)
 						}
 					})
 					.await
@@ -69,6 +122,7 @@ impl GroupIcon {
 			scope,
 			result,
 			cancelled,
+			profile_kind: None,
 		});
 		Ok(())
 	}
@@ -112,6 +166,13 @@ impl Drop for GroupIcon {
 }
 
 fn read(path: &Path, output_edge: u32) -> Result<(String, egui::ColorImage), &'static str> {
+	read_with(path, |bytes| decode(bytes, output_edge))
+}
+
+fn read_with(
+	path: &Path,
+	prepare: impl FnOnce(&[u8]) -> Result<(String, egui::ColorImage), &'static str>,
+) -> Result<(String, egui::ColorImage), &'static str> {
 	let metadata =
 		std::fs::symlink_metadata(path).map_err(|_| "Could not open the chosen image")?;
 	if !metadata.is_file() || metadata.file_type().is_symlink() {
@@ -125,7 +186,7 @@ fn read(path: &Path, output_edge: u32) -> Result<(String, egui::ColorImage), &'s
 	file.take(MAX_INPUT as u64 + 1)
 		.read_to_end(&mut bytes)
 		.map_err(|_| "Could not read the chosen image")?;
-	decode(&bytes, output_edge)
+	prepare(&bytes)
 }
 
 fn decode(bytes: &[u8], output_edge: u32) -> Result<(String, egui::ColorImage), &'static str> {
@@ -140,6 +201,16 @@ pub(crate) fn decode_image(
 	let (png, preview) = decode_png(bytes, output_edge, square, 256 * 1024)?;
 	let uri = discord_protocol::group_actions::icon_data_uri(&png)
 		.ok_or("Prepared icon exceeds 256 KB; choose a simpler image")?;
+	Ok((uri, preview))
+}
+
+/// A profile banner keeps its aspect ratio; unlike square icons, it is not center-cropped.
+pub(crate) fn decode_profile_banner(
+	bytes: &[u8],
+) -> Result<(String, egui::ColorImage), &'static str> {
+	let (png, preview) = decode_png(bytes, 1024, false, 256 * 1024)?;
+	let uri = discord_protocol::profile::image_data_uri(&png, model::ProfilePicture::Banner)
+		.ok_or("Banner must be a 680 × 240 or larger PNG within the size limits")?;
 	Ok((uri, preview))
 }
 
@@ -176,8 +247,10 @@ pub(crate) fn decode_png(
 	};
 	let image = image::DynamicImage::ImageRgba8(image::imageops::thumbnail(
 		&*crop,
-		crop.width().min(output_edge.clamp(1, 512)),
-		crop.height().min(output_edge.clamp(1, 512)),
+		crop.width()
+			.min(output_edge.clamp(1, if square { 512 } else { 1024 })),
+		crop.height()
+			.min(output_edge.clamp(1, if square { 512 } else { 1024 })),
 	));
 	let mut png = Cursor::new(Vec::new());
 	image
@@ -219,6 +292,21 @@ mod tests {
 		assert!(decode(png.get_ref(), 256).is_err());
 	}
 	#[test]
+	fn profile_banner_retains_width_and_full_aspect_ratio() {
+		let mut png = Cursor::new(Vec::new());
+		image::DynamicImage::ImageRgba8(image::RgbaImage::from_pixel(
+			1024,
+			240,
+			image::Rgba([40, 180, 110, 255]),
+		))
+		.write_to(&mut png, image::ImageFormat::Png)
+		.unwrap();
+		let (uri, preview) = decode_profile_banner(png.get_ref()).unwrap();
+		assert_eq!(preview.resolution(), [1024, 240]);
+		assert!(model::valid_banner_uri(&uri));
+	}
+
+	#[test]
 	fn stale_picker_retains_single_slot_until_completion_and_discards_result() {
 		let (send, result) = mpsc::sync_channel(1);
 		let mut picker = GroupIcon {
@@ -226,6 +314,7 @@ mod tests {
 				scope: (1, Id(1), 1),
 				result,
 				cancelled: Arc::new(AtomicBool::new(false)),
+				profile_kind: None,
 			}),
 		};
 		let state = client_core::State::default();
@@ -254,6 +343,7 @@ mod tests {
 			scope,
 			result,
 			cancelled: Arc::new(AtomicBool::new(false)),
+			profile_kind: None,
 		});
 		send.send(Ok(None)).unwrap();
 		let (received_scope, result) = picker.poll(&state).unwrap();

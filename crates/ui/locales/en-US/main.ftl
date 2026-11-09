@@ -2066,6 +2066,12 @@ profile-edit-form-png-jpeg-gif-or-webp-up-to-8-mb-cropped = PNG, JPEG, GIF or We
 # Context: form
 profile-edit-form-profile-color = Profile color
 # Context: form
+profile-edit-form-profile-banner = Profile banner
+# Context: form
+profile-edit-form-banner-upload-hint = PNG, JPEG, GIF or WebP up to 8 MB. Applied as a static image; animated uploads are not supported yet.
+# Context: form
+profile-edit-form-banner-requires-nitro = Change requires Nitro. Removal stays available; entitlements are not overridden.
+# Context: form
 profile-edit-form-profile-picture = Profile picture
 # Context: form
 profile-edit-form-remove = Remove
@@ -2080,7 +2086,15 @@ profile-edit-form-your-picture-will-be-removed-when-you-save = Your picture will
 # Context: preview
 profile-edit-preview-about-me = About Me
 # Context: preview
+profile-edit-preview-change-banner = Change profile banner; Nitro required
+# Context: preview
 profile-edit-preview-change-profile-picture = Change profile picture
+# Context: preview
+profile-edit-preview-edit-display-name = Edit display name
+# Context: preview
+profile-edit-preview-edit-pronouns = Edit pronouns
+# Context: preview
+profile-edit-preview-edit-about-me = Edit About Me
 # Context: preview
 profile-edit-preview-preview = Preview
 # Context: show
