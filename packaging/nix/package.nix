@@ -31,6 +31,8 @@
     libglvnd,
     alsa-lib,
     aws-lc,
+    sqlite,
+    zstd,
     gst_all_1,
     pipewire,
     libx11,
@@ -128,7 +130,7 @@ in
             ];
 
         buildInputs =
-            [aws-lc]
+            [aws-lc sqlite zstd]
             ++ lib.optionals isLinux (toolkitDeps ++ graphicsDeps ++ windowingDeps ++ audioDeps ++ gstPlugins)
             ++ lib.optionals isDarwin [
                 apple-sdk_15
