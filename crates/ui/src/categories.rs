@@ -2880,6 +2880,8 @@ mod tests {
 		let mut view = MessagingUi {
 			guild: Some(Id(10)),
 			voice_available: true,
+			// The optional join gate never applies to channel selection or navigation.
+			voice_double_click_join: true,
 			..Default::default()
 		};
 		let ctx = egui::Context::default();

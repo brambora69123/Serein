@@ -543,6 +543,9 @@ pub struct MessagingUi {
 	stream_preview_watch: Option<(Id, Id)>,
 	/// Guild voice channel double-clicked in the channel list, joined after selection applies.
 	voice_join: Option<Id>,
+	/// Require a second click on the same channel before joining a guild voice call.
+	pub voice_double_click_join: bool,
+	voice_join_click: voice::JoinClickGate,
 	pub voice_inputs: Vec<(String, String)>,
 	pub voice_outputs: Vec<(String, String)>,
 	pub voice_input: Option<String>,
