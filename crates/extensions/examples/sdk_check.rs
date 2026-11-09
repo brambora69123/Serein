@@ -918,6 +918,7 @@ fn check_safe_ports(catalog_wasm_dir: &Path) -> Result<(), Box<dyn std::error::E
 		}
 		println!("{name}/rebuilt: {} Wasm bytes; real ABI behavior passed", package.wasm.len());
 	}
+
 	for module in [&social, &social_committed] {
 		let normalized = invoke(module, &social_normalize_input)?;
 		assert!(matches!(
@@ -1099,6 +1100,20 @@ fn check_safe_ports(catalog_wasm_dir: &Path) -> Result<(), Box<dyn std::error::E
 		println!(
 			"{stem}/committed+rebuilt: {} Wasm bytes; export and missing-snapshot behavior passed",
 			rebuilt_package.wasm.len()
+		);
+	}
+	for module in [&external, &external_committed] {
+		let panel = invoke(
+			module,
+			&Invocation {
+				action: "open".into(),
+				..Default::default()
+			},
+		)?;
+		assert!(
+			!panel.panel.is_empty(),
+			"settings panel must validate and open"
+
 		);
 	}
 	Ok(())
