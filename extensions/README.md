@@ -13,6 +13,7 @@ covers writing your own.
 | `plugins/packages/` | Reviewed plugin packages clients install |
 | `licenses/` | Third-party extension license texts, including Equicord/Vencord GPL terms |
 | `previews/` | Catalog preview images ([provenance](previews/README.md)) |
+| `catalog-metadata.json` | One reviewed user-facing description per package ID; the only source of catalog descriptions |
 | `catalog.json` | Generated; never edit by hand |
 
 `catalog.json` lists each package's manifest, exact byte length, SHA-256 hash and an
@@ -28,19 +29,28 @@ client's explicit consent flow.
 2. For a plugin, rebuild and repackage it under `plugins/packages/` (see
    [plugins/README.md](plugins/README.md)). The source and packaged manifests must match.
 3. Optionally add a PNG preview under `previews/` with the package's file stem.
-4. Open a pull request. CI validates every package, manifest and preview
-   (`python3 catalog.py --validate`), builds the plugins and runs them in the host sandbox.
-5. After merge, the [catalog workflow](../.github/workflows/extension-catalog.yml) runs
+4. Review or add the package's description record in `catalog-metadata.json`.
+   Every package ID needs exactly one non-empty record (at most 256 characters and
+   1024 UTF-8 bytes, no control characters) that matches the manifest kind; unknown
+   IDs or packages without records fail validation. Describe what the package does
+   for the user; keep it in step with the package README.
+5. Open a pull request. CI validates every package, manifest, preview and
+   description (`python3 catalog.py --validate`), builds the plugins and runs them
+   in the host sandbox.
+6. After merge, the [catalog workflow](../.github/workflows/extension-catalog.yml) runs
    `catalog.py --pin` on the merged commit and commits the regenerated catalog to `main`.
-   Pull requests are squash-merged, so only a commit on `main` is a durable pin.
+   Pull requests are squash-merged, so only a commit on `main` is a durable pin. Editing
+   `catalog-metadata.json` triggers the same re-pin, so description changes reach the
+   published catalog without touching package bytes.
 
 Do not commit `catalog.json` changes in a pull request. To check a catalog locally
 against its pinned commit, run `python3 catalog.py --check`; `python3 test_catalog.py`
 covers the validator itself.
 
 Catalog tooling uses only Python's standard library. It checks identities,
-capabilities/actions, byte bounds, plugin Wasm headers, source manifests, previews and
-hashes. It intentionally does not duplicate Serein's theme schema or Wasm sandbox
+capabilities/actions, byte bounds, plugin Wasm headers, source manifests, previews,
+description coverage and hashes. It intentionally does not duplicate Serein's theme
+schema or Wasm sandbox
 validation: the client runs `extensions::parse_package` and sandbox checks before
 installation, and CI runs the committed packages through the same code.
 

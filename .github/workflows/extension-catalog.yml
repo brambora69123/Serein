@@ -11,6 +11,7 @@ on:
       - extensions/previews/**
       - extensions/plugins/packages/**
       - extensions/plugins/*/manifest.json
+      - extensions/catalog-metadata.json
       - extensions/catalog.py
       # A hand edit is regenerated. This workflow's own push uses GITHUB_TOKEN, which
       # never triggers workflows, so it cannot loop.

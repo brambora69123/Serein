@@ -17,6 +17,7 @@ from urllib.parse import urlsplit
 ROOT = Path(__file__).resolve().parent
 REPOSITORY = "brambora69123/Serein"
 PACKAGE_DIRS = ("themes", "plugins/packages")
+METADATA = "catalog-metadata.json"
 CAPABILITIES = {
     "account_control", "account_profile", "action_feedback", "api_proxy", "app_context",
     "app_events", "appearance", "audio_settings", "camera_control", "channel_control",
@@ -147,18 +148,63 @@ class WorkingTree:
         return path.read_bytes() if path.is_file() else None
 
 
+def load_descriptions(tree):
+    """Reviewed user-facing descriptions mapped by package ID, from the same commit."""
+    data = tree.read(METADATA)
+    require(data is not None, f"missing {METADATA}")
+    require(len(data) <= 1024 * 1024, "catalog metadata exceeds 1 MiB")
+    document = json.loads(data)
+    require(
+        isinstance(document, dict) and set(document) == {"api_version", "descriptions"},
+        "invalid catalog metadata shape",
+    )
+    require(type(document["api_version"]) is int and document["api_version"] == 1, "invalid catalog metadata API version")
+    records = document["descriptions"]
+    require(isinstance(records, list) and 0 < len(records) <= 512, "descriptions must be a bounded list")
+    descriptions = {}
+    previous = ""
+    for record in records:
+        require(isinstance(record, dict) and set(record) == {"id", "kind", "description"}, "invalid description record")
+        require(valid_id(record["id"]), "invalid description record ID")
+        require(record["kind"] in ("plugin", "theme"), "invalid description record kind")
+        require(record["id"] > previous, f"duplicate or unsorted description record: {record['id']}")
+        previous = record["id"]
+        description = record["description"]
+        require(isinstance(description, str), "description must be a string")
+        require(description == description.strip() and description, f"description must be non-empty with no surrounding whitespace: {record['id']}")
+        require(
+            len(description) <= 256 and len(description.encode()) <= 1024,
+            f"description exceeds the host's 256 characters or 1024 bytes: {record['id']}",
+        )
+        require(
+            not any(ord(c) < 32 or 127 <= ord(c) <= 159 for c in description),
+            f"description contains control characters: {record['id']}",
+        )
+        descriptions[record["id"]] = (record["kind"], description)
+    return descriptions
+
+
 def entries(tree, base):
     """Validate every package, its source manifest and preview; return catalog entries."""
     paths = tree.packages()
     require(0 < len(paths) <= 512, "catalog requires 1 to 512 packages")
-    result, ids = [], set()
+    packages, kinds, ids = [], {}, set()
     for relative in paths:
         data = tree.read(relative)
         manifest = validate(data)
         require(manifest["id"] not in ids, "duplicate extension ID")
         ids.add(manifest["id"])
+        kinds[manifest["id"]] = manifest["kind"]
+        packages.append((relative, data, manifest))
+    descriptions = load_descriptions(tree)
+    missing, unknown = ids - set(descriptions), set(descriptions) - ids
+    require(not missing and not unknown, f"descriptions must cover every package exactly; missing: {sorted(missing)}, unknown: {sorted(unknown)}")
+    for identifier, (kind, _) in descriptions.items():
+        require(kinds[identifier] == kind, f"description kind differs from the package: {identifier}")
+    result = []
+    for relative, data, manifest in packages:
         stem = Path(relative).stem
-        entry = dict(manifest=manifest, release_url=base + tree.prefix + relative, sha256=hashlib.sha256(data).hexdigest(), download_bytes=len(data), source_commit=getattr(tree, "commit", ""))
+        entry = dict(description=descriptions[manifest["id"]][1], manifest=manifest, release_url=base + tree.prefix + relative, sha256=hashlib.sha256(data).hexdigest(), download_bytes=len(data), source_commit=getattr(tree, "commit", ""))
         if manifest["kind"] == "plugin":
             source_manifest = tree.read(f"plugins/{stem}/manifest.json")
             require(source_manifest is not None and json.loads(source_manifest) == manifest, f"plugin source manifest differs from package: {stem}")
