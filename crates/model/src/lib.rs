@@ -6,6 +6,7 @@ mod image_sharing;
 pub mod polls;
 pub mod public_upload;
 pub mod registered_games;
+pub mod safety_hub;
 pub use image_sharing::ImageShare;
 pub mod archives;
 pub mod channel_display;

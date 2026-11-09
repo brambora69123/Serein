@@ -33,6 +33,7 @@ pub mod profile;
 pub mod reactions;
 pub mod read_state;
 mod replies;
+pub mod safety_hub;
 pub use replies::{HistoryNavigation, LinkResolution, ParkedReplies, Reply, ReplyDeletions};
 pub mod group_actions;
 pub mod onboarding;
@@ -283,6 +284,10 @@ pub enum Command {
 		user: Id,
 		request: u64,
 		changes: Option<model::ProfileEdit>,
+	},
+	/// One explicit read-only account standing request; never polled.
+	SafetyHub {
+		request: u64,
 	},
 	Voice(voice::Command),
 	Members {
@@ -624,6 +629,10 @@ pub enum Event {
 		request: u64,
 		result: Result<model::connections::Connection, auth::Failure>,
 	},
+	SafetyHub {
+		request: u64,
+		result: Result<model::safety_hub::Snapshot, auth::Failure>,
+	},
 	Voice(voice::Event),
 	ChannelCreated(Channel),
 	ChannelRestored(Channel),
@@ -846,6 +855,7 @@ pub struct State {
 	pub own_profile: profile::OwnProfile,
 	pub badge_editor: profile::BadgeEditor,
 	pub connections: connections::Connections,
+	pub safety_hub: safety_hub::View,
 	pub invites: invites::Cache,
 	pub invite_join: invites::Join,
 	pub guild_creation: guild_creation::Creation,
@@ -1088,6 +1098,7 @@ impl Default for State {
 			own_profile: Default::default(),
 			badge_editor: Default::default(),
 			connections: Default::default(),
+			safety_hub: Default::default(),
 			invites: Default::default(),
 			invite_join: Default::default(),
 			guild_creation: Default::default(),
@@ -2512,6 +2523,10 @@ impl State {
 			);
 			return;
 		}
+		if let Command::SafetyHub { request } = command {
+			self.reject_safety_hub(request);
+			return;
+		}
 		if matches!(command, Command::GuildFolders(_)) {
 			self.apply_guild_folders(Err(auth::Failure::ProtocolAt(
 				"Server organization was not queued; try again",
@@ -3008,6 +3023,7 @@ impl State {
 			self.invalidate_messaging_permissions(None);
 			self.interrupt_own_profile();
 			self.interrupt_connections();
+			self.interrupt_safety_hub();
 		}
 		if let Event::Typing(signal) = &envelope.event {
 			self.observe_typing_at(
@@ -3489,6 +3505,10 @@ impl State {
 			}
 			Event::ConnectionVisibility { request, result } => {
 				self.apply_connection_visibility(request, result);
+				Ok(())
+			}
+			Event::SafetyHub { request, result } => {
+				self.apply_safety_hub(request, result);
 				Ok(())
 			}
 
@@ -4523,6 +4543,7 @@ impl State {
 				self.cancel_guild_creation();
 				self.read_state.cancel();
 				self.clear_profile();
+				self.disconnect_safety_hub();
 				// The voice socket is independent and a RESUME replays roster changes, so the call,
 				// roster and known DM calls all stay. Only a fresh READY invalidates the voice state.
 				self.voice.incoming = None;
@@ -4560,6 +4581,7 @@ impl State {
 				self.read_state.cancel();
 				self.clear_profile();
 				self.profile_cache.clear();
+				self.disconnect_safety_hub();
 				self.disconnect_voice(
 					"Discord session or permissions changed; rejoin after refreshing",
 				);
@@ -4771,6 +4793,7 @@ impl State {
 			self.interrupt_own_profile();
 			self.interrupt_badge_settings();
 			self.interrupt_connections();
+			self.interrupt_safety_hub();
 			self.local_game_activity = Default::default();
 			self.cancel_message_actions();
 			if self.folders_pending {
@@ -5075,6 +5098,9 @@ impl Event {
 				Self::BadgeSettings { result, .. } => result
 					.as_ref()
 					.map_or(0, |s| (s.order.capacity() + s.hidden.capacity()) * 4),
+				Self::SafetyHub { result, .. } => result
+					.as_ref()
+					.map_or(0, model::safety_hub::Snapshot::bytes),
 				Self::Voice(event) => event.bytes(),
 				Self::Permissions(event) => event.bytes(),
 				Self::GuildEmojis { emojis, .. } => custom_emoji_bytes(emojis),
