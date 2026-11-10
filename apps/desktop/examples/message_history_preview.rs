@@ -42,13 +42,13 @@ impl eframe::App for Preview {
 				let output = self.output.clone();
 				self.writer = Some(std::thread::spawn(move || {
 					let pixels: Vec<u8> = image
-						.pixels
+						.pixels()
 						.iter()
 						.flat_map(|pixel| pixel.to_srgba_unmultiplied())
 						.collect();
 					let image = image::RgbaImage::from_raw(
-						image.size[0] as u32,
-						image.size[1] as u32,
+						image.resolution()[0] as u32,
+						image.resolution()[1] as u32,
 						pixels,
 					)
 					.ok_or("Invalid screenshot pixel count")?;

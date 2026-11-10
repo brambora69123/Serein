@@ -30,6 +30,9 @@
     libpulseaudio,
     libglvnd,
     alsa-lib,
+    aws-lc,
+    sqlite,
+    zstd,
     gst_all_1,
     pipewire,
     libx11,
@@ -127,7 +130,8 @@ in
             ];
 
         buildInputs =
-            lib.optionals isLinux (toolkitDeps ++ graphicsDeps ++ windowingDeps ++ audioDeps ++ gstPlugins)
+            [aws-lc sqlite zstd]
+            ++ lib.optionals isLinux (toolkitDeps ++ graphicsDeps ++ windowingDeps ++ audioDeps ++ gstPlugins)
             ++ lib.optionals isDarwin [
                 apple-sdk_15
                 swiftPackages.stdlib
