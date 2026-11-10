@@ -309,6 +309,11 @@ impl MessagingUi {
 	/// Fixture-only entry point for the native offline settings preview.
 	pub fn preview_settings(&mut self, page: &str) {
 		self.settings.open = true;
+		// Preserve the established Registered Games alias ahead of broader keyword matches.
+		if page == "activity" {
+			self.settings.page = Page::Activity;
+			return;
+		}
 		// A label wins; keywords still reach pages that were merged or renamed ("activity").
 		if let Some(page) = Page::ALL
 			.into_iter()
@@ -446,119 +451,106 @@ impl MessagingUi {
 							64.0
 						};
 						let content_height = (ui.available_height() - footer_height).max(48.0);
-						ui.allocate_ui_with_layout(
-							egui::vec2(ui.available_width(), content_height),
-							egui::Layout::top_down(egui::Align::Min),
-							|ui| {
-								egui::ScrollArea::vertical()
-									.id_salt((
+						egui::ScrollArea::vertical()
+							.max_height(if profile_visible {
+								content_height
+							} else {
+								f32::INFINITY
+							})
+							.id_salt((
+								"settings-content",
+								self.settings.page as u8,
+								self.extensions.theme_editor_tab_key(),
+							))
+							.auto_shrink([false, false])
+							.show(ui, |ui| {
+								crate::dialog::page_fade(
+									ui,
+									egui::Id::unique((
 										"settings-content",
 										self.settings.page as u8,
-										self.extensions.theme_editor_tab_key(),
-									))
-									.auto_shrink([false, false])
-									.show(ui, |ui| {
-										crate::dialog::page_fade(
+									)),
+								);
+								let scroll_padding = if self.settings.page == Page::Profile {
+									8.0
+								} else {
+									0.0
+								};
+								ui.set_width((ui.available_width() - scroll_padding).min(720.0));
+								ui.spacing_mut().item_spacing.y = 12.0;
+								let query = self.settings.query.to_lowercase();
+								if !Page::ALL
+									.into_iter()
+									.any(|p| p.matches(&query, self.language))
+								{
+									ui.label(
+										design::semibold(
 											ui,
-											egui::Id::unique((
-												"settings-content",
-												self.settings.page as u8,
-											)),
-										);
-										let scroll_padding = if self.settings.page == Page::Profile
-										{
-											8.0
-										} else {
-											0.0
-										};
-										ui.set_width(
-											(ui.available_width() - scroll_padding).min(720.0),
-										);
-										ui.spacing_mut().item_spacing.y = 12.0;
-										let query = self.settings.query.to_lowercase();
-										if !Page::ALL
-											.into_iter()
-											.any(|p| p.matches(&query, self.language))
-										{
-											ui.label(
-												design::semibold(
-													ui,
-													self.language.text("no-settings-found"),
-													16.0,
-												)
-												.color(colors.text_strong),
-											);
-											ui.weak(self.language.text("search-suggestion"));
-											return;
-										}
-										if self.settings.page != Page::Connections {
-											self.settings.connections_requested = false;
-										}
-										match self.settings.page {
-											Page::General => self.general_settings(ui, state.demo),
-											Page::LanguageTime => self.language_time_settings(ui),
-											Page::Account => self.account_page(ui, state),
-											Page::Connections => {
-												if !self.settings.connections_requested {
-													self.settings.connections_requested = true;
-													if let Some(command) =
-														state.request_connections()
-													{
-														commands.push(command);
-													}
-												}
-												self.connections_settings(ui, state, commands);
-											}
-											Page::Profile => self.settings.editor.show(
-												ui,
-												state,
-												&mut self.avatars,
-												commands,
-											),
-											Page::Appearance => {
-												self.appearance_settings(ui, state.demo)
-											}
-											Page::Chat => self.chat_settings(ui, state.demo),
-											Page::MessagingPermissions => self
-												.messaging_permissions_settings(
-													ui, state, commands,
-												),
-											Page::Notifications => {
-												self.notification_settings(ui, state.demo)
-											}
-											Page::Activity => self.activity_settings(ui, state),
-											Page::Voice => self.voice_settings_content(
-												ui,
-												state.demo,
-												state.voice.active.is_some(),
-												false,
-											),
-											Page::Storage => self.storage_page(ui, state),
-											Page::Updates => self.update_settings(ui, state.demo),
-											Page::Keybinds => crate::keybinds::show(
-												ui,
-												&mut self.keybinds,
-												&mut self.keybind_capture,
-												self.global_keybind_status,
-											),
-											Page::Extensions | Page::Themes => {
-												self.extensions.select_themes(
-													self.settings.page == Page::Themes,
-												);
-												self.extensions.settings(ui, state);
+											self.language.text("no-settings-found"),
+											16.0,
+										)
+										.color(colors.text_strong),
+									);
+									ui.weak(self.language.text("search-suggestion"));
+									return;
+								}
+								if self.settings.page != Page::Connections {
+									self.settings.connections_requested = false;
+								}
+								match self.settings.page {
+									Page::General => self.general_settings(ui, state.demo),
+									Page::LanguageTime => self.language_time_settings(ui),
+									Page::Account => self.account_page(ui, state),
+									Page::Connections => {
+										if !self.settings.connections_requested {
+											self.settings.connections_requested = true;
+											if let Some(command) = state.request_connections() {
+												commands.push(command);
 											}
 										}
-										if state.demo {
-											ui.add_space(20.0);
-											design::hint(
-												ui,
-												&self.language.text("offline-preview"),
-											);
-										}
-										ui.add_space(24.0);
-									});
-							},
-						);
+										self.connections_settings(ui, state, commands);
+									}
+									Page::Profile => self.settings.editor.show(
+										ui,
+										state,
+										&mut self.avatars,
+										commands,
+									),
+									Page::Appearance => self.appearance_settings(ui, state.demo),
+									Page::Chat => self.chat_settings(ui, state.demo),
+									Page::MessagingPermissions => {
+										self.messaging_permissions_settings(ui, state, commands)
+									}
+									Page::Notifications => {
+										self.notification_settings(ui, state.demo)
+									}
+									Page::Activity => self.activity_settings(ui, state),
+									Page::Voice => self.voice_settings_content(
+										ui,
+										state.demo,
+										state.voice.active.is_some(),
+										false,
+									),
+									Page::Storage => self.storage_page(ui, state),
+									Page::Updates => self.update_settings(ui, state.demo),
+									Page::Keybinds => crate::keybinds::show(
+										ui,
+										&mut self.keybinds,
+										&mut self.keybind_capture,
+										self.global_keybind_status,
+									),
+									Page::Extensions | Page::Themes => {
+										self.extensions
+											.select_themes(self.settings.page == Page::Themes);
+										self.extensions.settings(ui, state);
+									}
+								}
+								if state.demo {
+									ui.add_space(20.0);
+									design::hint(ui, &self.language.text("offline-preview"));
+								}
+								ui.add_space(24.0);
+							});
 						if profile_visible {
 							ui.add_space(16.0);
 							self.settings.editor.save_controls(ui, state, commands);
