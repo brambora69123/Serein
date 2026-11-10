@@ -4,14 +4,21 @@
 use crate::DecodeError;
 use model::{
 	AvatarDecoration, Cosmetics, EffectAsset, EffectLayer, FrameAnchor, FrameLayer, FrameLayerKind,
-	Id, Nameplate, NameplatePalette, ProfileEffect, ProfileFrame, User,
+	Id, Nameplate, NameplatePalette, OwnedCollectibles, OwnedCosmetic, ProfileEffect, ProfileFrame,
+	User,
 };
 use serde::{Deserialize, de::IgnoredAny};
 
 /// Catalog responses for one SKU, including bundled variants.
 pub const MAX_PRODUCT_WIRE: usize = 256 * 1024;
+/// The account's owned products, including effect layers. This is not a Shop response.
+pub const MAX_PURCHASES_WIRE: usize = 512 * 1024;
+const MAX_PURCHASE_PRODUCTS: usize = 32;
+const AVATAR_DECORATION: u8 = 0;
 const PROFILE_EFFECT: u8 = 1;
+const NAMEPLATE: u8 = 2;
 const PROFILE_FRAME: u8 = 3;
+const SUBSCRIPTION_PURCHASE: u8 = 7;
 
 /// Keeps a value only when it has the expected shape.
 #[derive(Clone, Deserialize)]
@@ -341,6 +348,11 @@ pub fn decode_effect(bytes: &[u8], sku: Id) -> Result<ProfileEffect, DecodeError
 	let dto: EffectDto = product_item(bytes, sku, PROFILE_EFFECT, |item: &EffectDto| {
 		Some((item.kind, item.sku_id))
 	})?;
+	effect_from_item(dto)
+}
+
+fn effect_from_item(dto: EffectDto) -> Result<ProfileEffect, DecodeError> {
+	let sku = dto.sku_id;
 	let layers: Vec<EffectLayerDto> = dto
 		.effects
 		.into_iter()
@@ -405,6 +417,244 @@ pub fn decode_effect(bytes: &[u8], sku: Id) -> Result<ProfileEffect, DecodeError
 		return Err(DecodeError);
 	}
 	Ok(effect)
+}
+
+#[derive(Deserialize)]
+struct PurchaseProductDto {
+	sku_id: Id,
+	#[serde(default)]
+	name: Option<String>,
+	#[serde(default)]
+	purchase_type: Option<u8>,
+	#[serde(default)]
+	expires_at: Option<Lenient<String>>,
+	#[serde(default)]
+	items: Vec<serde_json::Value>,
+}
+#[derive(Deserialize)]
+struct PurchaseItemDto {
+	#[serde(rename = "type")]
+	kind: u8,
+	sku_id: Id,
+}
+
+fn insert_owned<T>(
+	options: &mut Vec<OwnedCosmetic<T>>,
+	option: OwnedCosmetic<T>,
+	sku: Id,
+	full: bool,
+	limited: &mut bool,
+	item_sku: impl Fn(&T) -> Id,
+) {
+	if let Some(existing) = options
+		.iter_mut()
+		.find(|existing| item_sku(&existing.item) == sku)
+	{
+		// Multiple purchase records may entitle one SKU. A normal/gifted/quest purchase is
+		// stronger evidence than a subscription-only claim of the same cosmetic.
+		if existing.requires_nitro && !option.requires_nitro {
+			*existing = option;
+		}
+		return;
+	}
+	if full {
+		*limited = true;
+	} else {
+		options.push(option);
+	}
+}
+
+/// Decode only verified owned decoration, nameplate and effect options. Unknown products are
+/// never turned into editable SKU text fields. Product and item caps include bundled products.
+pub fn decode_purchases(bytes: &[u8]) -> Result<OwnedCollectibles, DecodeError> {
+	if bytes.len() > MAX_PURCHASES_WIRE {
+		return Err(DecodeError);
+	}
+	let products: Vec<Lenient<PurchaseProductDto>> = crate::decode(bytes)?;
+	if products.len() > MAX_PURCHASE_PRODUCTS {
+		return Err(DecodeError);
+	}
+	let now = model::unix_now();
+	let mut owned = OwnedCollectibles::default();
+	for product in products {
+		let product = match product {
+			Lenient::Value(product) => product,
+			Lenient::Invalid(_) => {
+				owned.limited = true;
+				continue;
+			}
+		};
+		let Some(purchase_type) = product
+			.purchase_type
+			.filter(|kind| matches!(*kind, 1 | 5 | 6 | SUBSCRIPTION_PURCHASE | 10))
+		else {
+			owned.limited = true;
+			continue;
+		};
+		if product.sku_id.0 == 0 {
+			owned.limited = true;
+			continue;
+		}
+		if let Some(expires) = product.expires_at {
+			let Lenient::Value(expires) = expires else {
+				owned.limited = true;
+				continue;
+			};
+			let Ok(expires) = time::OffsetDateTime::parse(
+				&expires,
+				&time::format_description::well_known::Rfc3339,
+			) else {
+				owned.limited = true;
+				continue;
+			};
+			if expires.unix_timestamp() <= now as i64 {
+				continue;
+			}
+		}
+		if product.items.len() > 8 {
+			owned.limited = true;
+		}
+		for item in product.items.into_iter().take(8) {
+			let Ok(header) = serde_json::from_value::<PurchaseItemDto>(item.clone()) else {
+				owned.limited = true;
+				continue;
+			};
+			if header.sku_id.0 == 0 {
+				owned.limited = true;
+				continue;
+			}
+			let requires_nitro = purchase_type == SUBSCRIPTION_PURCHASE;
+			let name = label(product.name.clone());
+			let full = owned.decorations.len() + owned.nameplates.len() + owned.effects.len()
+				>= model::MAX_OWNED_COLLECTIBLES;
+			match header.kind {
+				AVATAR_DECORATION => {
+					let Ok(mut dto) = serde_json::from_value::<DecorationDto>(item) else {
+						owned.limited = true;
+						continue;
+					};
+					if dto.sku_id != header.sku_id {
+						owned.limited = true;
+						continue;
+					}
+					dto.expires_at = None;
+					let item = AvatarDecoration {
+						asset: dto.asset,
+						sku: dto.sku_id,
+						expires_at: None,
+					};
+					if !item.valid() {
+						owned.limited = true;
+						continue;
+					}
+					let name = if name.is_empty() {
+						format!("Avatar decoration {}", item.sku)
+					} else {
+						name
+					};
+					insert_owned(
+						&mut owned.decorations,
+						OwnedCosmetic {
+							name,
+							item,
+							requires_nitro,
+						},
+						header.sku_id,
+						full,
+						&mut owned.limited,
+						|item| item.sku,
+					);
+				}
+				NAMEPLATE => {
+					let Ok(dto) = serde_json::from_value::<NameplateDto>(item) else {
+						owned.limited = true;
+						continue;
+					};
+					let item = Nameplate {
+						asset: dto.asset,
+						sku: dto.sku_id,
+						label: label(dto.label),
+						palette: dto
+							.palette
+							.as_deref()
+							.and_then(NameplatePalette::parse)
+							.unwrap_or(NameplatePalette::None),
+						expires_at: None,
+					};
+					if dto.sku_id != header.sku_id || !item.valid() {
+						owned.limited = true;
+						continue;
+					}
+					let name = if name.is_empty() {
+						if item.label.is_empty() {
+							format!("Nameplate {}", item.sku)
+						} else {
+							item.label.clone()
+						}
+					} else {
+						name
+					};
+					insert_owned(
+						&mut owned.nameplates,
+						OwnedCosmetic {
+							name,
+							item,
+							requires_nitro,
+						},
+						header.sku_id,
+						full,
+						&mut owned.limited,
+						|item| item.sku,
+					);
+				}
+				PROFILE_EFFECT => {
+					let Ok(dto) = serde_json::from_value::<EffectDto>(item) else {
+						owned.limited = true;
+						continue;
+					};
+					if dto.sku_id != header.sku_id {
+						owned.limited = true;
+						continue;
+					}
+					let title = dto.title.clone().unwrap_or_default();
+					let Ok(item) = effect_from_item(dto) else {
+						owned.limited = true;
+						continue;
+					};
+					let name = if name.is_empty() {
+						let title = label(Some(title));
+						if title.is_empty() {
+							format!("Profile effect {}", item.sku)
+						} else {
+							title
+						}
+					} else {
+						name
+					};
+					insert_owned(
+						&mut owned.effects,
+						OwnedCosmetic {
+							name,
+							item,
+							requires_nitro,
+						},
+						header.sku_id,
+						full,
+						&mut owned.limited,
+						|item| item.sku,
+					);
+				}
+				PROFILE_FRAME => {
+					// Display already supports frames, but no mutation field is verified.
+				}
+				_ => owned.limited = true,
+			}
+		}
+	}
+	owned.decorations.shrink_to_fit();
+	owned.nameplates.shrink_to_fit();
+	owned.effects.shrink_to_fit();
+	owned.valid().then_some(owned).ok_or(DecodeError)
 }
 
 /// The profile frame sold as `sku`. Unknown layer types, orders or anchors drop that layer.
@@ -634,6 +884,49 @@ mod tests {
 
 	fn frame_json_without_layers() -> String {
 		json!({"sku_id":"30","items":[{"type":3,"sku_id":"30","layers":[]}]}).to_string()
+	}
+
+	#[test]
+	fn purchases_keep_only_bounded_owned_options_and_per_sku_requirements() {
+		let effect = || {
+			json!({"type":1,"sku_id":"14","title":"Sparks","accessibilityLabel":"Sparks",
+				"reducedMotionSrc":format!("https://cdn.discordapp.com/assets/content/{HASH}"),
+				"effects":[]})
+		};
+		let purchases = json!([
+			{"sku_id":"10","name":"Member ring","purchase_type":7,"items":[
+				{"type":0,"sku_id":"10","asset":"a_fed43ab12698df65902ba06727e20c0e"}]},
+			{"sku_id":"11","name":"Owned ring","purchase_type":1,"items":[
+				{"type":0,"sku_id":"11","asset":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}]},
+			{"sku_id":"12","name":"Gifted plate","purchase_type":6,"items":[
+				{"type":2,"sku_id":"12","asset":"nameplates/synthetic/","label":"Plate","palette":"violet"}]},
+			{"sku_id":"14","name":"Subscription effect","purchase_type":7,"items":[effect()]},
+			{"sku_id":"14","name":"Purchased effect","purchase_type":1,"items":[effect()]},
+			{"sku_id":"15","name":"Owned frame","purchase_type":1,"items":[
+				{"type":3,"sku_id":"15","layers":[]}]},
+			{"sku_id":"16","name":"Expired","purchase_type":1,"expires_at":"2000-01-01T00:00:00Z","items":[
+				{"type":0,"sku_id":"16","asset":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}]}
+		]);
+		let owned = decode_purchases(purchases.to_string().as_bytes()).unwrap();
+		assert_eq!(owned.decorations.len(), 2);
+		assert!(owned.decoration(Id(10)).unwrap().requires_nitro);
+		assert!(!owned.decoration(Id(11)).unwrap().requires_nitro);
+		assert!(!owned.nameplate(Id(12)).unwrap().requires_nitro);
+		assert_eq!(owned.effects.len(), 1);
+		assert_eq!(owned.effect(Id(14)).unwrap().name, "Purchased effect");
+		assert!(!owned.effect(Id(14)).unwrap().requires_nitro);
+		assert!(owned.valid() && !owned.limited);
+
+		let malformed = json!([{"sku_id":"17","name":"Unknown","items":[
+			{"type":99,"sku_id":"17"}]}]);
+		assert!(
+			decode_purchases(malformed.to_string().as_bytes())
+				.unwrap()
+				.limited
+		);
+		let many = vec![json!(null); MAX_PURCHASE_PRODUCTS + 1];
+		assert!(decode_purchases(serde_json::to_vec(&many).unwrap().as_slice()).is_err());
+		assert!(decode_purchases(&vec![b' '; MAX_PURCHASES_WIRE + 1]).is_err());
 	}
 
 	#[test]

@@ -59,7 +59,25 @@ pub fn encode_edit(changes: &model::ProfileEdit) -> Result<serde_json::Value, De
 	if let Some(banner) = &changes.banner {
 		fields.insert("banner".into(), serde_json::json!(banner));
 	}
+	if let Some(sku) = changes.avatar_decoration_sku_id {
+		fields.insert("avatar_decoration_sku_id".into(), serde_json::json!(sku));
+	}
+	if let Some(sku) = changes.nameplate_sku_id {
+		fields.insert("nameplate_sku_id".into(), serde_json::json!(sku));
+	}
 	Ok(serde_json::Value::Object(fields))
+}
+
+/// The profile effect has its own route. It is deliberately not mixed into the account PATCH.
+pub fn encode_profile_effect(
+	changes: &model::ProfileEdit,
+) -> Result<Option<serde_json::Value>, DecodeError> {
+	if !changes.valid() {
+		return Err(DecodeError);
+	}
+	Ok(changes
+		.profile_effect_id
+		.map(|sku| serde_json::json!({"profile_effect_id": sku})))
 }
 #[derive(Deserialize)]
 struct ProfileDto {

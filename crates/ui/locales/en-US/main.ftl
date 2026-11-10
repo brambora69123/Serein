@@ -2117,6 +2117,25 @@ profile-edit-form-undo = Undo
 profile-edit-form-use-default = Use default
 # Context: form
 profile-edit-form-your-picture-will-be-removed-when-you-save = Your picture will be removed when you save.
+
+profile-edit-form-owned-cosmetics = Owned cosmetics
+profile-edit-form-owned-cosmetics-unavailable = Owned items could not be loaded. Other profile fields still save; reload to verify cosmetic ownership.
+profile-edit-form-reload-owned-cosmetics = Reload owned items
+profile-edit-form-avatar-decoration = Avatar decoration
+profile-edit-form-owned-avatar-decoration = Verified owned decorations only. Clear is always available.
+profile-edit-form-no-owned-avatar-decorations = No owned decorations
+profile-edit-form-nameplate = Nameplate
+profile-edit-form-owned-nameplate = Verified owned nameplates only. Clear is always available.
+profile-edit-form-no-owned-nameplates = No owned nameplates
+profile-edit-form-profile-effect = Profile effect
+profile-edit-form-owned-profile-effect = Owned effects save in a second request after account changes; any save failure requires reload.
+profile-edit-form-no-owned-profile-effects = No owned profile effects
+profile-edit-form-owned-cosmetics-partial = Only verified owned entries are shown. Unsupported or incomplete entries cannot be selected.
+profile-edit-form-profile-frame = Profile frame
+profile-edit-form-profile-frame-unavailable = Display only. No supported profile frame mutation field has been verified.
+profile-edit-form-none = None
+profile-edit-form-requires-full-nitro = requires active full Nitro
+profile-edit-form-equipped-cosmetic-not-owned = The equipped SKU is not in verified owned purchases. You can clear it, but cannot select it as a new value.
 # Context: preview
 profile-edit-preview-about-me = About Me
 # Context: preview

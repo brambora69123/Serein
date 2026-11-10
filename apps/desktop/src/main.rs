@@ -2108,7 +2108,10 @@ impl Desktop {
 					event: Event::ProfileEdited {
 						user,
 						request,
-						result: Ok(Box::new(profile)),
+						result: Ok(Box::new(model::OwnProfileData {
+							profile,
+							collectibles: Some(ui::synthetic_owned_collectibles()),
+						})),
 					},
 				});
 			}
@@ -4383,27 +4386,16 @@ impl Desktop {
 								if !changes.valid() {
 									return Err(Failure::Capacity);
 								}
-								if let Some(name) = changes.global_name {
-									profile.user.name =
-										name.clone().unwrap_or_else(|| profile.username.clone());
-									profile.global_name = name;
-								}
-								if let Some(bio) = changes.bio {
-									profile.bio = bio;
-								}
-								if let Some(pronouns) = changes.pronouns {
-									profile.pronouns = pronouns;
-								}
-								if let Some(color) = changes.accent_color {
-									profile.accent_color = color;
-								}
-								if let Some(avatar) = changes.avatar {
-									// Synthetic hash: the fixture never uploads or fetches images.
-									profile.user.avatar = avatar
-										.map(|_| "0123456789abcdef0123456789abcdef".to_owned());
-								}
+								ui::synthetic_apply_profile_edit(
+									&mut profile,
+									changes,
+									&ui::synthetic_owned_collectibles(),
+								);
 							}
-							Ok(Box::new(profile))
+							Ok(Box::new(model::OwnProfileData {
+								profile,
+								collectibles: Some(ui::synthetic_owned_collectibles()),
+							}))
 						})
 						.unwrap_or(Err(Failure::Protocol));
 					Event::ProfileEdited {

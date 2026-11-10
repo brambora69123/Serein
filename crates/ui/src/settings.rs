@@ -145,7 +145,9 @@ impl Page {
 	fn matches(self, query: &str, language: Language) -> bool {
 		let keywords = match self {
 			Self::Account => "my account profile logout",
-			Self::Profile => "profile edit display name about me bio pronouns color colour",
+			Self::Profile => {
+				"profile edit display name about me bio pronouns color colour avatar decoration nameplate effect frame owned collectibles"
+			}
 			Self::Connections => {
 				"connections linked accounts services spotify steam github reddit twitch xbox playstation visibility activity"
 			}

@@ -13,6 +13,9 @@ struct Draft {
 	avatar: Option<Option<String>>,
 	/// The banner follows the same pending-dirty lifecycle, but is Nitro-gated.
 	banner: Option<Option<String>>,
+	avatar_decoration: Option<Id>,
+	nameplate: Option<Id>,
+	profile_effect: Option<Id>,
 }
 impl Draft {
 	fn from_profile(profile: &UserProfile) -> Self {
@@ -23,6 +26,19 @@ impl Draft {
 			color: profile.accent_color,
 			avatar: None,
 			banner: None,
+			avatar_decoration: profile
+				.user
+				.cosmetics
+				.as_deref()
+				.and_then(|cosmetics| cosmetics.decoration.as_ref())
+				.map(|decoration| decoration.sku),
+			nameplate: profile
+				.user
+				.cosmetics
+				.as_deref()
+				.and_then(|cosmetics| cosmetics.nameplate.as_ref())
+				.map(|nameplate| nameplate.sku),
+			profile_effect: profile.effect_sku,
 		}
 	}
 	fn changes(&self, profile: &UserProfile) -> ProfileEdit {
@@ -41,6 +57,24 @@ impl Draft {
 				Some(None) if profile.banner.is_none() => None,
 				other => other.clone(),
 			},
+			avatar_decoration_sku_id: (self.avatar_decoration
+				!= profile
+					.user
+					.cosmetics
+					.as_deref()
+					.and_then(|cosmetics| cosmetics.decoration.as_ref())
+					.map(|decoration| decoration.sku))
+			.then_some(self.avatar_decoration),
+			nameplate_sku_id: (self.nameplate
+				!= profile
+					.user
+					.cosmetics
+					.as_deref()
+					.and_then(|cosmetics| cosmetics.nameplate.as_ref())
+					.map(|nameplate| nameplate.sku))
+			.then_some(self.nameplate),
+			profile_effect_id: (self.profile_effect != profile.effect_sku)
+				.then_some(self.profile_effect),
 		}
 	}
 	fn rebase(&mut self, before: &Self, fresh: &Self) {
@@ -55,6 +89,15 @@ impl Draft {
 		}
 		if self.color == before.color {
 			self.color = fresh.color;
+		}
+		if self.avatar_decoration == before.avatar_decoration {
+			self.avatar_decoration = fresh.avatar_decoration;
+		}
+		if self.nameplate == before.nameplate {
+			self.nameplate = fresh.nameplate;
+		}
+		if self.profile_effect == before.profile_effect {
+			self.profile_effect = fresh.profile_effect;
 		}
 	}
 }
@@ -86,6 +129,7 @@ enum AvatarAction {
 	BannerRemove,
 	Undo,
 	BannerUndo,
+	ReloadCollectibles,
 }
 
 #[derive(Default)]
@@ -317,6 +361,7 @@ impl Editor {
 		};
 		let mut action = None;
 		let banner_entitled = matches!(state.premium_type, 1 | 2);
+		let full_nitro = state.premium_type == 2;
 		let width = ui.available_width();
 		if width >= 620.0 {
 			ui.horizontal_top(|ui| {
@@ -326,7 +371,15 @@ impl Editor {
 					egui::Layout::top_down(egui::Align::Min),
 					|ui| {
 						ui.add_enabled_ui(editable, |ui| {
-							action = form(ui, draft, profile, picture_choice, banner_entitled);
+							action = form(
+								ui,
+								draft,
+								profile,
+								picture_choice,
+								banner_entitled,
+								state.own_profile.collectibles.as_ref(),
+								full_nitro,
+							);
 						});
 					},
 				);
@@ -336,6 +389,7 @@ impl Editor {
 						ui,
 						draft,
 						profile,
+						state.own_profile.collectibles.as_ref(),
 						avatars,
 						(state.demo, &state.guilds),
 						&mut self.preview_link,
@@ -351,9 +405,18 @@ impl Editor {
 			});
 		} else {
 			ui.add_enabled_ui(editable, |ui| {
-				action = form(ui, draft, profile, picture_choice, banner_entitled);
+				action = form(
+					ui,
+					draft,
+					profile,
+					picture_choice,
+					banner_entitled,
+					state.own_profile.collectibles.as_ref(),
+					full_nitro,
+				);
 			});
 		}
+		let mut reload_collectibles = false;
 		match action {
 			Some(AvatarAction::Pick) if editable && !(self.choosing || self.choosing_banner) => {
 				self.revision = self.revision.wrapping_add(1);
@@ -383,6 +446,7 @@ impl Editor {
 				draft.banner = None;
 				self.pending_banner = None;
 			}
+			Some(AvatarAction::ReloadCollectibles) => reload_collectibles = true,
 			_ => {}
 		}
 		if *draft != before {
@@ -404,6 +468,7 @@ impl Editor {
 				ui,
 				draft,
 				profile,
+				state.own_profile.collectibles.as_ref(),
 				avatars,
 				(state.demo, &state.guilds),
 				&mut self.preview_link,
@@ -421,6 +486,12 @@ impl Editor {
 				banner_entitled,
 			);
 		}
+		if reload_collectibles
+			&& editable
+			&& let Some(command) = state.load_own_profile()
+		{
+			commands.push(command);
+		}
 		crate::markdown::confirm_external_link(ui.ctx(), &mut self.preview_link, true);
 		if !state.demo && !state.gateway_connected {
 			design::hint(
@@ -437,6 +508,8 @@ fn form(
 	profile: &UserProfile,
 	choosing: Option<model::ProfilePicture>,
 	banner_entitled: bool,
+	collectibles: Option<&model::OwnedCollectibles>,
+	full_nitro: bool,
 ) -> Option<AvatarAction> {
 	ui.spacing_mut().item_spacing.y = 6.0;
 	let mut action = None;
@@ -590,7 +663,157 @@ fn form(
 				.unwrap_or(design::DEFAULT_PRIMARY_RGB)
 		});
 	}
+	ui.add_space(12.0);
+	collectible_groups(ui, draft, collectibles, full_nitro, &mut action);
 	action
+}
+
+fn collectible_groups(
+	ui: &mut egui::Ui,
+	draft: &mut Draft,
+	collectibles: Option<&model::OwnedCollectibles>,
+	full_nitro: bool,
+	action: &mut Option<AvatarAction>,
+) {
+	let Some(owned) = collectibles else {
+		design::row(
+			ui,
+			"profile-edit-form-owned-cosmetics",
+			Some("profile-edit-form-owned-cosmetics-unavailable"),
+			|ui| {
+				if design::text_action(
+					ui,
+					&crate::i18n::translate("profile-edit-form-reload-owned-cosmetics"),
+				)
+				.clicked()
+				{
+					*action = Some(AvatarAction::ReloadCollectibles);
+				}
+			},
+		);
+		return;
+	};
+	let decorations: Vec<_> = owned
+		.decorations
+		.iter()
+		.map(|option| (option.item.sku, option.name.as_str(), option.requires_nitro))
+		.collect();
+	let nameplates: Vec<_> = owned
+		.nameplates
+		.iter()
+		.map(|option| (option.item.sku, option.name.as_str(), option.requires_nitro))
+		.collect();
+	let effects: Vec<_> = owned
+		.effects
+		.iter()
+		.map(|option| (option.item.sku, option.name.as_str(), option.requires_nitro))
+		.collect();
+	cosmetic_row(
+		ui,
+		"profile-edit-form-avatar-decoration",
+		"profile-edit-form-owned-avatar-decoration",
+		"profile-edit-form-no-owned-avatar-decorations",
+		&mut draft.avatar_decoration,
+		&decorations,
+		full_nitro,
+	);
+	cosmetic_row(
+		ui,
+		"profile-edit-form-nameplate",
+		"profile-edit-form-owned-nameplate",
+		"profile-edit-form-no-owned-nameplates",
+		&mut draft.nameplate,
+		&nameplates,
+		full_nitro,
+	);
+	cosmetic_row(
+		ui,
+		"profile-edit-form-profile-effect",
+		"profile-edit-form-owned-profile-effect",
+		"profile-edit-form-no-owned-profile-effects",
+		&mut draft.profile_effect,
+		&effects,
+		full_nitro,
+	);
+	if owned.limited {
+		design::hint(
+			ui,
+			&crate::i18n::translate("profile-edit-form-owned-cosmetics-partial"),
+		);
+	}
+	// Display remains available, but no supported mutation field was found for frames.
+	design::row(
+		ui,
+		"profile-edit-form-profile-frame",
+		Some("profile-edit-form-profile-frame-unavailable"),
+		|ui| {
+			ui.add_enabled_ui(false, |ui| {
+				design::button(
+					ui,
+					&crate::i18n::translate("profile-edit-form-change"),
+					design::ButtonKind::Outline,
+				);
+			});
+		},
+	);
+}
+
+#[allow(clippy::too_many_arguments)]
+fn cosmetic_row(
+	ui: &mut egui::Ui,
+	label: &'static str,
+	hint: &'static str,
+	empty: &'static str,
+	selected: &mut Option<Id>,
+	options: &[(Id, &str, bool)],
+	full_nitro: bool,
+) {
+	let unknown = selected.is_some_and(|sku| !options.iter().any(|option| option.0 == sku));
+	design::row(ui, label, Some(hint), |ui| {
+		if options.is_empty() && selected.is_none() {
+			ui.label(crate::i18n::translate(empty));
+			return;
+		}
+		let selected_name = selected
+			.and_then(|sku| {
+				options
+					.iter()
+					.find(|option| option.0 == sku)
+					.map(|option| option.1.to_owned())
+			})
+			.or_else(|| selected.map(|sku| format!("SKU {sku}")))
+			.unwrap_or_else(|| crate::i18n::translate("profile-edit-form-none"));
+		egui::ComboBox::from_id_salt(label)
+			.selected_text(selected_name)
+			.width(210.0)
+			.show_ui(ui, |ui| {
+				ui.selectable_value(
+					selected,
+					None,
+					crate::i18n::translate("profile-edit-form-none"),
+				);
+				for (sku, name, requires_nitro) in options {
+					ui.add_enabled_ui(!requires_nitro || full_nitro, |ui| {
+						let name = if *requires_nitro {
+							format!(
+								"{} · {}",
+								name,
+								crate::i18n::translate("profile-edit-form-requires-full-nitro")
+							)
+						} else {
+							(*name).to_owned()
+						};
+						ui.selectable_value(selected, Some(*sku), name);
+					});
+				}
+			});
+	});
+	if unknown {
+		design::hint(
+			ui,
+			&crate::i18n::translate("profile-edit-form-equipped-cosmetic-not-owned"),
+		);
+	}
 }
 
 fn field(
@@ -777,6 +1000,7 @@ fn preview(
 	ui: &mut egui::Ui,
 	draft: &Draft,
 	profile: &UserProfile,
+	collectibles: Option<&model::OwnedCollectibles>,
 	avatars: &mut Avatars,
 	media: (bool, &[model::Guild]),
 	opening: &mut Option<String>,
@@ -788,6 +1012,50 @@ fn preview(
 ) -> Option<AvatarAction> {
 	let (demo, guilds) = media;
 	let colors = design::palette(ui);
+	let mut preview_profile = profile.clone();
+	if let Some(owned) = collectibles {
+		let current = profile
+			.user
+			.cosmetics
+			.as_deref()
+			.and_then(|cosmetics| cosmetics.decoration.as_ref())
+			.cloned();
+		let current_sku = current.as_ref().map(|item| item.sku);
+		let cosmetics = preview_profile.user.cosmetics.get_or_insert_default();
+		cosmetics.decoration = match draft.avatar_decoration {
+			Some(sku) => owned.decoration(sku).map_or_else(
+				|| (Some(sku) == current_sku).then_some(current.clone()).flatten(),
+				|option| Some(option.item.clone()),
+			),
+			None => None,
+		};
+		let current = profile
+			.user
+			.cosmetics
+			.as_deref()
+			.and_then(|cosmetics| cosmetics.nameplate.as_ref())
+			.cloned();
+		let current_sku = current.as_ref().map(|item| item.sku);
+		cosmetics.nameplate = match draft.nameplate {
+			Some(sku) => owned.nameplate(sku).map_or_else(
+				|| (Some(sku) == current_sku).then_some(current.clone()).flatten(),
+				|option| Some(option.item.clone()),
+			),
+			None => None,
+		};
+		preview_profile.effect_sku = draft.profile_effect;
+		preview_profile.effect = match draft.profile_effect {
+			Some(sku) => owned.effect(sku).map_or_else(
+				|| {
+					(Some(sku) == profile.effect_sku)
+						.then(|| profile.effect.clone())
+						.flatten()
+				},
+				|option| Some(Box::new(option.item.clone())),
+			),
+			None => None,
+		};
+	}
 	let mut action = None;
 	ui.label(design::eyebrow(
 		ui,
@@ -800,6 +1068,7 @@ fn preview(
 	let rgb = |c: u32| egui::Color32::from_rgb((c >> 16) as u8, (c >> 8) as u8, c as u8);
 	ui.scope(|ui| {
 		let background = ui.painter().add(egui::Shape::Noop);
+		let frame_back = ui.painter().add(egui::Shape::Noop);
 		ui.visuals_mut().override_text_color = Some(theme.text);
 		ui.visuals_mut().hyperlink_color = theme.link;
 		ui.set_width(ui.available_width());
@@ -862,6 +1131,7 @@ fn preview(
 			);
 			ui.painter()
 				.circle_filled(avatar.center(), 46.0, theme.card);
+			let remote_picture = matches!(picture, Picture::Remote);
 			let response =
 				ui.scope_builder(
 					egui::UiBuilder::new().max_rect(avatar),
@@ -871,12 +1141,15 @@ fn preview(
 								.fit_to_exact_size(egui::Vec2::splat(80.0))
 								.corner_radius(40.0),
 						),
-						Picture::Removed => design::avatar(ui, &profile.user.name, 80.0),
+						Picture::Removed => design::avatar(ui, &preview_profile.user.name, 80.0),
 						Picture::Remote => avatars.with_avatar_animation(true, |avatars| {
-							avatars.show_plain(ui, &profile.user, 80.0, demo)
+							avatars.show_plain(ui, &preview_profile.user, 80.0, demo)
 						}),
 					},
 				);
+			if !remote_picture {
+				avatars.paint_decoration(ui, &preview_profile.user, 80.0, avatar, demo);
+			}
 			if clickable {
 				let hit = ui.interact(
 					avatar,
@@ -926,12 +1199,29 @@ fn preview(
 							} else {
 								&draft.name
 							};
-							let name = ui.add(
-								egui::Label::new(
-									design::semibold(ui, name, 20.0).color(theme.text),
-								)
-								.wrap(),
+							let (name_row, _) = ui.allocate_exact_size(
+								egui::vec2(ui.available_width(), 30.0),
+								egui::Sense::hover(),
 							);
+							avatars.paint_nameplate(
+								ui,
+								&preview_profile.user,
+								name_row,
+								6,
+								false,
+								false,
+								demo,
+							);
+							let name = ui
+								.scope_builder(egui::UiBuilder::new().max_rect(name_row), |ui| {
+									ui.add(
+										egui::Label::new(
+											design::semibold(ui, name, 20.0).color(theme.text),
+										)
+										.truncate(),
+									)
+								})
+								.inner;
 							focus_field(
 								ui,
 								name,
@@ -987,6 +1277,18 @@ fn preview(
 		}
 		let rect = ui.min_rect();
 		ui.painter().set(background, theme.background(rect));
+		// The editor lives inside the Settings scroll area, not a floating profile pop-out.
+		// Reuse the docked clipping path so frame overflow cannot paint adjacent settings.
+		let settings_clip = ui.clip_rect();
+		crate::profiles::paint_collectibles(
+			ui,
+			avatars,
+			&preview_profile,
+			rect,
+			frame_back,
+			(false, Some(settings_clip)),
+			demo,
+		);
 	});
 	action
 }
@@ -1014,11 +1316,17 @@ mod tests {
 		draft.name.clear();
 		draft.bio.clear();
 		draft.color = None;
+		draft.avatar_decoration = Some(Id(9101));
+		draft.nameplate = Some(Id(9102));
+		draft.profile_effect = None;
 		let changes = draft.changes(&profile);
 		assert_eq!(changes.global_name, Some(None));
 		assert_eq!(changes.bio, Some(String::new()));
 		assert_eq!(changes.accent_color, Some(None));
 		assert_eq!(changes.pronouns, None);
+		assert_eq!(changes.avatar_decoration_sku_id, Some(Some(Id(9101))));
+		assert_eq!(changes.nameplate_sku_id, Some(Some(Id(9102))));
+		assert_eq!(changes.profile_effect_id, Some(None));
 		assert!(changes.valid());
 		// A reload retains edited values but adopts remote changes to untouched fields.
 		let before = Draft::from_profile(&profile);
@@ -1043,7 +1351,7 @@ mod tests {
 				egui::RawInput {
 					screen_rect: Some(egui::Rect::from_min_size(
 						egui::Pos2::ZERO,
-						egui::vec2(width, 1100.0),
+						egui::vec2(width, 1800.0),
 					)),
 					events,
 					..Default::default()
@@ -1097,10 +1405,10 @@ mod tests {
 					event: client_core::Event::ProfileEdited {
 						user,
 						request,
-						result: Ok(Box::new(crate::profiles::synthetic(
-							state.user.as_ref().unwrap(),
-							None,
-						))),
+						result: Ok(Box::new(model::OwnProfileData {
+							profile: crate::profiles::synthetic(state.user.as_ref().unwrap(), None),
+							collectibles: Some(crate::synthetic_owned_collectibles()),
+						})),
 					},
 				});
 				frame(&ctx, &mut editor, &mut state, &mut avatars, width, vec![]);

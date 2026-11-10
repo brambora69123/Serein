@@ -1,6 +1,6 @@
 use crate::{DiscordApi, Failure};
-use discord_protocol::{UserDto, profile};
-use model::{Id, ProfileEdit, UserProfile};
+use discord_protocol::{UserDto, collectibles, profile};
+use model::{Id, OwnProfileData, OwnedCollectibles, ProfileEdit, UserProfile};
 use reqwest::Method;
 
 impl DiscordApi {
@@ -37,19 +37,44 @@ impl DiscordApi {
 		Ok(())
 	}
 
+	/// Optional owned options for this session. Losing the optional catalog never hides the
+	/// ordinary profile, but an expired or challenged session remains authoritative.
+	async fn load_owned_collectibles(&self) -> Result<Option<OwnedCollectibles>, Failure> {
+		match self
+			.request_limited(
+				Method::GET,
+				"/users/@me/collectibles-purchases",
+				None,
+				collectibles::MAX_PURCHASES_WIRE,
+			)
+			.await
+		{
+			Ok(bytes) => Ok(collectibles::decode_purchases(&bytes).ok()),
+			Err(failure)
+				if failure.ends_session()
+					&& !matches!(failure, Failure::Capacity | Failure::CapacityAt(_)) =>
+			{
+				Err(failure)
+			}
+			Err(_) => Ok(None),
+		}
+	}
+
+	/// Account fields and the profile effect have separate routes and no cross-route
+	/// atomicity. They are sent in that order, once each, then every requested field is read back.
 	pub(super) async fn edit_profile(
 		&self,
 		user: Id,
 		changes: Option<ProfileEdit>,
-	) -> Result<Box<UserProfile>, Failure> {
+	) -> Result<Box<OwnProfileData>, Failure> {
 		if user.0 == 0 {
 			return Err(Failure::Protocol);
 		}
 		if let Some(changes) = &changes {
 			let body = profile::encode_edit(changes).map_err(|_| Failure::Protocol)?;
-			if changes != &ProfileEdit::default() {
-				// One explicitly requested write, without retries. Account responses may
-				// contain tokens; ignore those fields and clear the owned response buffer.
+			if body.as_object().is_some_and(|fields| !fields.is_empty()) {
+				// No write retry. Account responses may contain tokens; ignore those fields
+				// and clear the owned response buffer rather than retaining a replacement token.
 				let bytes = zeroize::Zeroizing::new(
 					self.request_limited(
 						Method::PATCH,
@@ -66,6 +91,28 @@ impl DiscordApi {
 				})?;
 				if saved.id != user || saved.bot {
 					return Err(Failure::Protocol);
+				}
+			}
+			if let Some(body) =
+				profile::encode_profile_effect(changes).map_err(|_| Failure::Protocol)?
+			{
+				let bytes = self
+					.request_limited(
+						Method::PATCH,
+						"/users/@me/profile",
+						Some(body),
+						profile::MAX_PROFILE_WIRE,
+					)
+					.await?;
+				let saved: serde_json::Value = discord_protocol::decode(&bytes).map_err(|_| {
+					Failure::ProtocolAt(
+						"Profile effect save could not be confirmed; reload before retrying",
+					)
+				})?;
+				if !saved.is_object() {
+					return Err(Failure::ProtocolAt(
+						"Profile effect save could not be confirmed; reload before retrying",
+					));
 				}
 			}
 		}
@@ -101,13 +148,34 @@ impl DiscordApi {
 				|| changes
 					.banner
 					.as_ref()
-					.is_some_and(|banner| banner.is_some() != saved.banner.is_some()))
+					.is_some_and(|banner| banner.is_some() != saved.banner.is_some())
+				|| changes.avatar_decoration_sku_id.is_some_and(|sku| {
+					sku != saved
+						.user
+						.cosmetics
+						.as_deref()
+						.and_then(|cosmetics| cosmetics.decoration.as_ref())
+						.map(|decoration| decoration.sku)
+				}) || changes.nameplate_sku_id.is_some_and(|sku| {
+				sku != saved
+					.user
+					.cosmetics
+					.as_deref()
+					.and_then(|cosmetics| cosmetics.nameplate.as_ref())
+					.map(|nameplate| nameplate.sku)
+			}) || changes
+				.profile_effect_id
+				.is_some_and(|sku| sku != saved.effect_sku))
 		{
 			return Err(Failure::ProtocolAt(
 				"Profile changes were not confirmed; reload before retrying",
 			));
 		}
-		Ok(Box::new(saved))
+		let collectibles = self.load_owned_collectibles().await?;
+		Ok(Box::new(OwnProfileData {
+			profile: saved,
+			collectibles,
+		}))
 	}
 }
 
@@ -143,6 +211,8 @@ mod tests {
 
 	const GET: &str = "GET /users/1/profile?with_mutual_guilds=false&with_mutual_friends=false&with_mutual_friends_count=false";
 	const PATCH: &str = "PATCH /users/@me";
+	const PATCH_PROFILE: &str = "PATCH /users/@me/profile";
+	const PURCHASES: &str = "GET /users/@me/collectibles-purchases";
 	const USER: &str =
 		r#"{"id":"1","username":"synthetic","global_name":null,"avatar":null,"discriminator":"0"}"#;
 	const PROFILE: &str = r#"{"user":{"id":"1","username":"synthetic","global_name":null,"avatar":null,"discriminator":"0"},"user_profile":{"bio":"hello","pronouns":"","accent_color":null},"mutual_guilds":null,"mutual_friends":null}"#;
@@ -209,6 +279,7 @@ mod tests {
 				accent_color: Some(None),
 				avatar: None,
 				banner: Some(None),
+				..Default::default()
 			};
 			let server = async {
 				respond(
@@ -222,6 +293,7 @@ mod tests {
 				)
 				.await;
 				respond(&listener, GET, None, 200, PROFILE).await;
+				respond(&listener, PURCHASES, None, 200, "[]").await;
 			};
 			let (event, ()) = tokio::join!(
 				api.execute(Command::EditProfile {
@@ -240,7 +312,7 @@ mod tests {
 				panic!("wrong event")
 			};
 			assert_eq!((user, request), (Id(1), 42));
-			assert_eq!(result.unwrap().bio, "hello");
+			assert_eq!(result.unwrap().profile.bio, "hello");
 			let set = ProfileEdit {
 				global_name: Some(Some("New name".into())),
 				bio: Some(String::new()),
@@ -248,14 +320,16 @@ mod tests {
 				accent_color: Some(Some(0x123456)),
 				avatar: None,
 				banner: None,
+				..Default::default()
 			};
 			let server = async {
 				respond(&listener, PATCH, Some(json!({"global_name":"New name","bio":"","pronouns":"they/them","accent_color":0x123456})), 200, USER).await;
 				let saved = json!({"user":{"id":"1","username":"synthetic","global_name":"New name"},"user_profile":{"bio":"","pronouns":"they/them","accent_color":0x123456}}).to_string();
 				respond(&listener, GET, None, 200, &saved).await;
+				respond(&listener, PURCHASES, None, 200, "[]").await;
 			};
 			let (result, ()) = tokio::join!(api.edit_profile(Id(1), Some(set)), server);
-			assert_eq!(result.unwrap().user.name, "New name");
+			assert_eq!(result.unwrap().profile.user.name, "New name");
 
 			let only_bio = ProfileEdit {
 				bio: Some("hello".into()),
@@ -267,9 +341,10 @@ mod tests {
 						respond(&listener, PATCH, Some(json!({"bio":"hello"})), 200, USER).await;
 					}
 					respond(&listener, GET, None, 200, PROFILE).await;
+					respond(&listener, PURCHASES, None, 200, "[]").await;
 				};
 				let (result, ()) = tokio::join!(api.edit_profile(Id(1), changes.clone()), server);
-				assert_eq!(result.unwrap().bio, "hello");
+				assert_eq!(result.unwrap().profile.bio, "hello");
 			}
 
 			for (status, body, expected) in [
@@ -326,6 +401,120 @@ mod tests {
 					.is_err(),
 				"invalid edits and retry attempts must not reach the transport"
 			);
+		})
+		.await
+		.unwrap();
+	}
+
+	#[tokio::test]
+	async fn owned_cosmetics_use_ordered_routes_and_exact_readback() {
+		tokio::time::timeout(Duration::from_secs(10), async {
+			let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+			let mut api = DiscordApi::new(Arc::new(
+				SessionSecret::from_owner_input("SYNTHETIC_PROFILE_EDIT_TOKEN".into()).unwrap(),
+			))
+			.unwrap();
+			api.base = format!("http://{}", listener.local_addr().unwrap());
+			let changes = ProfileEdit {
+				avatar_decoration_sku_id: Some(Some(Id(11))),
+				nameplate_sku_id: Some(Some(Id(12))),
+				profile_effect_id: Some(Some(Id(14))),
+				..Default::default()
+			};
+			let saved = json!({
+				"user":{"id":"1","username":"synthetic",
+					"avatar_decoration_data":{"asset":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","sku_id":"11","expires_at":null},
+					"collectibles":{"nameplate":{"asset":"nameplates/synthetic/","sku_id":"12","label":"Plate","palette":"violet","expires_at":null}}},
+				"user_profile":{"collectibles":[{"sku_id":"14","type":1}]}
+			});
+			let purchases = json!([
+				{"sku_id":"11","name":"Ring","purchase_type":1,"items":[
+					{"type":0,"sku_id":"11","asset":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}]},
+				{"sku_id":"12","name":"Plate","purchase_type":6,"items":[
+					{"type":2,"sku_id":"12","asset":"nameplates/synthetic/","label":"Plate","palette":"violet"}]},
+				{"sku_id":"14","name":"Sparks","purchase_type":1,"items":[
+					{"type":1,"sku_id":"14","title":"Sparks","reducedMotionSrc":format!("https://cdn.discordapp.com/assets/content/{}","a".repeat(64)),"effects":[]}]}
+			]);
+			let server = async {
+				respond(
+					&listener,
+					PATCH,
+					Some(json!({"avatar_decoration_sku_id":"11","nameplate_sku_id":"12"})),
+					200,
+					USER,
+				)
+				.await;
+				respond(
+					&listener,
+					PATCH_PROFILE,
+					Some(json!({"profile_effect_id":"14"})),
+					200,
+					"{}",
+				)
+				.await;
+				respond(&listener, GET, None, 200, &saved.to_string()).await;
+				respond(&listener, PURCHASES, None, 200, &purchases.to_string()).await;
+			};
+			let (result, ()) = tokio::join!(api.edit_profile(Id(1), Some(changes)), server);
+			let result = result.unwrap();
+			assert_eq!(result.profile.effect_sku, Some(Id(14)));
+			assert_eq!(result.collectibles.unwrap().effects.len(), 1);
+
+			// An effect-only clear never emits an empty account PATCH. An unavailable optional
+			// catalog disables new SKU choices without turning the profile read into a failure.
+			let server = async {
+				respond(
+					&listener,
+					PATCH_PROFILE,
+					Some(json!({"profile_effect_id":null})),
+					200,
+					"{}",
+				)
+				.await;
+				respond(&listener, GET, None, 200, PROFILE).await;
+				respond(&listener, PURCHASES, None, 403, "{}").await;
+			};
+			let (result, ()) = tokio::join!(
+				api.edit_profile(
+					Id(1),
+					Some(ProfileEdit {
+						profile_effect_id: Some(None),
+						..Default::default()
+					})
+				),
+				server
+			);
+			assert!(result.unwrap().collectibles.is_none());
+
+			// A profile effect ignored by the service must not be reported as saved, and the
+			// inventory read/deauthorization still follows the successful profile read.
+			let server = async {
+				respond(
+					&listener,
+					PATCH_PROFILE,
+					Some(json!({"profile_effect_id":"14"})),
+					200,
+					"{}",
+				)
+				.await;
+				respond(&listener, GET, None, 200, PROFILE).await;
+			};
+			let (result, ()) = tokio::join!(
+				api.edit_profile(
+					Id(1),
+					Some(ProfileEdit {
+						profile_effect_id: Some(Some(Id(14))),
+						..Default::default()
+					})
+				),
+				server
+			);
+			assert!(matches!(result, Err(Failure::ProtocolAt(_))));
+			let (result, ()) = tokio::join!(api.edit_profile(Id(1), None), async {
+				respond(&listener, GET, None, 200, PROFILE).await;
+				respond(&listener, PURCHASES, None, 401, "{}").await;
+			});
+			assert_eq!(result.err(), Some(Failure::Expired));
 		})
 		.await
 		.unwrap();

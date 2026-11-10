@@ -137,6 +137,9 @@ impl MessagingUi {
 					},
 					avatar: None,
 					banner: None,
+					avatar_decoration_sku_id: None,
+					nameplate_sku_id: None,
+					profile_effect_id: None,
 				};
 				queue(state.save_own_profile(changes), commands)?;
 			}

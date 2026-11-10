@@ -634,7 +634,7 @@ pub enum Event {
 	ProfileEdited {
 		user: Id,
 		request: u64,
-		result: Result<Box<UserProfile>, auth::Failure>,
+		result: Result<Box<OwnProfileData>, auth::Failure>,
 	},
 	Connections {
 		request: u64,
@@ -5146,8 +5146,9 @@ impl Event {
 				Self::Invite { code, result } => {
 					code.capacity() + result.as_ref().map_or(0, |embed| embed.bytes())
 				}
-				Self::Profile { result, .. } | Self::ProfileEdited { result, .. } => {
-					result.as_ref().map_or(0, |p| p.bytes())
+				Self::Profile { result, .. } => result.as_ref().map_or(0, |p| p.bytes()),
+				Self::ProfileEdited { result, .. } => {
+					result.as_ref().map_or(0, |data| data.bytes())
 				}
 				Self::StreamPreview { result, .. } => result.as_ref().map_or(0, String::capacity),
 				Self::BadgeSettings { result, .. } => result

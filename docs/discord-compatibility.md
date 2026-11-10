@@ -177,10 +177,11 @@ establish it.
   layers over it. The popout keeps the overflow on screen.
 
 Unknown palettes, layer kinds, anchors, malformed values and expired items are dropped
-without rejecting the user, member row or profile. Cosmetic editing is not supported. All
-five are opt-in: they stay hidden, unrequested and without catalog reads until enabled in
-Settings › Appearance › Profile cosmetics. This is a local display choice; nothing is sent
-to Discord.
+without rejecting the user, member row or profile. Editing is limited to verified owned
+avatar decorations, nameplates and profile effects in the global own-profile editor; frame
+selection remains unavailable. All five display choices are opt-in: they stay hidden,
+unrequested and without catalog reads until enabled in Settings › Appearance › Profile
+cosmetics. These local visibility preferences do not equip or remove anything on Discord.
 
 ## Guild voice moderation — October 8, 2026
 
@@ -761,10 +762,33 @@ accounts see a disabled explanatory control. This is a UI hint, never an entitle
 and Discord's response remains authoritative. Profile-frame editing is not exposed until its
 mutation field is supported by evidence.
 
-Only deliberately changed fields are sent, including explicit null clears, in one account-profile
-write rather than a partly applied split save. Failures remain visible and uncertain saves require
-reload; no automatic write retry occurs. Readback confirms requested fields, including added or
-removed images. Geometric validation keeps group icons separate from profile images: avatar crops
+Only deliberately changed account fields are sent, including explicit null clears, in one
+`PATCH /users/@me`. Avatar decorations and nameplates use its documented unofficial
+`avatar_decoration_sku_id` and `nameplate_sku_id` fields. A changed profile effect then uses
+`profile_effect_id` on `PATCH /users/@me/profile`. These are ordered writes, not a cross-route
+atomic operation; an effect-only edit does not send an empty account PATCH. Failures remain
+visible and uncertain saves require reload; no automatic write retry occurs. Readback confirms
+every requested field, including all three cosmetic SKU identities and added or removed images.
+
+The editor reads `GET /users/@me/collectibles-purchases` with its profile, bounded to 512 KiB,
+32 products, eight items per product and 48 supported session-only options. Invalid, expired,
+unknown and unavailable entities cannot be selected; a valid empty list gives an explicit empty
+state, while an unavailable catalog leaves other profile fields editable and offers a reload.
+Purchase type 7 (`SUBSCRIPTION`) requires session-reported full Nitro (type 2). Ordinary,
+promotional, gifted and quest purchases do not require Nitro merely because the account reports
+`premium_type`, and duplicate SKU records prefer a non-subscription entitlement. Discord remains
+authoritative. There is no inventively named frame mutation field: frame display is retained,
+while frame editing is disabled with that reason. Sources are the unofficial
+[collectibles purchase and item structures](https://docs.discord.food/resources/collectibles#list-user-purchased-collectibles),
+[user account/profile mutation fields](https://docs.discord.food/resources/user#modify-current-user),
+and Discord's official [Shop](https://support.discord.com/hc/en-us/articles/17162747936663-Shop-FAQ),
+[avatar decoration](https://support.discord.com/hc/en-us/articles/13410113109911-Avatar-Decorations-FAQ),
+[nameplate](https://support.discord.com/hc/en-us/articles/30408457944215-Nameplates-FAQ),
+[profile effect](https://support.discord.com/hc/en-us/articles/17828465914263-Profile-Effects)
+and [profile frame](https://support.discord.com/hc/en-us/articles/40775065582615-Profile-Frames-FAQ)
+guidance. The official pages distinguish owned purchases from subscription-exclusive items; they
+do not document a user-API frame field. Mock HTTP, reducer and offline UI tests cover this slice;
+no live profile or inventory was read or changed. Geometric validation keeps group icons separate from profile images: avatar crops
 are square, while banners keep their aspect ratio and must be at least 680×240 pixels. Selection
 uses the existing bounded native image worker (at most 8 MiB input), converts a single frame to an
 in-memory PNG of at most 256 KiB, and does not persist a file path or animation. Animated avatar
