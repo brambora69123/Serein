@@ -183,6 +183,15 @@ NSFW/locked/rules metadata is not inferred. Hiding pseudo-role headers requires 
 and leaves online/offline and real-role headers intact. Resource-channel rows cannot be inferred
 from a missing service marker.
 
+Settings > Chat also offers an original native adaptation of Equicord's `noBlockedMessages`
+behavior (upstream reference `0d4da19faff378b7f62fd7fd31e78499a5e03e5b`, GPL-3.0-or-later), not
+its renderer patches or another restrictions manager. The default-off preference filters visible
+rows from known blocked authors through the existing bounded timeline iterator; a second option
+includes known ignored authors. It covers thread starters and removes the row from virtual-list
+measurement rather than leaving blank space. Unknown relationship state stays visible, retained
+messages are unchanged, and unread/read behavior is not rewritten. Both choices are device-local
+and survive restart; no new endpoint, account list, per-message ID store or server write exists.
+
 Reading & Layout offers one-folder-open, close-on-Home and close-on-outside-folder behavior. It
 reuses inline expansion, keeps the existing 256-folder preference bound and does not serialize a
 separate sidebar or folder cache. Selecting a server outside a loaded folder closes the expanded
