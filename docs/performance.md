@@ -1936,3 +1936,29 @@ An isolated Xvfb `--demo` window was captured with a task-local HOME and inspect
 Discord session was used. No equivalent-process UI workload was sampled on the previous installed
 binary, so there is no UI-speed, RSS, startup-latency, frame-latency or live interoperability claim.
 These package sizes also do not represent the network cost of downloading optional extensions.
+
+### Profile editor, connections and voice interaction safeguards — November 10, 2026
+
+The comparison uses the previously installed complete-sync build and the integrated account feature
+revision `cc1247fdd6641088cc430ca655b362c0b62e250a`. Both use the standard voice-enabled
+`cargo xtask package --format dir` method on Linux x86-64, Rust 1.99.1 and locked dependencies.
+The compressed tree uses sorted `linux-root` files, zeroed gzip timestamp and normalized uid/gid.
+The validation used **2 Cargo jobs and 2 test threads** throughout the final test and package pass.
+All **1,658** native tests passed, including the profile footer, image-aspect and Connections guards.
+
+| Metric | Previously installed build | Integrated build | Delta |
+| --- | ---: | ---: | ---: |
+| Executable bytes | 96,363,240 | 96,465,640 | +102,400 (+0.106%) |
+| Installed `linux-root`, 245 files each | 101,063,630 | 101,166,065 | +102,435 (+0.101%) |
+| Compressed normalized `linux-root` (`tar.gz`) bytes | 57,617,972 | 57,650,665 | +32,693 (+0.057%) |
+
+Final executable SHA-256:
+`0bae5dd9268e568179582f0772c41f3df39bc9d7434fdc38585a280a829bee92`.
+Compressed-tree SHA-256:
+`72a3e0c34e3e2f5b014c15e24e9ac5eb9aa1fdf1bbf50441fecedf1c665812ce`.
+Both packaged executable paths had matching bytes, `ldd` reported no missing libraries, and the
+245-file installation tree had no broken symlinks. The comparison does not measure UI latency,
+FPS, startup duration or live Discord behavior. No real account profile, connection, microphone or
+voice session was modified for these measurements; protocol deserializers and HTTP write proposals
+were exercised only with synthetic data and mocked servers. Those local results do not prove live
+Discord interoperability or subscription eligibility.
