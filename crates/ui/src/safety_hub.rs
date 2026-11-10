@@ -4,6 +4,19 @@ use crate::{MessagingUi, design, i18n};
 use client_core::{Command, State};
 use model::safety_hub::{AccountStanding, AppealStatus, Snapshot};
 
+/// Remote descriptive text is never a Fluent key, even if it looks exactly like one.
+fn service_hint(ui: &mut egui::Ui, text: &str) {
+	ui.add_space(4.0);
+	ui.add(
+		egui::Label::new(
+			egui::RichText::new(text)
+				.size(12.0)
+				.color(design::palette(ui).muted),
+		)
+		.wrap(),
+	);
+}
+
 /// Discord's official support article for the warning system and account standing. No public
 /// Safety Hub web URL is documented, so this is the official reference the app can offer.
 const OFFICIAL_STANDING_ARTICLE: &str = "https://support.discord.com/hc/articles/18210965981847";
@@ -82,7 +95,7 @@ impl MessagingUi {
 					ui.add(egui::Label::new(design::medium(ui, title, 14.0)).wrap());
 					for action in &classification.actions {
 						if let Some(description) = action.descriptions.first() {
-							design::hint(ui, description);
+							service_hint(ui, description);
 						} else {
 							design::hint(
 								ui,
@@ -279,6 +292,16 @@ mod tests {
 			labels
 				.iter()
 				.any(|label| { label == "Synthetic spam classification for the offline preview." })
+		);
+		let mut collision = test_support::safety_hub::Fixture::Violation.snapshot();
+		collision.classifications[0].actions[0].descriptions[0] =
+			"settings-safety-hub-check".into();
+		state.safety_hub.snapshot = Some(collision);
+		let labels = render(&mut view, &mut state, vec![]).0;
+		assert!(
+			labels
+				.iter()
+				.any(|label| label == "settings-safety-hub-check")
 		);
 		assert!(
 			labels.iter().any(|label| label == "Open explanation"),

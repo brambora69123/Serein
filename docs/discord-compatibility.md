@@ -30,9 +30,11 @@ change or remove the route.
   resyncing or ending the session clears the answer and rejects an in-flight response
   from an older request or generation.
 - **Standing.** Documented `account_standing.state` values are typed: 100 All Good,
-  200 Limited, 300 Very limited, 400 At risk and 500 Suspended. A missing, malformed,
-  unknown or failed response is shown as **Unavailable**, never as All Good. Serein does
-  not infer standing from flags, DMs, profile fields or local state.
+  200 Limited, 300 Very limited, 400 At risk and 500 Suspended. Missing or unknown standing
+  is **Unavailable**; malformed, oversized and failed responses retain a specific error instead
+  of pretending that standing was read. None of these states becomes All Good. In particular, an
+  oversized response does not claim that its HTTP request stopped the wider connected session.
+  Serein does not infer standing from flags, DMs, profile fields or local state.
 - **Classifications.** Serein retains at most 16 classifications: id, raw classification
   type, description, HTTPS explainer link, up to 8 actions with up to 4 descriptions,
   `max_expiration_time` parsed to Unix seconds, and the documented appeal status. Unknown
@@ -42,9 +44,10 @@ change or remove the route.
   read-only panel; Serein does not submit appeals or age verification.
 - **Bounds and links.** The response is capped at 128 KiB on the wire and 32 KiB retained,
   with control characters removed and text/link lengths enforced. Explainer links must be
-  absolute HTTPS URLs without userinfo; the existing external-link confirmation still
-  shows the exact destination before opening it. Discord does not document a public Safety
-  Hub web URL, so the panel links its official
+  absolute HTTPS URLs without userinfo. They use the existing external-link handling, including
+  destination confirmation for external hosts; recognized Discord-owned HTTPS links can open
+  directly under that shared policy. Discord does not document a public Safety Hub web URL, so
+  the panel links its official
   [warning-system support article](https://support.discord.com/hc/articles/18210965981847)
   instead.
 

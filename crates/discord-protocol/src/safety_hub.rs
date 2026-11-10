@@ -1,6 +1,6 @@
-//! Read-only Safety Hub (`GET /safety-hub/@me`) decoding, as documented by Userdoccers and
-//! observed in the normal official client. Unofficial and unverified; see
-//! `docs/discord-compatibility.md`. Flagged message bodies and attachments are not parsed or
+//! Read-only Safety Hub (`GET /safety-hub/@me`) decoded from the normal-session shape reported
+//! by Userdoccers. Unofficial and unverified; see `docs/discord-compatibility.md`. Flagged
+//! message bodies and attachments are not parsed or
 //! retained, and `guild_classifications` are outside this account-scoped read.
 use crate::{DecodeError, collectibles::Lenient};
 use model::{

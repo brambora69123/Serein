@@ -54,7 +54,8 @@ pub struct AuthorizedApps {
 	pub deauthorization: Option<Deauthorization>,
 }
 impl AuthorizedApps {
-	fn pending(&self) -> bool {
+	/// One shared pipeline; UI can disable actions that the reducer would otherwise reject.
+	pub fn pending(&self) -> bool {
 		self.view.as_ref().is_some_and(|view| view.loading)
 			|| self.detail.as_ref().is_some_and(|detail| detail.loading)
 			|| self

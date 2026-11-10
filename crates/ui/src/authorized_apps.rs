@@ -17,6 +17,8 @@ pub(super) struct Ui {
 	query: String,
 	/// Authorization ID awaiting explicit confirmation.
 	pub(super) confirm: Option<String>,
+	/// Policy destination awaiting the shared external-link confirmation.
+	opening: Option<String>,
 }
 
 impl MessagingUi {
@@ -153,6 +155,11 @@ impl MessagingUi {
 			});
 		}
 		self.authorized_app_confirmation(ui, state, commands);
+		crate::markdown::confirm_external_link(
+			ui.ctx(),
+			&mut self.settings.authorized_apps.opening,
+			self.reading_preferences.confirm_external_links,
+		);
 	}
 
 	fn authorized_app_row(
@@ -164,6 +171,7 @@ impl MessagingUi {
 	) {
 		let p = design::palette(ui);
 		let id = grant.id.clone();
+		let pending = state.authorized_apps.pending();
 		let saving = state.authorized_apps.deauthorization_saving(&id);
 		let ambiguous = state.authorized_apps.deauthorization_ambiguous(&id);
 		design::card(ui, |ui| {
@@ -217,12 +225,17 @@ impl MessagingUi {
 			}
 			ui.horizontal(|ui| {
 				ui.spacing_mut().item_spacing.x = 8.0;
-				if design::text_action(ui, &self.language.text("settings-authorized-apps-details"))
+				ui.add_enabled_ui(!pending, |ui| {
+					if design::text_action(
+						ui,
+						&self.language.text("settings-authorized-apps-details"),
+					)
 					.clicked() && let Some(command) = state.request_authorized_app_detail(&id)
-				{
-					commands.push(command);
-				}
-				ui.add_enabled_ui(!saving && !ambiguous && grant.can_deauthorize(), |ui| {
+					{
+						commands.push(command);
+					}
+				});
+				ui.add_enabled_ui(!pending && !ambiguous && grant.can_deauthorize(), |ui| {
 					if design::button(
 						ui,
 						&self.language.text("settings-authorized-apps-deauthorize"),
@@ -343,7 +356,7 @@ impl MessagingUi {
 		self.authorized_app_policy_links(ui, detail);
 	}
 
-	fn authorized_app_policy_links(&self, ui: &mut egui::Ui, grant: &AuthorizedAppGrant) {
+	fn authorized_app_policy_links(&mut self, ui: &mut egui::Ui, grant: &AuthorizedAppGrant) {
 		let p = design::palette(ui);
 		let mut shown = false;
 		ui.horizontal_wrapped(|ui| {
@@ -354,7 +367,12 @@ impl MessagingUi {
 				.as_deref()
 				.and_then(safe_policy_url)
 			{
-				ui.hyperlink_to(self.language.text("settings-authorized-apps-terms"), url);
+				if ui
+					.link(self.language.text("settings-authorized-apps-terms"))
+					.clicked()
+				{
+					self.settings.authorized_apps.opening = Some(url.to_owned());
+				}
 				shown = true;
 			}
 			if let Some(url) = grant
@@ -363,7 +381,12 @@ impl MessagingUi {
 				.as_deref()
 				.and_then(safe_policy_url)
 			{
-				ui.hyperlink_to(self.language.text("settings-authorized-apps-privacy"), url);
+				if ui
+					.link(self.language.text("settings-authorized-apps-privacy"))
+					.clicked()
+				{
+					self.settings.authorized_apps.opening = Some(url.to_owned());
+				}
 				shown = true;
 			}
 		});
@@ -432,7 +455,7 @@ impl MessagingUi {
 			self.settings.authorized_apps.confirm = None;
 			return;
 		};
-		let saving = state.authorized_apps.deauthorization_saving(&id);
+		let pending = state.authorized_apps.pending();
 		let ambiguous = state.authorized_apps.deauthorization_ambiguous(&id);
 		let mut confirmation = dialog::Confirm::new(
 			("deauthorize-authorized-app", &id),
@@ -447,7 +470,7 @@ impl MessagingUi {
 		.danger()
 		.confirm_label(self.language.text("settings-authorized-apps-deauthorize"))
 		.cancel_label(self.language.text("settings-authorized-apps-cancel"))
-		.enabled(!saving && !ambiguous);
+		.enabled(!pending && !ambiguous);
 		if ambiguous {
 			confirmation = confirmation.note(
 				dialog::Level::Warning,
@@ -484,5 +507,85 @@ fn scopes_text(language: &crate::i18n::Language, grant: &AuthorizedAppGrant) -> 
 		Some(scopes) if scopes.is_empty() => language.text("settings-authorized-apps-no-scopes"),
 		Some(scopes) => scopes.join(", "),
 		None => language.text("settings-authorized-apps-scopes-unknown"),
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	fn text_rect(shape: &egui::Shape, label: &str) -> Option<egui::Rect> {
+		match shape {
+			egui::Shape::Text(text) => {
+				(text.galley.job.text == label).then(|| text.visual_bounding_rect())
+			}
+			egui::Shape::Vec(shapes) => shapes.iter().find_map(|shape| text_rect(shape, label)),
+			_ => None,
+		}
+	}
+
+	#[test]
+	fn policy_links_request_confirmation_without_opening_egui_urls() {
+		let ctx = egui::Context::default();
+		let mut view = MessagingUi::default();
+		let mut state = State {
+			demo: true,
+			..Default::default()
+		};
+		assert!(state.request_authorized_apps().is_none());
+		let id = state
+			.authorized_apps
+			.view
+			.as_ref()
+			.unwrap()
+			.page
+			.as_ref()
+			.unwrap()
+			.items[0]
+			.id
+			.clone();
+		assert!(state.request_authorized_app_detail(&id).is_none());
+		let render = |events| {
+			let mut commands = Vec::new();
+			let output = ctx.run_ui(
+				egui::RawInput {
+					screen_rect: Some(egui::Rect::from_min_size(
+						egui::Pos2::ZERO,
+						egui::vec2(720.0, 1000.0),
+					)),
+					events,
+					focused: true,
+					..Default::default()
+				},
+				|ui| view.authorized_apps_settings(ui, &mut state, &mut commands),
+			);
+			assert!(commands.is_empty());
+			output
+		};
+		let _ = render(vec![]);
+		let output = render(vec![]);
+		let point = output
+			.shapes
+			.iter()
+			.find_map(|shape| text_rect(&shape.shape, "Terms of Service"))
+			.expect("policy link")
+			.center();
+		output.drop_without_applying_deltas();
+		for pressed in [true, false] {
+			let output = render(vec![
+				egui::Event::PointerMoved(point),
+				egui::Event::PointerButton {
+					pos: point,
+					button: egui::PointerButton::Primary,
+					pressed,
+					modifiers: egui::Modifiers::NONE,
+				},
+			]);
+			assert!(output.platform_output.open_url.is_none());
+		}
+		assert_eq!(
+			view.settings.authorized_apps.opening.as_deref(),
+			Some("https://example.com/terms")
+		);
 	}
 }

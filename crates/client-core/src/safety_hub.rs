@@ -61,7 +61,16 @@ impl State {
 			}
 			Err(failure) => {
 				self.safety_hub.snapshot = None;
-				self.safety_hub.error = Some(failure.label());
+				self.safety_hub.error = Some(
+					if matches!(
+						failure,
+						auth::Failure::Capacity | auth::Failure::CapacityAt(_)
+					) {
+						"Safety Hub response was invalid or too large"
+					} else {
+						failure.label()
+					},
+				);
 				if failure.ends_session() && failure != auth::Failure::Capacity {
 					self.fail(failure);
 				}
@@ -166,6 +175,15 @@ mod tests {
 		);
 		assert!(state.safety_hub.snapshot.is_none());
 		assert!(state.safety_hub.error.is_some());
+
+		let Some(Command::SafetyHub { request }) = state.load_safety_hub() else {
+			panic!("retry after network failure")
+		};
+		state.apply_safety_hub(request, Err(Failure::Capacity));
+		assert!(state.safety_hub.error.is_some_and(|error| {
+			error.contains("too large") && !error.contains("connection stopped")
+		}));
+		assert_eq!(state.auth, auth::AuthState::Authenticated);
 
 		let Some(Command::SafetyHub { request }) = state.load_safety_hub() else {
 			panic!("retry")
