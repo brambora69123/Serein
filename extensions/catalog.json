@@ -2,6 +2,7 @@
   "api_version": 1,
   "entries": [
     {
+      "description": "Photo-backed theme with a green accent, blurred translucent surfaces and tuned text metrics; ships its CC0-1.0-labelled background and cover image.",
       "manifest": {
         "api_version": 1,
         "id": "forest-piano",
@@ -14,17 +15,18 @@
         "capabilities": [],
         "actions": []
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/themes/forest-piano.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/themes/forest-piano.serein-extension",
       "sha256": "3fffa784b2f406b4ad435fa5804baa1bed9ead9682254546ccf332c2bae12505",
       "download_bytes": 6452658,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d",
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97",
       "preview": {
-        "url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/previews/forest-piano.png",
+        "url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/previews/forest-piano.png",
         "sha256": "f3e8df1046c03eeed4a477530c5dec114ee582caa0ec4bb28e24b4131b8ce29f",
         "download_bytes": 147517
       }
     },
     {
+      "description": "Quiet forest-green theme: deep moss dark palette with a soft light counterpart and default control metrics.",
       "manifest": {
         "api_version": 1,
         "id": "serein-forest",
@@ -35,17 +37,18 @@
         "source": "https://github.com/ViceVerse-cz/Serein",
         "kind": "theme"
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/themes/forest.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/themes/forest.serein-extension",
       "sha256": "f576fbcb73f452da4ecddda35f92932cdd3ef7b46959a38837fe3491784d6038",
       "download_bytes": 1454,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d",
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97",
       "preview": {
-        "url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/previews/forest.png",
+        "url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/previews/forest.png",
         "sha256": "a55d6c1dedee9e9696bd7a634aca41977f20eb428580d32da12a0dc477b543a9",
         "download_bytes": 66398
       }
     },
     {
+      "description": "Warm parchment-light palette with a charcoal-brown counterpart and slightly larger, roomier control metrics.",
       "manifest": {
         "api_version": 1,
         "id": "golden-theme",
@@ -56,17 +59,18 @@
         "source": "https://github.com/ViceVerse-cz/Serein",
         "kind": "theme"
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/themes/golden.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/themes/golden.serein-extension",
       "sha256": "0018a46e9c5e4d0431ba02a860b3d7deffab9c159c5d52e04928421ccb3be586",
       "download_bytes": 1794,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d",
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97",
       "preview": {
-        "url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/previews/golden.png",
+        "url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/previews/golden.png",
         "sha256": "1e9df1eaf7fe9906d9088924403f8cf4f4cd71527ce0af97681c600704536a1b",
         "download_bytes": 66164
       }
     },
     {
+      "description": "Near-black theme with charcoal surfaces, compact controls and small radii for a minimal, low-glare interface.",
       "manifest": {
         "api_version": 1,
         "id": "black-theme",
@@ -77,17 +81,18 @@
         "source": "https://github.com/ViceVerse-cz/Serein",
         "kind": "theme"
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/themes/katana.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/themes/katana.serein-extension",
       "sha256": "cf4ef3755d9208e700ee721b66edad3fceb4f26e52d09b82e645bf49070f1a15",
       "download_bytes": 994,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d",
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97",
       "preview": {
-        "url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/previews/katana.png",
+        "url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/previews/katana.png",
         "sha256": "693726039bd2edac1d44bdaa624c7b2bb3cf3e5245b87316a925418902097b06",
         "download_bytes": 66257
       }
     },
     {
+      "description": "Warm latte tones: a cream-beige light palette with a deep roast-brown dark counterpart and default control metrics.",
       "manifest": {
         "api_version": 1,
         "id": "serein-latte",
@@ -98,17 +103,18 @@
         "source": "https://github.com/ViceVerse-cz/Serein",
         "kind": "theme"
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/themes/latte.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/themes/latte.serein-extension",
       "sha256": "a3c3ac481e6d4039a5df26a0e58583add79e638f7a58a6fae309d1beb74a468d",
       "download_bytes": 1452,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d",
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97",
       "preview": {
-        "url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/previews/latte.png",
+        "url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/previews/latte.png",
         "sha256": "3c0a7016eb6994d1be6fb27368a06cd717657f4a042db7647255d7cbd6387275",
         "download_bytes": 65904
       }
     },
     {
+      "description": "Deep navy-blue palette with a pale light counterpart and default control metrics.",
       "manifest": {
         "api_version": 1,
         "id": "serein-midnight",
@@ -119,17 +125,18 @@
         "source": "https://github.com/ViceVerse-cz/Serein",
         "kind": "theme"
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/themes/midnight.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/themes/midnight.serein-extension",
       "sha256": "f7ffb0acdb7269f1e2fdb235536870cef344f3fac761543174ddc091bb2aebb6",
       "download_bytes": 1458,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d",
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97",
       "preview": {
-        "url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/previews/midnight.png",
+        "url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/previews/midnight.png",
         "sha256": "81eb4c6bd634cc7e624a7d9714ae2503e8e05260470b7ff0af63daa3e0a98c16",
         "download_bytes": 65740
       }
     },
     {
+      "description": "Deep purple-black surfaces with tuned typography, spacing and rounded controls.",
       "manifest": {
         "api_version": 1,
         "id": "obsidian-theme",
@@ -140,17 +147,18 @@
         "source": "https://github.com/ViceVerse-cz/Serein",
         "kind": "theme"
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/themes/obsidian.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/themes/obsidian.serein-extension",
       "sha256": "e42cb1ad38f0c495375343bb8e64852ccb98a5a860293cd9ce3a86bbec1f0dd5",
       "download_bytes": 1838,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d",
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97",
       "preview": {
-        "url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/previews/obsidian.png",
+        "url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/previews/obsidian.png",
         "sha256": "8860202e554147302139d5664714d65bdf6b94e8729228d4937a25c55f405588",
         "download_bytes": 66162
       }
     },
     {
+      "description": "Cool ocean-blue palette with a soft light counterpart and default control metrics.",
       "manifest": {
         "api_version": 1,
         "id": "serein-ocean",
@@ -161,17 +169,18 @@
         "source": "https://github.com/ViceVerse-cz/Serein",
         "kind": "theme"
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/themes/ocean.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/themes/ocean.serein-extension",
       "sha256": "7309d84495dc4487ccb3e3355fd704c79dd8f68b14a3441ccc7ea5bda5ef9be8",
       "download_bytes": 958,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d",
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97",
       "preview": {
-        "url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/previews/ocean.png",
+        "url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/previews/ocean.png",
         "sha256": "7fd9532d983c52ec9f86a345d23e2c6822597ca29a34833958be816e0bcc1913",
         "download_bytes": 85376
       }
     },
     {
+      "description": "Deep plum-pink dark palette with a soft light counterpart and default control metrics.",
       "manifest": {
         "api_version": 1,
         "id": "serein-rose",
@@ -182,17 +191,18 @@
         "source": "https://github.com/ViceVerse-cz/Serein",
         "kind": "theme"
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/themes/rose.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/themes/rose.serein-extension",
       "sha256": "bf8ad0dc259c375fbce786591530f0c2121cf336e63fc39daac11a2fc000087c",
       "download_bytes": 1450,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d",
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97",
       "preview": {
-        "url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/previews/rose.png",
+        "url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/previews/rose.png",
         "sha256": "c5b3380a76863535afb52314db03240cf86f481e7805f73ac3cd6789a404980b",
         "download_bytes": 65114
       }
     },
     {
+      "description": "Photograph-backed theme in soft greys with a pale periwinkle accent; ships its CC0-1.0-labelled background and cover image.",
       "manifest": {
         "api_version": 1,
         "id": "soft-white",
@@ -205,17 +215,18 @@
         "capabilities": [],
         "actions": []
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/themes/soft-white.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/themes/soft-white.serein-extension",
       "sha256": "e981bf8d1230bf540e531d49eecde1f06769e635b55ba2b4eb376dab668248a0",
       "download_bytes": 5860518,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d",
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97",
       "preview": {
-        "url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/previews/soft-white.png",
+        "url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/previews/soft-white.png",
         "sha256": "dbe0d64360c5eba021b03122cae6776a9f05585f5335c47580684e7d3ac73e60",
         "download_bytes": 110890
       }
     },
     {
+      "description": "Deep teal theme with a matching light mode and a compact, small-radius control set.",
       "manifest": {
         "api_version": 1,
         "id": "teal-theme",
@@ -226,17 +237,18 @@
         "source": "https://github.com/ViceVerse-cz/Serein",
         "kind": "theme"
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/themes/teal.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/themes/teal.serein-extension",
       "sha256": "1c794d14b12bb470164e2c220051de7c20b13de8175390595a559f551bb6409a",
       "download_bytes": 1827,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d",
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97",
       "preview": {
-        "url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/previews/teal.png",
+        "url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/previews/teal.png",
         "sha256": "07f686309198ce01ddf28bbc9e1d07b91fac27949e4e4c769c3c88e084b6c36c",
         "download_bytes": 65843
       }
     },
     {
+      "description": "Stores up to 16 text-only profile presets and recent DM choices, or rotates through loaded voice channels. Profile changes, navigation and joins are explicit Apply proposals, never automatic.",
       "manifest": {
         "api_version": 1,
         "id": "account-navigation-tools",
@@ -299,12 +311,13 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/account-navigation-tools.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/account-navigation-tools.serein-extension",
       "sha256": "9da3d19e3268533edb7f2fa3f112aed592014bea848ae76553992927bbc5fd30",
       "download_bytes": 1346239,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97"
     },
     {
+      "description": "Configure Serein's HTTP/HTTPS forward proxy for Discord API traffic: Direct, automatic from environment settings, or a validated URL. Saved settings resume on activation; proxy credentials stay in the OS credential store and never reach the plugin.",
       "manifest": {
         "api_version": 1,
         "id": "api-proxy",
@@ -336,17 +349,18 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/api-proxy.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/api-proxy.serein-extension",
       "sha256": "e6ce691505357f3e19d5db33762e8d54da355a35b19fde309edec04fc0a7a85c",
       "download_bytes": 920979,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d",
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97",
       "preview": {
-        "url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/previews/api-proxy.png",
+        "url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/previews/api-proxy.png",
         "sha256": "3764a08ea4cfda49a365bdf79480b61753130c6cf623083ef64410a88ddb64a1",
         "download_bytes": 69881
       }
     },
     {
+      "description": "Builds one bounded search query from validated extra tokens (NSFW, replies, mentions, embed types and more) and proposes one native search after Apply. Nothing is searched automatically; server support for the extra tokens is unverified.",
       "manifest": {
         "api_version": 1,
         "id": "better-search-tools",
@@ -372,12 +386,13 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/better-search-tools.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/better-search-tools.serein-extension",
       "sha256": "e2fde696cc2ec992250791cb86b2efa681a5db0f691c0f3bd4f740dab6e42741",
       "download_bytes": 1218517,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97"
     },
     {
+      "description": "Launcher-style panel over already-loaded channels: typed filtering with pinned-first results, up to 16 pins, fixed native destinations, bounded conversation search and own-profile opening. Every navigation proposal requires Apply; no arbitrary commands.",
       "manifest": {
         "api_version": 1,
         "id": "command-palette",
@@ -438,12 +453,13 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/command-palette.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/command-palette.serein-extension",
       "sha256": "6905a57c995e8900ac41d3679e6d1649899c9033bceb5bdea91cb622babd226f",
       "download_bytes": 1589556,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97"
     },
     {
+      "description": "Native rich-presence editor for Playing, Streaming, Listening, Watching or Competing activities, with links, artwork, two buttons, party size and timers. The local preview publishes only after Apply; disabling the plugin stops the activity.",
       "manifest": {
         "api_version": 1,
         "id": "custom-rpc",
@@ -490,17 +506,18 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/custom-rpc.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/custom-rpc.serein-extension",
       "sha256": "f6f70f0f537052910a6e5497bf4d40a6d8d7e5ece3be4d4678a09d872e31b0ac",
       "download_bytes": 409132,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d",
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97",
       "preview": {
-        "url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/previews/custom-rpc.png",
+        "url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/previews/custom-rpc.png",
         "sha256": "32a89d15bce3c35b0d2d176f4a0fc2c30dc1be01bdd0db6a634910fdacb1bac9",
         "download_bytes": 43030
       }
     },
     {
+      "description": "Configurable composer actions: reverse draft text while protecting code, URLs and Discord tokens, append a bounded signature block once, and run deterministic local prose cleanup. Nothing edits or sends automatically.",
       "manifest": {
         "api_version": 1,
         "id": "draft-style-tools",
@@ -542,12 +559,13 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/draft-style-tools.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/draft-style-tools.serein-extension",
       "sha256": "3c1254fc47f3d1e4fafee2669cb037c1b9cb376815d04c638b2ac9e169ba1e3a",
       "download_bytes": 694390,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97"
     },
     {
+      "description": "Copies one selected message as bounded text, checks up to eight literal trigger phrases and proposes the HTTPS link, deletes the current channel, or declines a call in a locally ignored DM after Apply. Nothing runs in the background.",
       "manifest": {
         "api_version": 1,
         "id": "equicord-community-tools",
@@ -604,12 +622,13 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/equicord-community-tools.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/equicord-community-tools.serein-extension",
       "sha256": "b9d0d05bdbeb5f4a99299cb3bee81029f2f6791cc74e94a0b5cbf8ee90124f5b",
       "download_bytes": 1373963,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97"
     },
     {
+      "description": "Proposes a public browser page for the selected message in Google Translate, DeepL or the configured search engine. Only fixed allowlisted HTTPS providers; the exact URL is displayed and opened only after confirmation.",
       "manifest": {
         "api_version": 1,
         "id": "external-search-tools",
@@ -647,12 +666,13 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/external-search-tools.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/external-search-tools.serein-extension",
       "sha256": "4cf8ebba8c82731a7478b874fbe54556e03d239a74eae49c4114f1cafdff8e8d",
       "download_bytes": 1853128,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97"
     },
     {
+      "description": "Chooses among stickers already loaded on the selected message, revalidates the exact channel, message and sticker, and proposes one send after Apply. No greet catalog or multi-send, and nothing is sent automatically.",
       "manifest": {
         "api_version": 1,
         "id": "greet-sticker-tools",
@@ -680,12 +700,13 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/greet-sticker-tools.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/greet-sticker-tools.serein-extension",
       "sha256": "bc852dc05f6a0bd1b20c4f8a187dab68767b928db307e448341aa94ca0466be5",
       "download_bytes": 1239146,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97"
     },
     {
+      "description": "Message actions that copy the selected message author's canonical profile URL or <@mention> after Apply, using only the public author ID.",
       "manifest": {
         "api_version": 1,
         "id": "identity-tools",
@@ -712,12 +733,13 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/identity-tools.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/identity-tools.serein-extension",
       "sha256": "59139d94dae5482db0e0b269cb9b87c145871184e7a6b4a1cac137fe14e8e17f",
       "download_bytes": 1221711,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97"
     },
     {
+      "description": "Chooses one eligible draft word deterministically and appends the Ington suffix with upstream casing rules, skipping code, URLs and Discord tokens. Each replacement is proposed for Apply.",
       "manifest": {
         "api_version": 1,
         "id": "ingtoninator",
@@ -738,12 +760,13 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/ingtoninator.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/ingtoninator.serein-extension",
       "sha256": "9a8f0a0ca79048f19eddd326bb76a4c8819fd62c9cb11a55390d38c67df53da3",
       "download_bytes": 481265,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97"
     },
     {
+      "description": "Parses up to five Discord message links in the selected message and previews only targets already in the current loaded timeline, proposing one jump after Apply. It never fetches or renders linked content or media.",
       "manifest": {
         "api_version": 1,
         "id": "linked-message-tools",
@@ -771,12 +794,13 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/linked-message-tools.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/linked-message-tools.serein-extension",
       "sha256": "4ead29fc20744727c6013b899d86ea373c91125acc47211f931c9a893c55a6aa",
       "download_bytes": 1263602,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97"
     },
     {
+      "description": "Lists already-loaded members holding a chosen role and proposes opening a profile or copying an exact role color after Apply. Never requests a guild-wide member list or a server-wide count.",
       "manifest": {
         "api_version": 1,
         "id": "loaded-role-members",
@@ -815,12 +839,13 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/loaded-role-members.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/loaded-role-members.serein-extension",
       "sha256": "7d0063cdf3156ffa91e3661307b979e34a4a8bab3d55d70fb2c41be7660f5654",
       "download_bytes": 1516204,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97"
     },
     {
+      "description": "Configured composer helpers: review up to 12 split segments of a long draft, drop whole keyword lines, review a dispersed message burst, or merge a draft into your latest own loaded message. Proposals only; Apply confirms.",
       "manifest": {
         "api_version": 1,
         "id": "message-composition-tools",
@@ -872,12 +897,13 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/message-composition-tools.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/message-composition-tools.serein-extension",
       "sha256": "116b64b33a6532769b0c115305672ce8dada004d62e5d26bbceac0ece333d4e7",
       "download_bytes": 1403456,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97"
     },
     {
+      "description": "Keeps messages deleted from loaded chats readable on your device while enabled: retained text shows in red with local highlight and removal controls. Nothing is sent to the server or written to disk.",
       "manifest": {
         "api_version": 1,
         "id": "message-delete-protector",
@@ -898,17 +924,18 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/message-delete-protector.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/message-delete-protector.serein-extension",
       "sha256": "dffd601e3b85b17ae9bacc6deedc526e225c3ee81072ee5e8e64981da03bf6f9",
       "download_bytes": 338103,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d",
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97",
       "preview": {
-        "url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/previews/message-delete-protector.png",
+        "url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/previews/message-delete-protector.png",
         "sha256": "729063ad60d977fef21d630e07e09677ce07836b1a6bd18d447c3541af5a938c",
         "download_bytes": 65905
       }
     },
     {
+      "description": "Reviewed consent enables a bounded, persistent, account-scoped history of subsequently loaded readable chats, with filters, deleted-object versions, ghost alerts and bounded export. No deleted-before-load recovery.",
       "manifest": {
         "api_version": 1,
         "id": "message-history",
@@ -934,12 +961,13 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/message-history.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/message-history.serein-extension",
       "sha256": "681ab8423d2d4fb7e5320ab66e43fd499d2b6b122c069c334d36a9bdb0253b14",
       "download_bytes": 420981,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97"
     },
     {
+      "description": "Two read-only message actions: display the selected author's highest loaded guild role with a local exclusion list, and copy bounded magnet-link display names and exact links after Apply. No media download or inline rendering.",
       "manifest": {
         "api_version": 1,
         "id": "message-inspector-tools",
@@ -978,12 +1006,13 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/message-inspector-tools.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/message-inspector-tools.serein-extension",
       "sha256": "4403539befc829b736283523bf59fef0e5bde60ec33a98ed7b6d3a9aa4fb2673",
       "download_bytes": 1313304,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97"
     },
     {
+      "description": "Proposes jumps to the latest, oldest, your own, or a selected author's loaded messages within the current 50-row timeline. Each jump needs Apply; nothing is fetched beyond loaded rows.",
       "manifest": {
         "api_version": 1,
         "id": "message-navigation-tools",
@@ -1028,12 +1057,13 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/message-navigation-tools.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/message-navigation-tools.serein-extension",
       "sha256": "ee4bcec4335c18da6fb7e30dc3b58ac5fb6e919f438ffa5dab814b3c8e532375",
       "download_bytes": 1228384,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97"
     },
     {
+      "description": "Message actions to jump to a loaded reply's original, propose one fixed-host Google search for the selected text, or suggest adding one reaction. Each effect is a single reviewed proposal requiring Apply.",
       "manifest": {
         "api_version": 1,
         "id": "message-reference-tools",
@@ -1069,12 +1099,13 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/message-reference-tools.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/message-reference-tools.serein-extension",
       "sha256": "9d484ebc6fa7ce0f6d65e574c48215c1c4e060a57de685391a10aff06d21c50e",
       "download_bytes": 1927969,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97"
     },
     {
+      "description": "Stores up to 42 configured reactions and, choosing among at most 20 loaded messages, proposes exactly one add-reaction action for review. An explicit palette, not a hover bar.",
       "manifest": {
         "api_version": 1,
         "id": "more-quick-reactions-tools",
@@ -1107,12 +1138,13 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/more-quick-reactions-tools.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/more-quick-reactions-tools.serein-extension",
       "sha256": "3f99cf3a03b4fdb932b0c23052cbe91aff4d729c2eedbe6b9afc164a34d3faf9",
       "download_bytes": 1435419,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97"
     },
     {
+      "description": "Recognizes Spotify, Apple Music, YouTube Music and TIDAL track or album HTTPS links in a message or paste and proposes the matching public song.link page or provider page after Apply. The extension itself fetches nothing.",
       "manifest": {
         "api_version": 1,
         "id": "music-link-tools",
@@ -1139,12 +1171,13 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/music-link-tools.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/music-link-tools.serein-extension",
       "sha256": "78db26dafae7f006ffd4d2bf540b57af05bbfe0ad838dbbd2bb5d6af45723663",
       "download_bytes": 1774839,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97"
     },
     {
+      "description": "Five invoked composer and count tools. URL tracker cleanup uses a fixed offline list; unit conversions and text transformations are deterministic and offline; nothing is fetched or sent.",
       "manifest": {
         "api_version": 1,
         "id": "offline-composer-tools",
@@ -1185,12 +1218,13 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/offline-composer-tools.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/offline-composer-tools.serein-extension",
       "sha256": "db4c0da974cc9bc9fba70841530483a7ea2079ad6e9eeacbc1b67d8f22c792f9",
       "download_bytes": 1203304,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97"
     },
     {
+      "description": "Applies a literal find/replace, once or globally, to one of your own loaded messages, and proposes the edited result for Apply. Empty results delete only attachment-free targets; no regexes or other authors' messages.",
       "manifest": {
         "api_version": 1,
         "id": "own-message-sed",
@@ -1219,12 +1253,13 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/own-message-sed.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/own-message-sed.serein-extension",
       "sha256": "7daeb504a240f3210e23f49a0202e43e9d7fb1f22b3b66c1a83a43f54faf0183",
       "download_bytes": 1234041,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97"
     },
     {
+      "description": "Read-only panel showing the current channel's loaded permission decisions and a selected loaded member's role order. It derives nothing for other members and fetches no members, roles or overwrites.",
       "manifest": {
         "api_version": 1,
         "id": "permissions-tools",
@@ -1251,12 +1286,13 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/permissions-tools.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/permissions-tools.serein-extension",
       "sha256": "b6867648e96b1aca73b2f657cb4041ddb87a8b44f69a7044b3740fb3fabe38fa",
       "download_bytes": 1424071,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97"
     },
     {
+      "description": "Adds your plus-prefixed emoji reaction to a nearby loaded message: one plus targets the newest loaded message and each extra plus steps one row further back, to 50. The target, author and preview appear before Apply; the draft stays untouched.",
       "manifest": {
         "api_version": 1,
         "id": "plus-reacts-tools",
@@ -1279,12 +1315,13 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/plus-reacts-tools.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/plus-reacts-tools.serein-extension",
       "sha256": "aef98bb192ed39b7e6f5205c5d8950027104f1329e4ed3fb51e7097b2323e6fd",
       "download_bytes": 1350653,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97"
     },
     {
+      "description": "Read-only panel over already-loaded server data: name, snowflake-derived creation date, channel-type totals and a relationship summary. It never fetches owner, boost, vanity or membership details.",
       "manifest": {
         "api_version": 1,
         "id": "server-info-tools",
@@ -1313,12 +1350,13 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/server-info-tools.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/server-info-tools.serein-extension",
       "sha256": "1b99d5aee81e0693d6fb5b990f01ed6c3ce37e8e29e0ec0ac414b32a97951f3d",
       "download_bytes": 1475051,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97"
     },
     {
+      "description": "Cancel one loaded outgoing friend request, normalize canary/ptb Discord links when copying a selected message, or propose repeating a message or reply with neutralized mentions. Every write waits for Apply.",
       "manifest": {
         "api_version": 1,
         "id": "social-link-tools",
@@ -1363,12 +1401,13 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/social-link-tools.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/social-link-tools.serein-extension",
       "sha256": "4962435865842c25ed3e59b888e92cb61b2edb499f25167a8c97a87beeff5895",
       "download_bytes": 1284771,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97"
     },
     {
+      "description": "Stores up to 32 named presence presets containing a status, custom text and an optional expiry up to one day, and applies one at a time through the host review. No background timers.",
       "manifest": {
         "api_version": 1,
         "id": "status-presets",
@@ -1410,12 +1449,13 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/status-presets.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/status-presets.serein-extension",
       "sha256": "94b99903f282ba354725a3610c2b77f82015acf38aef9d7861bdf47d8d53c9ae",
       "download_bytes": 622216,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97"
     },
     {
+      "description": "Decodes standard Base64 spans in drafts or in up to eight selected-message matches with strict UTF-8, and capitalizes sentence starts. Every replacement or copy requires Apply.",
       "manifest": {
         "api_version": 1,
         "id": "text-codecs",
@@ -1448,12 +1488,13 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/text-codecs.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/text-codecs.serein-extension",
       "sha256": "d6bc6df1441ba87823b64eefab75b7d5ab7acee175feb4ea6093945bfede9718",
       "download_bytes": 1283125,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97"
     },
     {
+      "description": "Up to eight literal replacement rules and eight local message tags, edited in the native panel; configuration stays bounded and corrupt storage is preserved. Composer edits require Apply.",
       "manifest": {
         "api_version": 1,
         "id": "text-commands",
@@ -1515,12 +1556,13 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/text-commands.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/text-commands.serein-extension",
       "sha256": "a6d2f111abb5cfdbc4906ca0503c3ab4c8fd5a0bccc2e25cf4cfb1933e5e7abe",
       "download_bytes": 596352,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97"
     },
     {
+      "description": "Message menu action showing the selected message's exact raw text and its public message, channel and author IDs in a native panel. It exposes no private host objects and changes nothing.",
       "manifest": {
         "api_version": 1,
         "id": "view-raw-message",
@@ -1541,12 +1583,13 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/view-raw-message.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/view-raw-message.serein-extension",
       "sha256": "b0c45fcd93f9efb209b0a44df745f15e7ffc46ce1498e69ffe46dd4001fe3349",
       "download_bytes": 1358624,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97"
     },
     {
+      "description": "Proposes local participant volume and mute changes, keeps a 256-entry log of the current call, or appends current-call mentions to the draft. No server moderation, cross-channel log or automatic send.",
       "manifest": {
         "api_version": 1,
         "id": "voice-and-chat-tools",
@@ -1605,12 +1648,13 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/voice-and-chat-tools.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/voice-and-chat-tools.serein-extension",
       "sha256": "d2780ff5870ec1db59c6b76345b3cf1fe6743b7f068c2fa9bb7f9c89cfb5934e",
       "download_bytes": 1546059,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97"
     },
     {
+      "description": "Adjusts local audio gains with one reviewed change: output up to 200% and input up to 100%. An input gain above 100% is shown as text but never silently lowered, and Apply is required before writing.",
       "manifest": {
         "api_version": 1,
         "id": "voice-panel-tools",
@@ -1636,12 +1680,13 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/voice-panel-tools.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/voice-panel-tools.serein-extension",
       "sha256": "3743fcacc5cc5941803d66f9deef807ce97e305444f32b4ad87e8047d18c168d",
       "download_bytes": 1209583,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97"
     },
     {
+      "description": "Remembers one last voice channel and proposes a muted, no-ring rejoin after an explicit Apply; saving or forgetting the channel is always manual. No reconnect loops or timers.",
       "manifest": {
         "api_version": 1,
         "id": "voice-rejoin-tools",
@@ -1686,10 +1731,10 @@
           }
         ]
       },
-      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/1962de8b7170a5044dc560e9d0ef51c2d51ac93d/extensions/plugins/packages/voice-rejoin-tools.serein-extension",
+      "release_url": "https://raw.githubusercontent.com/brambora69123/Serein/9702a0f49128c889c6fc4a17b2477bdb03114a97/extensions/plugins/packages/voice-rejoin-tools.serein-extension",
       "sha256": "2d71de4c9711bf3ae33c923e78ee940ba590b3d073e0388acbdda79e42c8507d",
       "download_bytes": 1401571,
-      "source_commit": "1962de8b7170a5044dc560e9d0ef51c2d51ac93d"
+      "source_commit": "9702a0f49128c889c6fc4a17b2477bdb03114a97"
     }
   ]
 }
