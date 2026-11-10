@@ -245,13 +245,23 @@ pub(crate) fn decode_png(
 	} else {
 		image.view(0, 0, image.width(), image.height())
 	};
-	let image = image::DynamicImage::ImageRgba8(image::imageops::thumbnail(
-		&*crop,
-		crop.width()
-			.min(output_edge.clamp(1, if square { 512 } else { 1024 })),
-		crop.height()
-			.min(output_edge.clamp(1, if square { 512 } else { 1024 })),
-	));
+	let limit = output_edge.clamp(1, if square { 512 } else { 1024 });
+	// Non-square pictures must retain their aspect ratio rather than merely fitting
+	// independent width and height clamps into a square buffer.
+	let (width, height) = if square {
+		(crop.width().min(limit), crop.height().min(limit))
+	} else if crop.width() >= crop.height() {
+		(
+			limit,
+			((u64::from(crop.height()) * u64::from(limit)) / u64::from(crop.width())).max(1) as u32,
+		)
+	} else {
+		(
+			((u64::from(crop.width()) * u64::from(limit)) / u64::from(crop.height())).max(1) as u32,
+			limit,
+		)
+	};
+	let image = image::DynamicImage::ImageRgba8(image::imageops::thumbnail(&*crop, width, height));
 	let mut png = Cursor::new(Vec::new());
 	image
 		.write_to(&mut png, image::ImageFormat::Png)
@@ -304,6 +314,20 @@ mod tests {
 		let (uri, preview) = decode_profile_banner(png.get_ref()).unwrap();
 		assert_eq!(preview.resolution(), [1024, 240]);
 		assert!(model::valid_banner_uri(&uri));
+	}
+
+	#[test]
+	fn wide_banner_fits_bounds_without_becoming_a_square() {
+		let mut png = Cursor::new(Vec::new());
+		image::DynamicImage::ImageRgba8(image::RgbaImage::from_pixel(
+			1920,
+			1080,
+			image::Rgba([40, 180, 110, 255]),
+		))
+		.write_to(&mut png, image::ImageFormat::Png)
+		.unwrap();
+		let (_, preview) = decode_profile_banner(png.get_ref()).unwrap();
+		assert_eq!(preview.resolution(), [1024, 576]);
 	}
 
 	#[test]

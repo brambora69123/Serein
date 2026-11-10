@@ -343,6 +343,7 @@ impl Editor {
 						banner_picture,
 						editable && !(self.choosing || self.choosing_banner),
 						editable && banner_entitled && !(self.choosing || self.choosing_banner),
+						banner_entitled,
 					) {
 						action = Some(picked);
 					}
@@ -417,6 +418,7 @@ impl Editor {
 				},
 				false,
 				false,
+				banner_entitled,
 			);
 		}
 		crate::markdown::confirm_external_link(ui.ctx(), &mut self.preview_link, true);
@@ -474,7 +476,7 @@ fn form(
 			{
 				action = Some(AvatarAction::Remove);
 			}
-			if choosing.is_some() {
+			if matches!(choosing, Some(model::ProfilePicture::Avatar)) {
 				ui.add(egui::Spinner::new().size(14.0));
 			}
 		},
@@ -639,6 +641,17 @@ fn field(
 }
 
 impl Editor {
+	/// Shares the visible error state with the settings page's footer reservation.
+	pub(super) fn invalid_draft(&self, state: &State) -> bool {
+		self.draft
+			.as_ref()
+			.zip(state.own_profile.data.as_ref())
+			.is_some_and(|(draft, profile)| {
+				let changes = draft.changes(profile);
+				changes != ProfileEdit::default() && !changes.valid()
+			})
+	}
+
 	/// The actions stay below the scrollable profile fields, including when new editors are added.
 	pub(super) fn save_controls(
 		&mut self,
@@ -771,6 +784,7 @@ fn preview(
 	banner_preview: BannerPreview<'_>,
 	clickable: bool,
 	banner_clickable: bool,
+	banner_entitled: bool,
 ) -> Option<AvatarAction> {
 	let (demo, guilds) = media;
 	let colors = design::palette(ui);
@@ -804,8 +818,14 @@ fn preview(
 					avatars.paint_banner(ui, profile, banner, corner, demo);
 				}
 				BannerPreview::Pending(texture) | BannerPreview::Saved(texture) => {
+					let source = texture.resolution_vec2();
+					let scale = (banner.width() / source.x).max(banner.height() / source.y);
+					let uv = egui::Rect::from_center_size(
+						egui::pos2(0.5, 0.5),
+						banner.size() / (source * scale),
+					);
 					egui::Image::new(texture)
-						.fit_to_exact_size(banner.size())
+						.uv(uv)
 						.corner_radius(corner)
 						.paint_at(ui, banner);
 				}
@@ -830,9 +850,11 @@ fn preview(
 					action = Some(AvatarAction::BannerPick);
 				}
 			} else {
-				banner_hit.on_hover_text(crate::i18n::translate(
-					"profile-edit-form-banner-requires-nitro",
-				));
+				banner_hit.on_hover_text(crate::i18n::translate(if banner_entitled {
+					"profile-edit-preview-use-banner-editor"
+				} else {
+					"profile-edit-form-banner-requires-nitro"
+				}));
 			}
 			let avatar = egui::Rect::from_min_size(
 				banner.left_bottom() + egui::vec2(16.0, -40.0),
@@ -1026,7 +1048,10 @@ mod tests {
 					events,
 					..Default::default()
 				},
-				|ui| editor.show(ui, state, avatars, &mut commands),
+				|ui| {
+					editor.show(ui, state, avatars, &mut commands);
+					editor.save_controls(ui, state, &mut commands);
+				},
 			);
 			output.textures_delta.clear();
 			fn text(shape: &egui::Shape, labels: &mut Vec<(String, egui::Rect)>) {

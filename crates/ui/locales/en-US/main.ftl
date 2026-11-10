@@ -2088,6 +2088,8 @@ profile-edit-preview-about-me = About Me
 # Context: preview
 profile-edit-preview-change-banner = Change profile banner; Nitro required
 # Context: preview
+profile-edit-preview-use-banner-editor = Use the banner editor buttons instead.
+# Context: preview
 profile-edit-preview-change-profile-picture = Change profile picture
 # Context: preview
 profile-edit-preview-edit-display-name = Edit display name

@@ -424,8 +424,17 @@ impl MessagingUi {
 							self.extensions.theme_editor_toolbar(ui);
 							ui.add_space(12.0);
 						}
-						let footer_height = if self.settings.page == Page::Profile {
-							64.0
+						let profile_visible = self.settings.page == Page::Profile
+							&& self
+								.settings
+								.page
+								.matches(&self.settings.query.to_lowercase(), self.language);
+						let footer_height = if profile_visible {
+							if self.settings.editor.invalid_draft(state) {
+								128.0
+							} else {
+								64.0
+							}
 						} else {
 							0.0
 						};
@@ -529,7 +538,7 @@ impl MessagingUi {
 									});
 							},
 						);
-						if self.settings.page == Page::Profile {
+						if profile_visible {
 							ui.add_space(16.0);
 							self.settings.editor.save_controls(ui, state, commands);
 						}
