@@ -1024,7 +1024,11 @@ fn preview(
 		let cosmetics = preview_profile.user.cosmetics.get_or_insert_default();
 		cosmetics.decoration = match draft.avatar_decoration {
 			Some(sku) => owned.decoration(sku).map_or_else(
-				|| (Some(sku) == current_sku).then_some(current.clone()).flatten(),
+				|| {
+					(Some(sku) == current_sku)
+						.then_some(current.clone())
+						.flatten()
+				},
 				|option| Some(option.item.clone()),
 			),
 			None => None,
@@ -1038,7 +1042,11 @@ fn preview(
 		let current_sku = current.as_ref().map(|item| item.sku);
 		cosmetics.nameplate = match draft.nameplate {
 			Some(sku) => owned.nameplate(sku).map_or_else(
-				|| (Some(sku) == current_sku).then_some(current.clone()).flatten(),
+				|| {
+					(Some(sku) == current_sku)
+						.then_some(current.clone())
+						.flatten()
+				},
 				|option| Some(option.item.clone()),
 			),
 			None => None,

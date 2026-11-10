@@ -545,7 +545,7 @@ mod tests {
 			.id
 			.clone();
 		assert!(state.request_authorized_app_detail(&id).is_none());
-		let render = |events| {
+		let mut render = |events| {
 			let mut commands = Vec::new();
 			let output = ctx.run_ui(
 				egui::RawInput {
@@ -562,7 +562,8 @@ mod tests {
 			assert!(commands.is_empty());
 			output
 		};
-		let _ = render(vec![]);
+		let warmup = render(vec![]);
+		warmup.drop_without_applying_deltas();
 		let output = render(vec![]);
 		let point = output
 			.shapes
@@ -581,7 +582,14 @@ mod tests {
 					modifiers: egui::Modifiers::NONE,
 				},
 			]);
-			assert!(output.platform_output.open_url.is_none());
+			assert!(
+				output
+					.platform_output
+					.commands
+					.iter()
+					.all(|command| !matches!(command, egui::OutputCommand::OpenUrl(_)))
+			);
+			output.drop_without_applying_deltas();
 		}
 		assert_eq!(
 			view.settings.authorized_apps.opening.as_deref(),
