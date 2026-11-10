@@ -25,6 +25,7 @@ mod categories;
 pub use categories::debug_thread_navigation_check;
 #[cfg(feature = "demo")]
 pub use timeline::debug_unread_navigation_check;
+mod authorized_apps;
 mod channel_marks;
 mod channel_menu;
 mod channel_permissions;

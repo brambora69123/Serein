@@ -3297,3 +3297,29 @@ connection access tokens, or reuse Spotify playback state. Opening it therefore 
 request and Spotify's independent poller is unchanged. Synthetic list, empty, error, pending and
 rejected cases are covered by focused parser, reducer and mock-HTTP tests; no live account response
 or mutation was used. Offline screenshot page: `connections` in `profile_preview`.
+
+## Authorized applications page - November 10, 2026
+
+Settings > Authorized Apps performs one explicit, bounded
+[`GET /oauth2/tokens`](https://docs.discord.food/topics/oauth2) when the page opens. The route is
+documented by Userdoccers, not Discord's public documentation, and normal-session delivery remains
+unofficial/live-unverified. Only the most recent authorization per application is requested. At
+most 64 grants are retained; authorization and application IDs, names, descriptions, icons, scopes,
+approval timestamps and policy URLs are bounded, and total retained bytes are capped. Missing or
+unrecognized scopes, approval timestamps, verification flags and policy links stay unknown rather
+than being inferred; a malformed scope array is dropped and marks the row limited. The list is
+session RAM only and is never written to SQLite or the account cache.
+
+A requested detail row uses one
+[`GET /oauth2/tokens/{id}`](https://docs.discord.food/topics/oauth2) read and accepts only a
+response whose authorization ID matches the requested row. Deauthorization is per specific
+application and requires an explicit confirmation dialog. It uses one
+[`DELETE /oauth2/tokens/{id}`](https://docs.discord.food/topics/oauth2) attempt followed by one
+bounded list refetch; success is shown only when the refreshed list no longer contains that
+authorization. A failed, rejected or unconfirmed write leaves the row in place, and an ambiguous
+write is not retried until the user refreshes the list. The page does not read or persist access or
+refresh tokens, call `/oauth2/token` revocation, use client credentials, intercept callbacks, scrape
+the official client, or reuse Connections or Spotify state. Synthetic list, detail, empty, error,
+search, pending, rejected and ambiguous cases are covered by focused parser, reducer and mock-HTTP
+tests; no live account response or mutation was used. Offline preview page: `authorized apps`
+in `profile_preview` (`--demo-settings=authorized apps`).

@@ -24,6 +24,15 @@ impl MessagingUi {
 				.size(13.0)
 				.color(p.muted),
 		);
+		ui.add_space(4.0);
+		if design::text_action(
+			ui,
+			&self.language.text("settings-connections-authorized-apps"),
+		)
+		.clicked()
+		{
+			self.open_authorized_apps_settings();
+		}
 		ui.add_space(8.0);
 		let page = state
 			.connections

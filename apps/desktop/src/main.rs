@@ -3719,8 +3719,13 @@ impl Desktop {
 			let event = match command {
 				// Offline typing has no transport or synthetic state change.
 				Command::Typing { .. } => return,
-				// Synthetic connection pages are populated by the client state, never a service.
-				Command::Connections { .. } | Command::SetConnectionVisibility { .. } => return,
+				// Synthetic connection and authorization pages are populated by the client
+				// state, never a service.
+				Command::Connections { .. }
+				| Command::SetConnectionVisibility { .. }
+				| Command::AuthorizedApps { .. }
+				| Command::AuthorizedAppDetail { .. }
+				| Command::DeauthorizeAuthorizedApp { .. } => return,
 				// Offline previews confirm locally; nothing reaches the service.
 				Command::BadgeSettings { request, settings } => Event::BadgeSettings {
 					request,

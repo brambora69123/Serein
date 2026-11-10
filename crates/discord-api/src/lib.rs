@@ -1,6 +1,7 @@
 // Origin-fixed REST adapter. No cookies, redirects, logging, persistence or bot SDK.
 mod activity_sharing;
 mod archives;
+mod authorized_apps;
 mod badges;
 mod channel_actions;
 mod collectibles;
@@ -1287,6 +1288,18 @@ impl DiscordApi {
 			} => Event::ConnectionVisibility {
 				request,
 				result: self.set_connection_visibility(&kind, &id, visible).await,
+			},
+			Command::AuthorizedApps { request } => Event::AuthorizedApps {
+				request,
+				result: self.authorized_apps().await,
+			},
+			Command::AuthorizedAppDetail { id, request } => Event::AuthorizedAppDetail {
+				request,
+				result: self.authorized_app(&id).await,
+			},
+			Command::DeauthorizeAuthorizedApp { id, request } => Event::AuthorizedAppDeauthorized {
+				request,
+				result: self.deauthorize_authorized_app(&id).await,
 			},
 			Command::GifFavorites { request, change } => {
 				let (result, frequent_emoji) = match self.gif_favorites(change).await {

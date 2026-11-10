@@ -14,7 +14,9 @@ pub(super) struct Settings {
 	pub(super) notifications: crate::notification_settings::Navigation,
 	pub(super) messaging_permissions: crate::messaging_permissions::Navigation,
 	pub(super) games: crate::registered_games::Page,
+	pub(super) authorized_apps: crate::authorized_apps::Ui,
 	connections_requested: bool,
+	authorized_apps_requested: bool,
 	pub(super) safety_hub_opening: Option<String>,
 }
 
@@ -23,6 +25,7 @@ enum Page {
 	Account,
 	Profile,
 	Connections,
+	AuthorizedApps,
 	General,
 	#[default]
 	Appearance,
@@ -42,10 +45,11 @@ enum Page {
 }
 impl Page {
 	/// Every page in sidebar order; the narrow-window page picker lists them the same way.
-	const ALL: [Self; 16] = [
+	const ALL: [Self; 17] = [
 		Self::Account,
 		Self::Profile,
 		Self::Connections,
+		Self::AuthorizedApps,
 		Self::MessagingPermissions,
 		Self::Storage,
 		Self::Appearance,
@@ -69,6 +73,7 @@ impl Page {
 				Self::Account,
 				Self::Profile,
 				Self::Connections,
+				Self::AuthorizedApps,
 				Self::MessagingPermissions,
 				Self::Storage,
 			],
@@ -94,6 +99,7 @@ impl Page {
 			Self::Account => "page-account",
 			Self::Profile => "page-profile",
 			Self::Connections => "page-connections",
+			Self::AuthorizedApps => "page-authorized-apps",
 			Self::General => "page-general",
 			Self::LanguageTime => "page-language-time",
 			Self::Appearance => "page-appearance",
@@ -117,6 +123,7 @@ impl Page {
 			Self::Account => "description-account",
 			Self::Profile => "description-profile",
 			Self::Connections => "description-connections",
+			Self::AuthorizedApps => "description-authorized-apps",
 			Self::General => "description-general",
 			Self::LanguageTime => "description-language-time",
 			Self::Appearance => "description-appearance",
@@ -141,6 +148,9 @@ impl Page {
 			Self::Profile => "profile edit display name about me bio pronouns color colour",
 			Self::Connections => {
 				"connections linked accounts services spotify steam github reddit twitch xbox playstation visibility activity"
+			}
+			Self::AuthorizedApps => {
+				"authorized apps applications oauth2 grants scopes deauthorize revoke privacy policy terms"
 			}
 			Self::General => {
 				"general windows macos linux login menu bar startup autostart automatically open minimized minimize close tray background title bar caption window buttons decorations borderless tiling graphics gpu adapter render discrete integrated hardware acceleration performance battery vrr variable refresh rate steady refresh rate g-sync gsync freesync adaptive sync flicker flickering steady frame rate fps vsync"
@@ -300,6 +310,12 @@ impl MessagingUi {
 	pub(super) fn open_voice_settings(&mut self) {
 		self.settings.open = true;
 		self.settings.page = Page::Voice;
+		self.settings.query.clear();
+	}
+
+	pub(super) fn open_authorized_apps_settings(&mut self) {
+		self.settings.open = true;
+		self.settings.page = Page::AuthorizedApps;
 		self.settings.query.clear();
 	}
 
@@ -500,6 +516,10 @@ impl MessagingUi {
 								if self.settings.page != Page::Connections {
 									self.settings.connections_requested = false;
 								}
+								if self.settings.page != Page::AuthorizedApps {
+									self.settings.authorized_apps_requested = false;
+									self.settings.authorized_apps.confirm = None;
+								}
 								match self.settings.page {
 									Page::General => self.general_settings(ui, state.demo),
 									Page::LanguageTime => self.language_time_settings(ui),
@@ -512,6 +532,15 @@ impl MessagingUi {
 											}
 										}
 										self.connections_settings(ui, state, commands);
+									}
+									Page::AuthorizedApps => {
+										if !self.settings.authorized_apps_requested {
+											self.settings.authorized_apps_requested = true;
+											if let Some(command) = state.request_authorized_apps() {
+												commands.push(command);
+											}
+										}
+										self.authorized_apps_settings(ui, state, commands);
 									}
 									Page::Profile => self.settings.editor.show(
 										ui,
@@ -574,6 +603,8 @@ impl MessagingUi {
 		if !self.settings.open {
 			self.settings.messaging_permissions.requested = false;
 			self.settings.connections_requested = false;
+			self.settings.authorized_apps_requested = false;
+			self.settings.authorized_apps.confirm = None;
 		}
 	}
 
