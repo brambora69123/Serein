@@ -1962,3 +1962,29 @@ FPS, startup duration or live Discord behavior. No real account profile, connect
 voice session was modified for these measurements; protocol deserializers and HTTP write proposals
 were exercised only with synthetic data and mocked servers. Those local results do not prove live
 Discord interoperability or subscription eligibility.
+
+### Account standing, authorized apps and owned profile cosmetics — November 10, 2026
+
+The comparison uses the preceding installed profile/connections revision and source commit
+`55e5a363f`. Both use the standard voice-enabled `cargo xtask package --format dir` method on
+Linux x86-64, Rust 1.99.1 and locked dependencies. The compressed tree uses sorted `linux-root`
+files, zeroed gzip timestamps and normalized uid/gid. The final combined `cargo xtask check`
+passed **1,688 tests, 0 failures, 14 ignored** with **2 Cargo jobs and 2 test threads**; packaging
+was also sequential under the 2-job limit.
+
+| Metric | Previously installed build | Account controls | Delta |
+| --- | ---: | ---: | ---: |
+| Executable bytes | 96,465,640 | 96,723,944 | +258,304 (+0.268%) |
+| Installed `linux-root`, 245 files each | 101,166,065 | 101,424,369 | +258,304 (+0.255%) |
+| Compressed normalized `linux-root` (`tar.gz`) bytes | 57,650,665 | 57,739,199 | +88,534 (+0.154%) |
+
+Final executable SHA-256:
+`bd27e08e2d30e380e8e2bce61a87aa7a85312fd52973ef5a862d5375f4b8eb11`.
+Compressed-tree SHA-256:
+`b55362b04ccb637e9d528e192c95c2732ef944c5aa50255c3976aad1d5100047`.
+Both packaged executable paths had matching bytes, `ldd` reported no missing libraries, and the
+245-file installation tree had no broken symlinks. Native offline interactions and matched
+before/after captures are in [the account-controls evidence guide](pr-evidence/account-profile-controls/README.md).
+This comparison does not measure UI CPU/RSS, FPS, startup duration or live Discord behavior.
+No real account standing, authorization, profile or subscription was read or changed; protocol
+bounds and write/readback were exercised only with synthetic fixtures and mocked HTTP servers.
