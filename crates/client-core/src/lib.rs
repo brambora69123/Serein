@@ -4,6 +4,7 @@ pub mod archives;
 pub mod auth;
 pub mod captcha;
 pub mod channel_actions;
+pub mod connections;
 pub mod emoji_frecency;
 pub mod fingerprint;
 pub mod forum;
@@ -91,6 +92,17 @@ pub enum Command {
 	MessagingPermissions {
 		request: u64,
 		change: Option<model::messaging_permissions::Change>,
+	},
+	/// One explicitly opened current-account connection list.
+	Connections {
+		request: u64,
+	},
+	/// One visibility write; the returned connection is the confirmation readback.
+	SetConnectionVisibility {
+		kind: String,
+		id: String,
+		visible: bool,
+		request: u64,
 	},
 	ChannelAction {
 		guild: Id,
@@ -604,6 +616,14 @@ pub enum Event {
 		request: u64,
 		result: Result<Box<UserProfile>, auth::Failure>,
 	},
+	Connections {
+		request: u64,
+		result: Result<model::connections::ConnectionsPage, auth::Failure>,
+	},
+	ConnectionVisibility {
+		request: u64,
+		result: Result<model::connections::Connection, auth::Failure>,
+	},
 	Voice(voice::Event),
 	ChannelCreated(Channel),
 	ChannelRestored(Channel),
@@ -825,6 +845,7 @@ pub struct State {
 	pub prefer_friend_nickname: bool,
 	pub own_profile: profile::OwnProfile,
 	pub badge_editor: profile::BadgeEditor,
+	pub connections: connections::Connections,
 	pub invites: invites::Cache,
 	pub invite_join: invites::Join,
 	pub guild_creation: guild_creation::Creation,
@@ -1066,6 +1087,7 @@ impl Default for State {
 			prefer_friend_nickname: false,
 			own_profile: Default::default(),
 			badge_editor: Default::default(),
+			connections: Default::default(),
 			invites: Default::default(),
 			invite_join: Default::default(),
 			guild_creation: Default::default(),
@@ -2625,6 +2647,14 @@ impl State {
 			self.apply_gifs(request, Err(auth::Failure::Capacity));
 			return;
 		}
+		if let Command::Connections { request } = command {
+			self.apply_connections(request, Err(auth::Failure::Capacity));
+			return;
+		}
+		if let Command::SetConnectionVisibility { request, .. } = command {
+			self.apply_connection_visibility(request, Err(auth::Failure::Capacity));
+			return;
+		}
 		if let Command::GifFavorites { request, .. } = command {
 			self.apply_gif_favorites(request, Err(auth::Failure::Capacity));
 			return;
@@ -2977,6 +3007,7 @@ impl State {
 			self.local_game_activity = Default::default();
 			self.invalidate_messaging_permissions(None);
 			self.interrupt_own_profile();
+			self.interrupt_connections();
 		}
 		if let Event::Typing(signal) = &envelope.event {
 			self.observe_typing_at(
@@ -3450,6 +3481,14 @@ impl State {
 			}
 			Event::BadgeSettings { request, result } => {
 				self.apply_badge_settings(request, result);
+				Ok(())
+			}
+			Event::Connections { request, result } => {
+				self.apply_connections(request, result);
+				Ok(())
+			}
+			Event::ConnectionVisibility { request, result } => {
+				self.apply_connection_visibility(request, result);
 				Ok(())
 			}
 
@@ -4731,6 +4770,7 @@ impl State {
 			self.invalidate_messaging_permissions(Some(failure));
 			self.interrupt_own_profile();
 			self.interrupt_badge_settings();
+			self.interrupt_connections();
 			self.local_game_activity = Default::default();
 			self.cancel_message_actions();
 			if self.folders_pending {

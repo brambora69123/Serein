@@ -6,6 +6,7 @@ pub mod archives;
 mod attachments;
 pub mod badges;
 pub mod collectibles;
+pub mod connections;
 mod diagnostics;
 mod embeds;
 pub mod emoji_frecency;
