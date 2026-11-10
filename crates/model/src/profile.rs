@@ -8,6 +8,14 @@ pub const MAX_PROFILE_PRONOUNS_CHARS: usize = 40;
 pub const MAX_PROFILE_EDIT_BYTES: usize = 4096;
 /// Largest PNG data URI accepted for a new profile picture (256 KiB of PNG, base64 encoded).
 pub const MAX_PROFILE_AVATAR_URI: usize = crate::server_settings::MAX_ICON_DATA_URI;
+/// The same bounded PNG payload is accepted for a newly selected profile banner.
+pub const MAX_PROFILE_BANNER_URI: usize = MAX_PROFILE_AVATAR_URI;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ProfilePicture {
+	Avatar,
+	Banner,
+}
 
 /// Only explicitly changed fields are sent. Nested `None` clears a nullable field.
 #[derive(Clone, Default, PartialEq, Eq)]
@@ -18,6 +26,8 @@ pub struct ProfileEdit {
 	pub accent_color: Option<Option<u32>>,
 	/// New picture as a PNG data URI; nested `None` removes the current picture.
 	pub avatar: Option<Option<String>>,
+	/// New banner as a PNG data URI; nested `None` removes the current banner.
+	pub banner: Option<Option<String>>,
 }
 impl ProfileEdit {
 	fn text_bytes(&self) -> usize {
@@ -27,7 +37,9 @@ impl ProfileEdit {
 			+ bytes(&self.pronouns)
 	}
 	pub fn bytes(&self) -> usize {
-		self.text_bytes() + self.avatar.as_ref().map_or(0, bytes)
+		self.text_bytes()
+			+ self.avatar.as_ref().map_or(0, bytes)
+			+ self.banner.as_ref().map_or(0, bytes)
 	}
 	pub fn valid(&self) -> bool {
 		fn text(value: &str, max: usize, multiline: bool) -> bool {
@@ -42,6 +54,10 @@ impl ProfileEdit {
 				.avatar
 				.as_ref()
 				.is_none_or(|avatar| avatar.as_deref().is_none_or(valid_avatar_uri))
+			&& self
+				.banner
+				.as_ref()
+				.is_none_or(|banner| banner.as_deref().is_none_or(valid_banner_uri))
 			&& self.global_name.as_ref().is_none_or(|name| {
 				name.as_ref().is_none_or(|name| {
 					!name.trim().is_empty() && text(name, MAX_PROFILE_NAME_CHARS, false)
@@ -63,7 +79,16 @@ impl ProfileEdit {
 
 /// PNG data URI small enough to send as a profile picture.
 pub fn valid_avatar_uri(uri: &str) -> bool {
-	uri.len() <= MAX_PROFILE_AVATAR_URI
+	valid_profile_image_uri(uri, MAX_PROFILE_AVATAR_URI)
+}
+
+/// PNG data URI small enough to send as a profile banner.
+pub fn valid_banner_uri(uri: &str) -> bool {
+	valid_profile_image_uri(uri, MAX_PROFILE_BANNER_URI)
+}
+
+fn valid_profile_image_uri(uri: &str, max: usize) -> bool {
+	uri.len() <= max
 		&& uri
 			.strip_prefix("data:image/png;base64,")
 			.is_some_and(|data| {
@@ -85,6 +110,7 @@ mod edit_tests {
 			pronouns: Some("🦀".repeat(MAX_PROFILE_PRONOUNS_CHARS)),
 			accent_color: Some(Some(0xff_ffff)),
 			avatar: Some(Some("data:image/png;base64,iVBORw0KGgo=".into())),
+			banner: Some(Some("data:image/png;base64,iVBORw0KGgo=".into())),
 		};
 		assert!(edit.valid());
 		edit.avatar = Some(Some("data:image/jpeg;base64,/9j/".into()));
@@ -94,6 +120,9 @@ mod edit_tests {
 			"A".repeat(MAX_PROFILE_AVATAR_URI)
 		)));
 		assert!(!edit.valid());
+		edit.banner = Some(Some("data:image/jpeg;base64,/9j/".into()));
+		assert!(!edit.valid());
+		edit.banner = Some(None);
 		edit.avatar = Some(None);
 		assert!(edit.valid());
 		edit.bio.as_mut().unwrap().push('x');

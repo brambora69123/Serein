@@ -715,13 +715,28 @@ restrictions. Synthetic parser/UI checks are not live normal-account verificatio
 
 ## Own profile editing — September 11, 2026
 
-The native editor updates global display name, bio, pronouns and accent color through
-the unofficial normal-user `PATCH /users/@me` route, then verifies a fresh global
-profile read. Only deliberate changed fields are sent; failures remain visible and
-uncertain saves require reload. Mock HTTP and reducer/UI tests pass; no live profile
-was read or changed. Avatar/banner uploads, username, guild profiles and security
-settings remain outside this editor. Sources, limits and reproduction are in
-in-app profile settings.
+The native editor updates global display name, bio, pronouns, accent color and a static PNG
+avatar through the unofficial normal-user `PATCH /users/@me` route, then verifies a fresh global
+profile read. The preview's display name, pronouns, About Me and avatar targets focus the same
+editor draft; no parallel editor rewrites unsaved values. The same sparse patch supports a static
+profile banner, including explicit removal, through the documented user account's `banner` field.
+Banner selection is enabled only for session-reported Nitro types 1 or 2; free and Nitro Basic
+accounts see a disabled explanatory control. This is a UI hint, never an entitlement override,
+and Discord's response remains authoritative. Profile-frame editing is not exposed until its
+mutation field is supported by evidence.
+
+Only deliberately changed fields are sent, including explicit null clears, in one account-profile
+write rather than a partly applied split save. Failures remain visible and uncertain saves require
+reload; no automatic write retry occurs. Readback confirms requested fields, including added or
+removed images. Geometric validation keeps group icons separate from profile images: avatar crops
+are square, while banners keep their aspect ratio and must be at least 680×240 pixels. Selection
+uses the existing bounded native image worker (at most 8 MiB input), converts a single frame to an
+in-memory PNG of at most 256 KiB, and does not persist a file path or animation. Animated avatar
+and banner uploads are not yet implemented. Username, guild profiles and security settings remain
+outside this editor. Mock HTTP and bounded media/protocol tests pass; no live profile was read or
+changed. Sources are the official [user account fields](https://docs.discord.com/developers/resources/user#modify-current-user),
+the unofficial [profile routes](https://docs.discord.food/resources/user#modify-current-user), and
+Discord's [custom profile guidance](https://support.discord.com/hc/en-us/articles/4403147417623-Custom-Profiles).
 
 ## Outgoing camera capture — September 12, 2026
 
@@ -3221,3 +3236,31 @@ fixture did not consistently establish the required public guild/dialog state. T
 `hidden_voice_participants_are_cached_only_with_hidden_channels_opted_in` test and selected-stage guard
 are the evidence for that behavior; no failed or misleading pair is committed. No live account,
 microphone, upstream-secret session or official-request differential was used for this sync.
+
+## Connected accounts page - November 9, 2026
+
+Settings > Connections performs one explicit, bounded, read-only
+[`GET /users/@me/connections`](https://docs.discord.com/developers/resources/user#get-current-user-connections)
+when the page opens. The public route is documented for OAuth2 applications; normal-session
+delivery and the response fields are documented by
+[Userdoccers Connected Accounts](https://github.com/discord-userdoccers/discord-userdoccers/blob/master/pages/resources/connected-accounts.mdx)
+and remain unofficial/live-unverified. The page defines its own connection model instead of
+reusing profile `connected_accounts` summaries. At most 64 rows are retained, each string and
+metadata set is bounded, and total retained bytes are capped. Missing or unrecognized flags keep
+their unknown state rather than defaulting to `false`; unrecognized visibility integers stay
+unknown. The list is session RAM only and is never written to SQLite or the account cache.
+
+A visibility switch uses one
+[`PATCH /users/@me/connections/{type}/{id}`](https://github.com/discord-userdoccers/discord-userdoccers/blob/master/pages/resources/connected-accounts.mdx)
+attempt with `{"visibility": 0|1}`, the existing limited REST path and no retry. The service
+identifier is a validated kind plus a percent-encoded single path segment; rows that cannot form a
+safe path, are revoked, truncated, or have unknown visibility show no control. The command accepts
+only a returned connection with the same type, ID and requested visibility as readback. A failed,
+rejected or unconfirmed response leaves the previous value in place and shows the explicit rollback
+message. Row rendering also shows verified state, activity sharing, friend sync, two-way link and
+metadata visibility when supplied. The page does not unlink, deauthorize, change friend sync, start
+a new connection authorization, contact domains, purchase anything, intercept callbacks, read
+connection access tokens, or reuse Spotify playback state. Opening it therefore makes no Spotify
+request and Spotify's independent poller is unchanged. Synthetic list, empty, error, pending and
+rejected cases are covered by focused parser, reducer and mock-HTTP tests; no live account response
+or mutation was used. Offline screenshot page: `connections` in `profile_preview`.

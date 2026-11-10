@@ -32,6 +32,7 @@ mod channel_permissions;
 mod channel_welcome_tests;
 mod components;
 mod composer_text;
+mod connections;
 #[cfg(any(test, all(debug_assertions, feature = "demo")))]
 mod recovery_demo;
 #[cfg(all(debug_assertions, feature = "demo"))]
@@ -543,6 +544,9 @@ pub struct MessagingUi {
 	stream_preview_watch: Option<(Id, Id)>,
 	/// Guild voice channel double-clicked in the channel list, joined after selection applies.
 	voice_join: Option<Id>,
+	/// Require a second click on the same channel before joining a guild voice call.
+	pub voice_double_click_join: bool,
+	voice_join_click: voice::JoinClickGate,
 	pub voice_inputs: Vec<(String, String)>,
 	pub voice_outputs: Vec<(String, String)>,
 	pub voice_input: Option<String>,
@@ -879,17 +883,44 @@ impl MessagingUi {
 		})
 	}
 
-	/// Pending profile picture selection: (generation, own user, editor revision).
-	pub fn take_profile_picture_request(&mut self) -> Option<(u64, Id, u64)> {
-		self.settings.editor.avatar_request.take()
+	/// Pending profile image selection: (generation, own user, editor revision, kind).
+	pub fn take_profile_picture_request(
+		&mut self,
+	) -> Option<(u64, Id, u64, model::ProfilePicture)> {
+		self.settings
+			.editor
+			.avatar_request
+			.take()
+			.map(|(generation, user, revision)| {
+				(generation, user, revision, model::ProfilePicture::Avatar)
+			})
+			.or_else(|| {
+				self.settings
+					.editor
+					.banner_request
+					.take()
+					.map(|(generation, user, revision)| {
+						(generation, user, revision, model::ProfilePicture::Banner)
+					})
+			})
 	}
 	pub fn accept_profile_picture(
 		&mut self,
 		ctx: &egui::Context,
-		request: (u64, Id, u64),
+		request: (u64, Id, u64, model::ProfilePicture),
 		result: Result<Option<(String, egui::ColorImage)>, &'static str>,
 	) {
-		if let Err(error) = self.settings.editor.accept_avatar(ctx, request, result) {
+		let kind = request.3;
+		let request = (request.0, request.1, request.2);
+		let accepted = match kind {
+			model::ProfilePicture::Avatar => {
+				self.settings.editor.accept_avatar(ctx, request, result)
+			}
+			model::ProfilePicture::Banner => {
+				self.settings.editor.accept_banner(ctx, request, result)
+			}
+		};
+		if let Err(error) = accepted {
 			self.toasts.push(design::Level::Error, error);
 		}
 	}

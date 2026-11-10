@@ -11,6 +11,8 @@ struct Draft {
 	color: Option<u32>,
 	/// `Some(Some(uri))` uploads a new picture, `Some(None)` removes the current one.
 	avatar: Option<Option<String>>,
+	/// The banner follows the same pending-dirty lifecycle, but is Nitro-gated.
+	banner: Option<Option<String>>,
 }
 impl Draft {
 	fn from_profile(profile: &UserProfile) -> Self {
@@ -20,6 +22,7 @@ impl Draft {
 			pronouns: profile.pronouns.clone(),
 			color: profile.accent_color,
 			avatar: None,
+			banner: None,
 		}
 	}
 	fn changes(&self, profile: &UserProfile) -> ProfileEdit {
@@ -32,6 +35,10 @@ impl Draft {
 			avatar: match &self.avatar {
 				// Removing a picture the account does not have is not a change.
 				Some(None) if profile.user.avatar.is_none() => None,
+				other => other.clone(),
+			},
+			banner: match &self.banner {
+				Some(None) if profile.banner.is_none() => None,
 				other => other.clone(),
 			},
 		}
@@ -64,11 +71,21 @@ enum Picture<'a> {
 	Removed,
 }
 
+enum BannerPreview<'a> {
+	Remote,
+	Pending(&'a egui::TextureHandle),
+	Saved(&'a egui::TextureHandle),
+	Removed,
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum AvatarAction {
 	Pick,
+	BannerPick,
 	Remove,
+	BannerRemove,
 	Undo,
+	BannerUndo,
 }
 
 #[derive(Default)]
@@ -81,8 +98,12 @@ pub(super) struct Editor {
 	preview_link: Option<String>,
 	/// Set when the picture button is pressed; the desktop shell opens the native picker.
 	pub avatar_request: Option<(u64, Id, u64)>,
+	pub banner_request: Option<(u64, Id, u64)>,
 	revision: u64,
 	choosing: bool,
+	choosing_banner: bool,
+	pending_banner: Option<egui::TextureHandle>,
+	saved_banner: Option<(Option<String>, egui::TextureHandle)>,
 	pending_picture: Option<egui::TextureHandle>,
 	/// Local copy of the last saved picture, keyed by the avatar hash the service returned.
 	saved_picture: Option<(Option<String>, egui::TextureHandle)>,
@@ -130,6 +151,59 @@ impl Editor {
 		}
 	}
 
+	pub fn accept_banner(
+		&mut self,
+		ctx: &egui::Context,
+		request: (u64, Id, u64),
+		result: Result<Option<(String, egui::ColorImage)>, &'static str>,
+	) -> Result<(), &'static str> {
+		if !self.choosing_banner
+			|| request
+				!= (
+					self.generation.unwrap_or_default(),
+					request.1,
+					self.revision,
+				) {
+			return Ok(());
+		}
+		self.choosing_banner = false;
+		match result {
+			Ok(Some((uri, image))) => {
+				if !model::valid_banner_uri(&uri)
+					|| image.resolution()[0] > 1024
+					|| image.resolution()[1] > 1024
+					|| image.resolution()[0] < 680
+					|| image.resolution()[1] < 240
+				{
+					return Err("The banner must be at least 680 × 240 pixels");
+				}
+				let Some(draft) = self.draft.as_mut() else {
+					return Ok(());
+				};
+				draft.banner = Some(Some(uri));
+				self.pending_banner = Some(ctx.load_texture(
+					"profile-banner-preview",
+					image,
+					egui::TextureOptions::LINEAR,
+				));
+				self.saved = false;
+				Ok(())
+			}
+			Ok(None) => Ok(()),
+			Err(error) => Err(error),
+		}
+	}
+
+	fn picture_choice(&self) -> Option<model::ProfilePicture> {
+		if self.choosing {
+			Some(model::ProfilePicture::Avatar)
+		} else if self.choosing_banner {
+			Some(model::ProfilePicture::Banner)
+		} else {
+			None
+		}
+	}
+
 	pub fn show(
 		&mut self,
 		ui: &mut egui::Ui,
@@ -161,6 +235,14 @@ impl Editor {
 					.is_some_and(|draft| matches!(draft.avatar, Some(Some(_))));
 				self.saved_picture = match (uploaded, self.pending_picture.take()) {
 					(true, Some(texture)) => Some((profile.user.avatar.clone(), texture)),
+					_ => None,
+				};
+				let uploaded_banner = self
+					.draft
+					.as_ref()
+					.is_some_and(|draft| matches!(draft.banner, Some(Some(_))));
+				self.saved_banner = match (uploaded_banner, self.pending_banner.take()) {
+					(true, Some(texture)) => Some((profile.banner.clone(), texture)),
 					_ => None,
 				};
 				self.draft = Some(Draft::from_profile(profile));
@@ -201,6 +283,7 @@ impl Editor {
 			draft.rebase(before, &fresh);
 		}
 		self.baseline = Some(fresh);
+		let picture_choice = self.picture_choice();
 		let draft = self
 			.draft
 			.get_or_insert_with(|| Draft::from_profile(profile));
@@ -219,7 +302,21 @@ impl Editor {
 				_ => Picture::Remote,
 			},
 		};
+		let banner_picture = match &draft.banner {
+			Some(Some(_)) => self
+				.pending_banner
+				.as_ref()
+				.map_or(BannerPreview::Remote, BannerPreview::Pending),
+			Some(None) => BannerPreview::Removed,
+			None => match &self.saved_banner {
+				Some((hash, texture)) if hash.is_some() && *hash == profile.banner => {
+					BannerPreview::Saved(texture)
+				}
+				_ => BannerPreview::Remote,
+			},
+		};
 		let mut action = None;
+		let banner_entitled = matches!(state.premium_type, 1 | 2);
 		let width = ui.available_width();
 		if width >= 620.0 {
 			ui.horizontal_top(|ui| {
@@ -229,7 +326,7 @@ impl Editor {
 					egui::Layout::top_down(egui::Align::Min),
 					|ui| {
 						ui.add_enabled_ui(editable, |ui| {
-							action = form(ui, draft, profile, self.choosing);
+							action = form(ui, draft, profile, picture_choice, banner_entitled);
 						});
 					},
 				);
@@ -243,7 +340,10 @@ impl Editor {
 						(state.demo, &state.guilds),
 						&mut self.preview_link,
 						picture,
-						editable && !self.choosing,
+						banner_picture,
+						editable && !(self.choosing || self.choosing_banner),
+						editable && banner_entitled && !(self.choosing || self.choosing_banner),
+						banner_entitled,
 					) {
 						action = Some(picked);
 					}
@@ -251,11 +351,11 @@ impl Editor {
 			});
 		} else {
 			ui.add_enabled_ui(editable, |ui| {
-				action = form(ui, draft, profile, self.choosing);
+				action = form(ui, draft, profile, picture_choice, banner_entitled);
 			});
 		}
 		match action {
-			Some(AvatarAction::Pick) if editable && !self.choosing => {
+			Some(AvatarAction::Pick) if editable && !(self.choosing || self.choosing_banner) => {
 				self.revision = self.revision.wrapping_add(1);
 				self.choosing = true;
 				self.avatar_request = Some((state.generation, profile.user.id, self.revision));
@@ -268,93 +368,26 @@ impl Editor {
 				draft.avatar = None;
 				self.pending_picture = None;
 			}
+			Some(AvatarAction::BannerPick)
+				if editable && banner_entitled && !(self.choosing || self.choosing_banner) =>
+			{
+				self.revision = self.revision.wrapping_add(1);
+				self.choosing_banner = true;
+				self.banner_request = Some((state.generation, profile.user.id, self.revision));
+			}
+			Some(AvatarAction::BannerRemove) => {
+				draft.banner = Some(None);
+				self.pending_banner = None;
+			}
+			Some(AvatarAction::BannerUndo) => {
+				draft.banner = None;
+				self.pending_banner = None;
+			}
 			_ => {}
 		}
 		if *draft != before {
 			self.saved = false;
 		}
-		let changes = draft.changes(profile);
-		let changed = changes != ProfileEdit::default();
-		if !changes.valid() {
-			design::notice(
-				ui,
-				design::Level::Error,
-				&crate::i18n::translate(
-					"profile-edit-show-check-character-limits-and-remove-control-characters-a-display-name",
-				),
-			);
-		}
-		ui.add_space(16.0);
-		egui::Frame::new()
-			.fill(colors.base)
-			.corner_radius(8)
-			.inner_margin(egui::Margin::symmetric(12, 8))
-			.show(ui, |ui| {
-				ui.set_width(ui.available_width());
-				ui.horizontal(|ui| {
-					ui.spacing_mut().item_spacing.x = 12.0;
-					if state.own_profile.saving {
-						ui.add(egui::Spinner::new().size(14.0));
-						ui.label(
-							egui::RichText::new(crate::i18n::translate(
-								"profile-edit-show-saving-profile",
-							))
-							.size(13.0)
-							.color(colors.muted),
-						);
-					} else if self.saved {
-						ui.label(
-							egui::RichText::new(crate::i18n::translate_if_key(if state.demo {
-								"profile-edit-show-saved-in-preview"
-							} else {
-								"profile-edit-show-profile-saved"
-							}))
-							.size(13.0)
-							.color(colors.positive),
-						);
-					} else if changed {
-						ui.label(
-							egui::RichText::new(crate::i18n::translate(
-								"profile-edit-show-you-have-unsaved-changes",
-							))
-							.size(13.0)
-							.color(colors.text),
-						);
-					}
-					ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-						ui.add_enabled_ui(
-							changed && changes.valid() && state.can_save_own_profile(),
-							|ui| {
-								if design::button(
-									ui,
-									&crate::i18n::translate("profile-edit-show-save-changes"),
-									design::ButtonKind::Primary,
-								)
-								.clicked() && let Some(command) = state.save_own_profile(changes)
-								{
-									self.submitted = Some(state.own_profile.request);
-									self.saved = false;
-									commands.push(command);
-								}
-							},
-						);
-						ui.add_enabled_ui(changed && editable, |ui| {
-							if design::button(
-								ui,
-								&crate::i18n::translate("profile-edit-show-cancel"),
-								design::ButtonKind::Neutral,
-							)
-							.clicked()
-							{
-								self.draft =
-									state.own_profile.data.as_ref().map(Draft::from_profile);
-								self.pending_picture = None;
-								self.saved = false;
-							}
-						});
-					});
-				});
-			});
 		if width < 620.0
 			&& let (Some(draft), Some(profile)) = (&self.draft, &state.own_profile.data)
 		{
@@ -375,7 +408,17 @@ impl Editor {
 				(state.demo, &state.guilds),
 				&mut self.preview_link,
 				picture,
+				match &draft.banner {
+					Some(Some(_)) => self
+						.pending_banner
+						.as_ref()
+						.map_or(BannerPreview::Remote, BannerPreview::Pending),
+					Some(None) => BannerPreview::Removed,
+					None => BannerPreview::Remote,
+				},
 				false,
+				false,
+				banner_entitled,
 			);
 		}
 		crate::markdown::confirm_external_link(ui.ctx(), &mut self.preview_link, true);
@@ -392,9 +435,9 @@ fn form(
 	ui: &mut egui::Ui,
 	draft: &mut Draft,
 	profile: &UserProfile,
-	choosing: bool,
+	choosing: Option<model::ProfilePicture>,
+	banner_entitled: bool,
 ) -> Option<AvatarAction> {
-	let colors = design::palette(ui);
 	ui.spacing_mut().item_spacing.y = 6.0;
 	let mut action = None;
 	let has_picture = match &draft.avatar {
@@ -410,7 +453,7 @@ fn form(
 			None => "profile-edit-form-png-jpeg-gif-or-webp-up-to-8-mb-cropped",
 		}),
 		|ui| {
-			ui.add_enabled_ui(!choosing, |ui| {
+			ui.add_enabled_ui(choosing.is_none(), |ui| {
 				if design::button(
 					ui,
 					&crate::i18n::translate("profile-edit-form-change"),
@@ -433,12 +476,53 @@ fn form(
 			{
 				action = Some(AvatarAction::Remove);
 			}
-			if choosing {
+			if matches!(choosing, Some(model::ProfilePicture::Avatar)) {
 				ui.add(egui::Spinner::new().size(14.0));
 			}
 		},
 	);
 	ui.add_space(10.0);
+	let has_banner = match &draft.banner {
+		Some(value) => value.is_some(),
+		None => profile.banner.is_some(),
+	};
+	design::row(
+		ui,
+		"profile-edit-form-profile-banner",
+		Some(if banner_entitled {
+			"profile-edit-form-banner-upload-hint"
+		} else {
+			"profile-edit-form-banner-requires-nitro"
+		}),
+		|ui| {
+			ui.add_enabled_ui(banner_entitled && choosing.is_none(), |ui| {
+				if design::button(
+					ui,
+					&crate::i18n::translate("profile-edit-form-change"),
+					design::ButtonKind::Outline,
+				)
+				.clicked()
+				{
+					action = Some(AvatarAction::BannerPick);
+				}
+			});
+			if draft.banner.is_some() {
+				if design::text_action(ui, &crate::i18n::translate("profile-edit-form-undo"))
+					.clicked()
+				{
+					action = Some(AvatarAction::BannerUndo);
+				}
+			} else if has_banner
+				&& design::text_action(ui, &crate::i18n::translate("profile-edit-form-remove"))
+					.clicked()
+			{
+				action = Some(AvatarAction::BannerRemove);
+			}
+			if matches!(choosing, Some(model::ProfilePicture::Banner)) {
+				ui.add(egui::Spinner::new().size(14.0));
+			}
+		},
+	);
 	field(
 		ui,
 		"profile-edit-form-display-name",
@@ -447,14 +531,6 @@ fn form(
 		model::MAX_PROFILE_NAME_CHARS,
 		false,
 	);
-	ui.label(
-		egui::RichText::new(crate::i18n::translate(
-			"profile-edit-form-leave-blank-to-use-your-username",
-		))
-		.size(12.0)
-		.color(colors.muted),
-	);
-	ui.add_space(8.0);
 	field(
 		ui,
 		"profile-edit-form-pronouns",
@@ -543,9 +619,16 @@ fn field(
 		})
 		.inner;
 	let edit = if multiline {
-		egui::TextEdit::multiline(value).desired_rows(4)
+		egui::TextEdit::multiline(value).desired_rows(3)
 	} else {
 		egui::TextEdit::singleline(value).align(egui::Align2::LEFT_CENTER)
+	};
+	let edit = if id == "profile-display-name" {
+		edit.hint_text(crate::i18n::translate(
+			"profile-edit-form-leave-blank-to-use-your-username",
+		))
+	} else {
+		edit
 	};
 	design::input(
 		ui,
@@ -557,6 +640,138 @@ fn field(
 	.labelled_by(label_id);
 }
 
+impl Editor {
+	/// Shares the visible error state with the settings page's footer reservation.
+	pub(super) fn invalid_draft(&self, state: &State) -> bool {
+		self.draft
+			.as_ref()
+			.zip(state.own_profile.data.as_ref())
+			.is_some_and(|(draft, profile)| {
+				let changes = draft.changes(profile);
+				changes != ProfileEdit::default() && !changes.valid()
+			})
+	}
+
+	/// The actions stay below the scrollable profile fields, including when new editors are added.
+	pub(super) fn save_controls(
+		&mut self,
+		ui: &mut egui::Ui,
+		state: &mut State,
+		commands: &mut Vec<Command>,
+	) {
+		let Some(profile) = state.own_profile.data.as_ref() else {
+			return;
+		};
+		let Some(draft) = self.draft.as_ref() else {
+			return;
+		};
+		let changes = draft.changes(profile);
+		let changed = changes != ProfileEdit::default();
+		let editable = !state.own_profile.loading && !state.own_profile.saving;
+		let colors = design::palette(ui);
+		if !changed && !changes.valid() {
+			return;
+		}
+		if !changes.valid() {
+			design::notice(
+				ui,
+				design::Level::Error,
+				&crate::i18n::translate(
+					"profile-edit-show-check-character-limits-and-remove-control-characters-a-display-name",
+				),
+			);
+		}
+		egui::Frame::new()
+			.fill(colors.base)
+			.corner_radius(8)
+			.inner_margin(egui::Margin::symmetric(12, 8))
+			.show(ui, |ui| {
+				ui.set_width(ui.available_width());
+				ui.horizontal(|ui| {
+					ui.spacing_mut().item_spacing.x = 12.0;
+					if state.own_profile.saving {
+						ui.add(egui::Spinner::new().size(14.0));
+						ui.label(
+							egui::RichText::new(crate::i18n::translate(
+								"profile-edit-show-saving-profile",
+							))
+							.size(13.0)
+							.color(colors.muted),
+						);
+					} else if self.saved {
+						ui.label(
+							egui::RichText::new(crate::i18n::translate_if_key(if state.demo {
+								"profile-edit-show-saved-in-preview"
+							} else {
+								"profile-edit-show-profile-saved"
+							}))
+							.size(13.0)
+							.color(colors.positive),
+						);
+					} else if changed {
+						ui.label(
+							egui::RichText::new(crate::i18n::translate(
+								"profile-edit-show-you-have-unsaved-changes",
+							))
+							.size(13.0)
+							.color(colors.text),
+						);
+					}
+					ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+						ui.add_enabled_ui(
+							changed && changes.valid() && state.can_save_own_profile(),
+							|ui| {
+								if design::button(
+									ui,
+									&crate::i18n::translate("profile-edit-show-save-changes"),
+									design::ButtonKind::Primary,
+								)
+								.clicked() && let Some(command) =
+									state.save_own_profile(changes.clone())
+								{
+									self.submitted = Some(state.own_profile.request);
+									self.saved = false;
+									commands.push(command);
+								}
+							},
+						);
+						ui.add_enabled_ui(changed && editable, |ui| {
+							if design::button(
+								ui,
+								&crate::i18n::translate("profile-edit-show-cancel"),
+								design::ButtonKind::Neutral,
+							)
+							.clicked()
+							{
+								self.draft =
+									state.own_profile.data.as_ref().map(Draft::from_profile);
+								self.pending_picture = None;
+								self.pending_banner = None;
+								self.saved = false;
+							}
+						});
+					});
+				});
+			});
+	}
+}
+
+/// A preview target focuses its existing editor, without opening an unsaved parallel draft.
+fn focus_field(
+	ui: &mut egui::Ui,
+	response: egui::Response,
+	field: &'static str,
+	label: &'static str,
+) {
+	let response = ui
+		.interact(response.rect, response.id, egui::Sense::click())
+		.on_hover_cursor(egui::CursorIcon::Text)
+		.on_hover_text(crate::i18n::translate(label));
+	if response.clicked() {
+		ui.memory_mut(|memory| memory.request_focus(egui::Id::unique(field)));
+	}
+}
+
 #[allow(clippy::too_many_arguments)]
 fn preview(
 	ui: &mut egui::Ui,
@@ -566,7 +781,10 @@ fn preview(
 	media: (bool, &[model::Guild]),
 	opening: &mut Option<String>,
 	picture: Picture<'_>,
+	banner_preview: BannerPreview<'_>,
 	clickable: bool,
+	banner_clickable: bool,
+	banner_entitled: bool,
 ) -> Option<AvatarAction> {
 	let (demo, guilds) = media;
 	let colors = design::palette(ui);
@@ -595,16 +813,48 @@ fn preview(
 				sw: 0,
 				se: 0,
 			};
-			if profile.banner.is_some() {
-				// The banner image covers its color, so the saved profile paints it as is.
-				avatars.paint_banner(ui, profile, banner, corner, demo);
+			match banner_preview {
+				BannerPreview::Remote if profile.banner.is_some() => {
+					avatars.paint_banner(ui, profile, banner, corner, demo);
+				}
+				BannerPreview::Pending(texture) | BannerPreview::Saved(texture) => {
+					let source = texture.resolution_vec2();
+					let scale = (banner.width() / source.x).max(banner.height() / source.y);
+					let uv = egui::Rect::from_center_size(
+						egui::pos2(0.5, 0.5),
+						banner.size() / (source * scale),
+					);
+					egui::Image::new(texture)
+						.uv(uv)
+						.corner_radius(corner)
+						.paint_at(ui, banner);
+				}
+				_ => {
+					let color = profile
+						.theme_colors
+						.map(crate::profiles::Theme::banner)
+						.or_else(|| draft.color.map(rgb))
+						.unwrap_or(colors.raised);
+					ui.painter().rect_filled(banner, corner, color);
+				}
+			}
+			let banner_hit = ui.interact(
+				banner,
+				ui.scope_id().with("change-banner"),
+				egui::Sense::click(),
+			);
+			if banner_clickable {
+				let banner_hit = banner_hit
+					.on_hover_text(crate::i18n::translate("profile-edit-preview-change-banner"));
+				if banner_hit.clicked() {
+					action = Some(AvatarAction::BannerPick);
+				}
 			} else {
-				let color = profile
-					.theme_colors
-					.map(crate::profiles::Theme::banner)
-					.or_else(|| draft.color.map(rgb))
-					.unwrap_or(colors.raised);
-				ui.painter().rect_filled(banner, corner, color);
+				banner_hit.on_hover_text(crate::i18n::translate(if banner_entitled {
+					"profile-edit-preview-use-banner-editor"
+				} else {
+					"profile-edit-form-banner-requires-nitro"
+				}));
 			}
 			let avatar = egui::Rect::from_min_size(
 				banner.left_bottom() + egui::vec2(16.0, -40.0),
@@ -676,11 +926,17 @@ fn preview(
 							} else {
 								&draft.name
 							};
-							ui.add(
+							let name = ui.add(
 								egui::Label::new(
 									design::semibold(ui, name, 20.0).color(theme.text),
 								)
 								.wrap(),
+							);
+							focus_field(
+								ui,
+								name,
+								"profile-display-name",
+								"profile-edit-preview-edit-display-name",
 							);
 							ui.label(
 								egui::RichText::new(&profile.username)
@@ -688,21 +944,33 @@ fn preview(
 									.color(theme.text),
 							);
 							if !draft.pronouns.is_empty() {
-								ui.label(
+								let pronouns = ui.label(
 									egui::RichText::new(&draft.pronouns)
 										.size(12.0)
 										.color(theme.muted),
+								);
+								focus_field(
+									ui,
+									pronouns,
+									"profile-pronouns",
+									"profile-edit-preview-edit-pronouns",
 								);
 							}
 							if !draft.bio.is_empty() {
 								ui.add_space(8.0);
 								ui.separator();
 								ui.add_space(8.0);
-								ui.label(design::eyebrow(
+								let about = ui.label(design::eyebrow(
 									ui,
 									crate::i18n::translate("profile-edit-preview-about-me"),
 									theme.text,
 								));
+								focus_field(
+									ui,
+									about,
+									"profile-about-me",
+									"profile-edit-preview-edit-about-me",
+								);
 								let mut mentions = crate::profiles::ProfileSession::default();
 								crate::markdown::Formatted::parse(&draft.bio).show_with_images(
 									ui,
@@ -780,7 +1048,10 @@ mod tests {
 					events,
 					..Default::default()
 				},
-				|ui| editor.show(ui, state, avatars, &mut commands),
+				|ui| {
+					editor.show(ui, state, avatars, &mut commands);
+					editor.save_controls(ui, state, &mut commands);
+				},
 			);
 			output.textures_delta.clear();
 			fn text(shape: &egui::Shape, labels: &mut Vec<(String, egui::Rect)>) {

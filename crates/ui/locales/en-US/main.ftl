@@ -9,6 +9,7 @@ section-app = App settings
 section-customization = Customization
 page-account = My Account
 page-profile = Profile
+page-connections = Connections
 page-general = General
 page-appearance = Appearance
 page-chat = Chat
@@ -23,6 +24,7 @@ page-extensions = Extensions
 page-themes = Themes
 description-account = The Discord account signed in on this device.
 description-profile = Choose how you appear across Discord.
+description-connections = View the third-party accounts linked to this account.
 description-general = Startup, window and graphics behavior on this device.
 description-appearance = Theme, colours, window effects and layout.
 description-chat = How messages, media, links and scrolling behave.
@@ -2096,6 +2098,12 @@ profile-edit-form-png-jpeg-gif-or-webp-up-to-8-mb-cropped = PNG, JPEG, GIF or We
 # Context: form
 profile-edit-form-profile-color = Profile color
 # Context: form
+profile-edit-form-profile-banner = Profile banner
+# Context: form
+profile-edit-form-banner-upload-hint = PNG, JPEG, GIF or WebP up to 8 MB. Applied as a static image; animated uploads are not supported yet.
+# Context: form
+profile-edit-form-banner-requires-nitro = Change requires Nitro. Removal stays available; entitlements are not overridden.
+# Context: form
 profile-edit-form-profile-picture = Profile picture
 # Context: form
 profile-edit-form-remove = Remove
@@ -2110,7 +2118,17 @@ profile-edit-form-your-picture-will-be-removed-when-you-save = Your picture will
 # Context: preview
 profile-edit-preview-about-me = About Me
 # Context: preview
+profile-edit-preview-change-banner = Change profile banner; Nitro required
+# Context: preview
+profile-edit-preview-use-banner-editor = Use the banner editor buttons instead.
+# Context: preview
 profile-edit-preview-change-profile-picture = Change profile picture
+# Context: preview
+profile-edit-preview-edit-display-name = Edit display name
+# Context: preview
+profile-edit-preview-edit-pronouns = Edit pronouns
+# Context: preview
+profile-edit-preview-edit-about-me = Edit About Me
 # Context: preview
 profile-edit-preview-preview = Preview
 # Context: show
@@ -4584,7 +4602,13 @@ voice-voice-settings-content-compare-with-the-other-participants-this-code-chang
 # Context: voice_settings_content
 voice-voice-settings-content-devices-levels = Devices & levels
 # Context: voice_settings_content
+voice-voice-settings-content-double-click-to-join = Double-click to join
+# Context: voice_settings_content
+voice-voice-settings-content-double-click-to-join-description = Require a second click on the same voice channel before joining. Selecting channels and text chat stay single-click.
+# Context: voice_settings_content
 voice-voice-settings-content-install-a-voice-enabled-build-to-use-these-controls = Install a voice-enabled build to use these controls.
+# Context: voice_settings_content
+voice-voice-settings-content-joining-calls = Joining calls
 # Context: voice_settings_content
 voice-voice-settings-content-voice-privacy-code = Voice privacy code
 # Context: voice_settings_content
@@ -5334,3 +5358,31 @@ server-list-indicators-tooltip = {$friends} friends online · {$servers} servers
 startup-timings-title = Startup timings
 startup-timings-description = Milliseconds since this launch began. Read-only; nothing is uploaded.
 startup-timings-empty = No startup phases were recorded.
+
+## Settings > Connections
+settings-connections-unofficial = Unofficial normal-session route · read-only list; visibility changes are independently confirmed and live-unverified.
+settings-connections-loading = Loading connected accounts…
+settings-connections-try-again = Try again
+settings-connections-unavailable = Connected accounts are unavailable right now.
+settings-connections-empty = No connected accounts
+settings-connections-empty-description = Accounts you link to Discord will appear here.
+settings-connections-limited = Some connection details were too large and are unavailable. Visibility changes are disabled for those rows.
+settings-connections-account-id = Account ID
+settings-connections-activity = Activity sharing
+settings-connections-friend-sync = Friend sync
+settings-connections-two-way-link = Two-way link
+settings-connections-metadata-visibility = Metadata visibility
+settings-connections-revoked = This connection is marked revoked.
+settings-connections-field-unavailable = Some details for this connection are unavailable and are shown as unknown.
+settings-connections-show-on-profile = Show this connection on your profile
+settings-connections-visibility-unavailable = Visibility cannot be changed for this connection.
+settings-connections-saving = Saving visibility…
+settings-connections-saved = Visibility updated
+settings-connections-verified = Verified
+settings-connections-not-verified = Not verified
+settings-connections-verification-unknown = Verification unknown
+settings-connections-everyone = Everyone
+settings-connections-only-you = Only you
+settings-connections-unknown = Unknown
+settings-connections-on = On
+settings-connections-off = Off

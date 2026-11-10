@@ -3717,6 +3717,8 @@ impl Desktop {
 			let event = match command {
 				// Offline typing has no transport or synthetic state change.
 				Command::Typing { .. } => return,
+				// Synthetic connection pages are populated by the client state, never a service.
+				Command::Connections { .. } | Command::SetConnectionVisibility { .. } => return,
 				// Offline previews confirm locally; nothing reaches the service.
 				Command::BadgeSettings { request, settings } => Event::BadgeSettings {
 					request,
@@ -6346,11 +6348,8 @@ impl eframe::App for Desktop {
 			self.messaging
 				.accept_create_server_icon(&ctx, scope, result);
 		}
-		if let Some((scope, result)) = self
-			.profile_avatar
-			.poll_scoped(self.state.generation, |user| {
-				self.state.user.as_ref().is_some_and(|own| own.id == user)
-			}) {
+		if let Some((scope, kind, result)) = self.profile_avatar.poll_profile(&self.state) {
+			let scope = (scope.0, scope.1, scope.2, kind);
 			self.messaging.accept_profile_picture(&ctx, scope, result);
 		}
 		if let Some((scope, result)) = self.server_icon.poll_server(&self.state) {
@@ -6763,7 +6762,8 @@ impl eframe::App for Desktop {
 				self.state.status = error;
 			}
 
-			if let Some(scope) = self.messaging.take_profile_picture_request() {
+			if let Some(request) = self.messaging.take_profile_picture_request() {
+				let scope = (request.0, request.1, request.2);
 				let result = if scope.0 != self.state.generation
 					|| !self
 						.state
@@ -6773,18 +6773,17 @@ impl eframe::App for Desktop {
 				{
 					Err("Sign in before changing your profile picture")
 				} else {
-					self.profile_avatar.start(
+					self.profile_avatar.start_profile(
 						scope,
+						request.3,
 						self.runtime.handle(),
 						&ctx,
 						self.window.clone(),
-						"Choose profile picture",
-						256,
 					)
 				};
 				if let Err(error) = result {
 					self.messaging
-						.accept_profile_picture(&ctx, scope, Err(error));
+						.accept_profile_picture(&ctx, request, Err(error));
 				}
 			}
 			if let Some(scope) = self.messaging.take_group_icon_request() {
