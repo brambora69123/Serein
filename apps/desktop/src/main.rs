@@ -2063,6 +2063,12 @@ impl Desktop {
 			state.older_exhausted = true;
 		}
 		#[cfg(feature = "demo")]
+		if demo && std::env::args().any(|arg| arg == "--demo-show-cosmetics") {
+			// Explicit fixture-only artwork preference; production stays opt-in and unchanged.
+			messaging.cosmetics = model::CosmeticPreferences::SHOWN;
+			state.profile_cosmetics = model::CosmeticPreferences::SHOWN;
+		}
+		#[cfg(feature = "demo")]
 		if demo && std::env::args().any(|arg| arg == "--demo-profile") {
 			// Presence for the fixture card comes from the same synthetic People rows.
 			let _ = state.request_members();

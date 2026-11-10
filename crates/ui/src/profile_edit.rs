@@ -785,7 +785,7 @@ fn cosmetic_row(
 			.unwrap_or_else(|| crate::i18n::translate("profile-edit-form-none"));
 		egui::ComboBox::from_id_salt(label)
 			.selected_text(selected_name)
-			.width(210.0)
+			.width(180.0)
 			.show_ui(ui, |ui| {
 				ui.selectable_value(
 					selected,
