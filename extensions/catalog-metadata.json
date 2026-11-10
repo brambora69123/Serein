@@ -1,0 +1,230 @@
+{
+  "api_version": 1,
+  "descriptions": [
+    {
+      "id": "account-navigation-tools",
+      "kind": "plugin",
+      "description": "Stores up to 16 text-only profile presets and recent DM choices, or rotates through loaded voice channels. Profile changes, navigation and joins are explicit Apply proposals, never automatic."
+    },
+    {
+      "id": "api-proxy",
+      "kind": "plugin",
+      "description": "Configure Serein's HTTP/HTTPS forward proxy for Discord API traffic: Direct, automatic from environment settings, or a validated URL. Saved settings resume on activation; proxy credentials stay in the OS credential store and never reach the plugin."
+    },
+    {
+      "id": "better-search-tools",
+      "kind": "plugin",
+      "description": "Builds one bounded search query from validated extra tokens (NSFW, replies, mentions, embed types and more) and proposes one native search after Apply. Nothing is searched automatically; server support for the extra tokens is unverified."
+    },
+    {
+      "id": "black-theme",
+      "kind": "theme",
+      "description": "Near-black theme with charcoal surfaces, compact controls and small radii for a minimal, low-glare interface."
+    },
+    {
+      "id": "command-palette",
+      "kind": "plugin",
+      "description": "Launcher-style panel over already-loaded channels: typed filtering with pinned-first results, up to 16 pins, fixed native destinations, bounded conversation search and own-profile opening. Every navigation proposal requires Apply; no arbitrary commands."
+    },
+    {
+      "id": "custom-rpc",
+      "kind": "plugin",
+      "description": "Native rich-presence editor for Playing, Streaming, Listening, Watching or Competing activities, with links, artwork, two buttons, party size and timers. The local preview publishes only after Apply; disabling the plugin stops the activity."
+    },
+    {
+      "id": "draft-style-tools",
+      "kind": "plugin",
+      "description": "Configurable composer actions: reverse draft text while protecting code, URLs and Discord tokens, append a bounded signature block once, and run deterministic local prose cleanup. Nothing edits or sends automatically."
+    },
+    {
+      "id": "equicord-community-tools",
+      "kind": "plugin",
+      "description": "Copies one selected message as bounded text, checks up to eight literal trigger phrases and proposes the HTTPS link, deletes the current channel, or declines a call in a locally ignored DM after Apply. Nothing runs in the background."
+    },
+    {
+      "id": "external-search-tools",
+      "kind": "plugin",
+      "description": "Proposes a public browser page for the selected message in Google Translate, DeepL or the configured search engine. Only fixed allowlisted HTTPS providers; the exact URL is displayed and opened only after confirmation."
+    },
+    {
+      "id": "forest-piano",
+      "kind": "theme",
+      "description": "Photo-backed theme with a green accent, blurred translucent surfaces and tuned text metrics; ships its CC0-1.0-labelled background and cover image."
+    },
+    {
+      "id": "golden-theme",
+      "kind": "theme",
+      "description": "Warm parchment-light palette with a charcoal-brown counterpart and slightly larger, roomier control metrics."
+    },
+    {
+      "id": "greet-sticker-tools",
+      "kind": "plugin",
+      "description": "Chooses among stickers already loaded on the selected message, revalidates the exact channel, message and sticker, and proposes one send after Apply. No greet catalog or multi-send, and nothing is sent automatically."
+    },
+    {
+      "id": "identity-tools",
+      "kind": "plugin",
+      "description": "Message actions that copy the selected message author's canonical profile URL or <@mention> after Apply, using only the public author ID."
+    },
+    {
+      "id": "ingtoninator",
+      "kind": "plugin",
+      "description": "Chooses one eligible draft word deterministically and appends the Ington suffix with upstream casing rules, skipping code, URLs and Discord tokens. Each replacement is proposed for Apply."
+    },
+    {
+      "id": "linked-message-tools",
+      "kind": "plugin",
+      "description": "Parses up to five Discord message links in the selected message and previews only targets already in the current loaded timeline, proposing one jump after Apply. It never fetches or renders linked content or media."
+    },
+    {
+      "id": "loaded-role-members",
+      "kind": "plugin",
+      "description": "Lists already-loaded members holding a chosen role and proposes opening a profile or copying an exact role color after Apply. Never requests a guild-wide member list or a server-wide count."
+    },
+    {
+      "id": "message-composition-tools",
+      "kind": "plugin",
+      "description": "Configured composer helpers: review up to 12 split segments of a long draft, drop whole keyword lines, review a dispersed message burst, or merge a draft into your latest own loaded message. Proposals only; Apply confirms."
+    },
+    {
+      "id": "message-delete-protector",
+      "kind": "plugin",
+      "description": "Keeps messages deleted from loaded chats readable on your device while enabled: retained text shows in red with local highlight and removal controls. Nothing is sent to the server or written to disk."
+    },
+    {
+      "id": "message-history",
+      "kind": "plugin",
+      "description": "Reviewed consent enables a bounded, persistent, account-scoped history of subsequently loaded readable chats, with filters, deleted-object versions, ghost alerts and bounded export. No deleted-before-load recovery."
+    },
+    {
+      "id": "message-inspector-tools",
+      "kind": "plugin",
+      "description": "Two read-only message actions: display the selected author's highest loaded guild role with a local exclusion list, and copy bounded magnet-link display names and exact links after Apply. No media download or inline rendering."
+    },
+    {
+      "id": "message-navigation-tools",
+      "kind": "plugin",
+      "description": "Proposes jumps to the latest, oldest, your own, or a selected author's loaded messages within the current 50-row timeline. Each jump needs Apply; nothing is fetched beyond loaded rows."
+    },
+    {
+      "id": "message-reference-tools",
+      "kind": "plugin",
+      "description": "Message actions to jump to a loaded reply's original, propose one fixed-host Google search for the selected text, or suggest adding one reaction. Each effect is a single reviewed proposal requiring Apply."
+    },
+    {
+      "id": "more-quick-reactions-tools",
+      "kind": "plugin",
+      "description": "Stores up to 42 configured reactions and, choosing among at most 20 loaded messages, proposes exactly one add-reaction action for review. An explicit palette, not a hover bar."
+    },
+    {
+      "id": "music-link-tools",
+      "kind": "plugin",
+      "description": "Recognizes Spotify, Apple Music, YouTube Music and TIDAL track or album HTTPS links in a message or paste and proposes the matching public song.link page or provider page after Apply. The extension itself fetches nothing."
+    },
+    {
+      "id": "obsidian-theme",
+      "kind": "theme",
+      "description": "Deep purple-black surfaces with tuned typography, spacing and rounded controls."
+    },
+    {
+      "id": "offline-composer-tools",
+      "kind": "plugin",
+      "description": "Five invoked composer and count tools. URL tracker cleanup uses a fixed offline list; unit conversions and text transformations are deterministic and offline; nothing is fetched or sent."
+    },
+    {
+      "id": "own-message-sed",
+      "kind": "plugin",
+      "description": "Applies a literal find/replace, once or globally, to one of your own loaded messages, and proposes the edited result for Apply. Empty results delete only attachment-free targets; no regexes or other authors' messages."
+    },
+    {
+      "id": "permissions-tools",
+      "kind": "plugin",
+      "description": "Read-only panel showing the current channel's loaded permission decisions and a selected loaded member's role order. It derives nothing for other members and fetches no members, roles or overwrites."
+    },
+    {
+      "id": "plus-reacts-tools",
+      "kind": "plugin",
+      "description": "Adds your plus-prefixed emoji reaction to a nearby loaded message: one plus targets the newest loaded message and each extra plus steps one row further back, to 50. The target, author and preview appear before Apply; the draft stays untouched."
+    },
+    {
+      "id": "serein-forest",
+      "kind": "theme",
+      "description": "Quiet forest-green theme: deep moss dark palette with a soft light counterpart and default control metrics."
+    },
+    {
+      "id": "serein-latte",
+      "kind": "theme",
+      "description": "Warm latte tones: a cream-beige light palette with a deep roast-brown dark counterpart and default control metrics."
+    },
+    {
+      "id": "serein-midnight",
+      "kind": "theme",
+      "description": "Deep navy-blue palette with a pale light counterpart and default control metrics."
+    },
+    {
+      "id": "serein-ocean",
+      "kind": "theme",
+      "description": "Cool ocean-blue palette with a soft light counterpart and default control metrics."
+    },
+    {
+      "id": "serein-rose",
+      "kind": "theme",
+      "description": "Deep plum-pink dark palette with a soft light counterpart and default control metrics."
+    },
+    {
+      "id": "server-info-tools",
+      "kind": "plugin",
+      "description": "Read-only panel over already-loaded server data: name, snowflake-derived creation date, channel-type totals and a relationship summary. It never fetches owner, boost, vanity or membership details."
+    },
+    {
+      "id": "social-link-tools",
+      "kind": "plugin",
+      "description": "Cancel one loaded outgoing friend request, normalize canary/ptb Discord links when copying a selected message, or propose repeating a message or reply with neutralized mentions. Every write waits for Apply."
+    },
+    {
+      "id": "soft-white",
+      "kind": "theme",
+      "description": "Photograph-backed theme in soft greys with a pale periwinkle accent; ships its CC0-1.0-labelled background and cover image."
+    },
+    {
+      "id": "status-presets",
+      "kind": "plugin",
+      "description": "Stores up to 32 named presence presets containing a status, custom text and an optional expiry up to one day, and applies one at a time through the host review. No background timers."
+    },
+    {
+      "id": "teal-theme",
+      "kind": "theme",
+      "description": "Deep teal theme with a matching light mode and a compact, small-radius control set."
+    },
+    {
+      "id": "text-codecs",
+      "kind": "plugin",
+      "description": "Decodes standard Base64 spans in drafts or in up to eight selected-message matches with strict UTF-8, and capitalizes sentence starts. Every replacement or copy requires Apply."
+    },
+    {
+      "id": "text-commands",
+      "kind": "plugin",
+      "description": "Up to eight literal replacement rules and eight local message tags, edited in the native panel; configuration stays bounded and corrupt storage is preserved. Composer edits require Apply."
+    },
+    {
+      "id": "view-raw-message",
+      "kind": "plugin",
+      "description": "Message menu action showing the selected message's exact raw text and its public message, channel and author IDs in a native panel. It exposes no private host objects and changes nothing."
+    },
+    {
+      "id": "voice-and-chat-tools",
+      "kind": "plugin",
+      "description": "Proposes local participant volume and mute changes, keeps a 256-entry log of the current call, or appends current-call mentions to the draft. No server moderation, cross-channel log or automatic send."
+    },
+    {
+      "id": "voice-panel-tools",
+      "kind": "plugin",
+      "description": "Adjusts local audio gains with one reviewed change: output up to 200% and input up to 100%. An input gain above 100% is shown as text but never silently lowered, and Apply is required before writing."
+    },
+    {
+      "id": "voice-rejoin-tools",
+      "kind": "plugin",
+      "description": "Remembers one last voice channel and proposes a muted, no-ring rejoin after an explicit Apply; saving or forgetting the channel is always manual. No reconnect loops or timers."
+    }
+  ]
+}
