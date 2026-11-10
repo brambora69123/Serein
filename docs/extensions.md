@@ -61,9 +61,11 @@ preference. There is no periodic background polling or automatic package update.
    file. Test through Import with synthetic `--demo` conversations first; catalog browsing
    may download public GitHub content.
 4. Add the package and reproducible source/build instructions under `extensions/`
-   in a pull request; CI validates it. After merge, a workflow pins `catalog.json`
-   to the merged commit, recording immutable package URLs, byte lengths and SHA-256
-   hashes. See the [extensions README](../extensions/README.md) for exact commands.
+   in a pull request, together with its reviewed description record in
+   `extensions/catalog-metadata.json`; CI validates it. After merge, a workflow pins `catalog.json`
+   to the merged commit, recording immutable package URLs, byte lengths, SHA-256
+   hashes and the reviewed descriptions. See the
+   [extensions README](../extensions/README.md) for exact commands.
 5. Maintainers review each listed version, its capabilities and the source to
    artifact relationship. A catalog checksum identifies reviewed bytes; it is
    not a signature or a guarantee that code is harmless. Updates need review too.

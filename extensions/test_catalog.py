@@ -114,6 +114,57 @@ except ValueError:
     pass
 else:
     raise AssertionError("513-entry catalog accepted")
+
+class MetadataCatalog:
+    """One plugin and one theme with a description record document, for mapping checks."""
+
+    prefix = ""
+
+    def __init__(self, document):
+        self.document = document
+
+    def packages(self):
+        return ["plugins/packages/message-delete-protector.serein-extension", "themes/ocean.serein-extension"]
+
+    def read(self, relative):
+        if relative == catalog.METADATA:
+            return json.dumps(self.document).encode()
+        path = catalog.ROOT / relative
+        return path.read_bytes() if path.is_file() else None
+
+metadata = {
+    "api_version": 1,
+    "descriptions": [
+        {"id": "message-delete-protector", "kind": "plugin", "description": "Keeps loaded deleted messages readable locally."},
+        {"id": "serein-ocean", "kind": "theme", "description": "Cool ocean-blue palette."},
+    ],
+}
+entries = catalog.entries(MetadataCatalog(metadata), "https://example.invalid/")
+assert [entry["description"] for entry in entries] == [record["description"] for record in metadata["descriptions"]]
+for mutate in (
+    lambda document: document["descriptions"].pop(0),
+    lambda document: document["descriptions"][0].update(id="unknown-package"),
+    lambda document: document["descriptions"].append(dict(document["descriptions"][0])),
+    lambda document: document["descriptions"][1].update(kind="plugin"),
+    lambda document: document["descriptions"][0].update(description=5),
+    lambda document: document["descriptions"][0].update(description="bad\x00control"),
+    lambda document: document["descriptions"][0].update(description="x" * 257),
+    lambda document: document.update(api_version=True),
+):
+    document = json.loads(json.dumps(metadata))
+    mutate(document)
+    try:
+        catalog.entries(MetadataCatalog(document), "https://example.invalid/")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("invalid description record accepted")
+checkout = catalog.WorkingTree()
+package_ids = {json.loads(checkout.read(relative))["manifest"]["id"] for relative in checkout.packages()}
+document = json.loads((catalog.ROOT / catalog.METADATA).read_bytes())
+assert document["api_version"] == 1
+assert [record["id"] for record in document["descriptions"]] == sorted(record["id"] for record in document["descriptions"])
+assert {record["id"] for record in document["descriptions"]} == package_ids, "catalog metadata and packages out of sync"
 coverage = json.loads((catalog.ROOT / "equicord-workflows.json").read_bytes())
 assert coverage["upstream"] == {
     "repository": "https://github.com/Equicord/Equicord",
@@ -137,4 +188,4 @@ assert coverage["coverage_totals"]["review_pending_packages"] == len({item["pack
 assert coverage["coverage_totals"]["mapped_upstream_workflows"] == package_workflows
 assert coverage["coverage_totals"]["native_workflows"] == native_workflows
 assert coverage["coverage_totals"]["total_workflow_mappings"] == package_workflows + native_workflows
-print("Theme/plugin identity, byte, capability, action, URL, catalog bounds and 373-workflow inventory checks passed.")
+print("Theme/plugin identity, byte, capability, action, URL, catalog bounds, description mapping and 373-workflow inventory checks passed.")
