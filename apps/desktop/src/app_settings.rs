@@ -78,6 +78,7 @@ impl Settings {
 			voice_push_to_talk: ui.voice_push_to_talk,
 			voice_muted: ui.voice_muted,
 			voice_deafened: ui.voice_deafened,
+			voice_double_click_join: ui.voice_double_click_join,
 			voice_input: ui.voice_input.clone(),
 			voice_output: ui.voice_output.clone(),
 			input_percent: ui.voice_gain.input_percent,
@@ -143,6 +144,7 @@ impl Settings {
 		ui.voice_push_to_talk = value.voice_push_to_talk;
 		ui.voice_muted = value.voice_muted;
 		ui.voice_deafened = value.voice_deafened;
+		ui.voice_double_click_join = value.voice_double_click_join;
 		ui.voice_input.clone_from(&value.voice_input);
 		ui.voice_output.clone_from(&value.voice_output);
 		ui.voice_gain.input_percent = value.input_percent;
@@ -592,6 +594,7 @@ mod tests {
 			locations: vec![model::Id(20), model::Id(10)],
 		};
 		settings.current.prefer_friend_nickname = true;
+		settings.current.voice_double_click_join = true;
 		let mut ui = ui::MessagingUi::default();
 		settings.apply(&mut ui);
 		assert!(ui.gif_insert);
@@ -599,6 +602,7 @@ mod tests {
 		assert_eq!(ui.silent_typing, settings.current.silent_typing);
 		assert_eq!(ui.silent_typing_locations, "20, 10");
 		assert!(ui.prefer_friend_nickname);
+		assert!(ui.voice_double_click_join);
 		settings.observe(&ui);
 		assert!(!settings.state.dirty);
 
@@ -606,11 +610,13 @@ mod tests {
 		ui.invite_defaults.max_uses = 10;
 		ui.silent_typing.enabled = false;
 		ui.prefer_friend_nickname = false;
+		ui.voice_double_click_join = false;
 		settings.observe(&ui);
 		assert!(!settings.current.gif_insert);
 		assert_eq!(settings.current.invite_defaults.max_uses, 10);
 		assert!(!settings.current.silent_typing.enabled);
 		assert!(!settings.current.prefer_friend_nickname);
+		assert!(!settings.current.voice_double_click_join);
 		assert!(settings.state.dirty);
 	}
 

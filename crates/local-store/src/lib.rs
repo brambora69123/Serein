@@ -82,6 +82,9 @@ pub struct AppPreferences {
 	pub voice_push_to_talk: bool,
 	pub voice_muted: bool,
 	pub voice_deafened: bool,
+	/// Require a second click on the same guild voice channel before joining.
+	/// Disabled for new and older preferences, preserving single-click joins.
+	pub voice_double_click_join: bool,
 	pub voice_input: Option<String>,
 	pub voice_output: Option<String>,
 	pub input_percent: u16,
@@ -157,6 +160,7 @@ impl Default for AppPreferences {
 			voice_push_to_talk: false,
 			voice_muted: false,
 			voice_deafened: false,
+			voice_double_click_join: false,
 			voice_input: None,
 			voice_output: None,
 			input_percent: 100,
@@ -2341,6 +2345,7 @@ mod tests {
 			serde_json::from_str(r#"{"voice_noise_suppression":true}"#).unwrap();
 		assert!(legacy.voice_processing.is_none());
 		assert!(legacy.voice_noise_suppression);
+		assert!(!legacy.voice_double_click_join);
 		// Existing installs run first-run setup once, like a fresh one.
 		assert!(!legacy.setup_done);
 		// Existing serialized bindings omit the newly optional diagnostics shortcut.
@@ -2415,6 +2420,7 @@ mod tests {
 			voice_processing: Some(model::voice_settings::VoiceProcessing::from_legacy(true)),
 			voice_muted: true,
 			voice_deafened: true,
+			voice_double_click_join: true,
 			voice_input: Some("synthetic microphone".into()),
 			output_percent: 75,
 			gpu_preference: model::GpuPreference::PowerSaving,

@@ -27,6 +27,46 @@ pub(super) struct CallSwitch {
 	audio: Option<(bool, bool)>,
 }
 
+/// Bounded per-channel double-click gate for the native Join Voice button.
+///
+/// Behavioral provenance: Equicord `src/plugins/vcDoubleClick` (index.ts and README),
+/// resolved commit `0d4da19faff378b7f62fd7fd31e78499a5e03e5b`, copyright (c) 2022
+/// Vendicated and contributors, GPL-3.0-or-later. Only the click-gating behavior was
+/// reimplemented in original Rust; no upstream JavaScript or settings protocol is used.
+#[derive(Default)]
+pub(super) struct JoinClickGate {
+	pending: Option<(Id, std::time::Duration)>,
+}
+
+impl JoinClickGate {
+	/// A second click on the same target must arrive within this window.
+	const WINDOW: std::time::Duration = std::time::Duration::from_millis(500);
+
+	/// Returns true when the click may join. Disabled preference and non-gated
+	/// actions always pass and clear any pending first click.
+	fn allow(&mut self, enabled: bool, channel: Id, now: std::time::Duration) -> bool {
+		if !enabled {
+			self.pending = None;
+			return true;
+		}
+		match self.pending.take() {
+			Some((pending, first))
+				if pending == channel && now.saturating_sub(first) <= Self::WINDOW =>
+			{
+				true
+			}
+			_ => {
+				self.pending = Some((channel, now));
+				false
+			}
+		}
+	}
+
+	fn clear(&mut self) {
+		self.pending = None;
+	}
+}
+
 impl MessagingUi {
 	pub(super) fn exit_voice_fullscreen(&mut self) {
 		if let Some((_, ctx, previous, focus)) = self.voice_fullscreen.take() {
@@ -2060,6 +2100,28 @@ impl MessagingUi {
 		}
 	}
 
+	/// Route a pointer or keyboard activation through the optional double-click gate.
+	/// `gated` is true only for guild voice-channel joins; text chat, DMs and calls to
+	/// existing conversations keep their ordinary single-click behavior.
+	fn request_call_on_click(
+		&mut self,
+		state: &mut State,
+		channel: Id,
+		ring: bool,
+		gated: bool,
+		now: std::time::Duration,
+		commands: &mut Vec<Command>,
+	) {
+		if gated
+			&& !self
+				.voice_join_click
+				.allow(self.voice_double_click_join, channel, now)
+		{
+			return;
+		}
+		self.request_call(state, channel, ring, commands);
+	}
+
 	pub(crate) fn request_call(
 		&mut self,
 		state: &mut State,
@@ -2067,6 +2129,7 @@ impl MessagingUi {
 		ring: bool,
 		commands: &mut Vec<Command>,
 	) {
+		self.voice_join_click.clear();
 		let _ = self.request_call_audio(state, channel, ring, None, commands);
 	}
 
@@ -2242,7 +2305,9 @@ impl MessagingUi {
 		.on_hover_text(&hint)
 		.on_disabled_hover_text(hint);
 		if response.clicked() {
-			self.request_call(state, channel, !guild && !incoming, commands);
+			let now = std::time::Duration::try_from_secs_f64(ui.input(|input| input.time))
+				.unwrap_or_default();
+			self.request_call_on_click(state, channel, !guild && !incoming, guild, now, commands);
 		}
 		response
 	}
@@ -2578,6 +2643,18 @@ impl MessagingUi {
 			}
 		});
 		if !compact {
+			design::group(
+				ui,
+				&crate::i18n::translate("voice-voice-settings-content-joining-calls"),
+				|ui| {
+					design::switch(
+						ui,
+						"voice-voice-settings-content-double-click-to-join",
+						Some("voice-voice-settings-content-double-click-to-join-description"),
+						&mut self.voice_double_click_join,
+					);
+				},
+			);
 			crate::keybinds::show_voice(
 				ui,
 				&mut self.keybinds,
@@ -4931,6 +5008,73 @@ fn device_combo(
 #[cfg(test)]
 mod tests {
 	use super::*;
+
+	#[test]
+	fn double_click_gate_is_per_target_and_bounded() {
+		let mut gate = JoinClickGate::default();
+		let at = std::time::Duration::from_millis;
+		assert!(gate.allow(false, Id(26), at(0)));
+		assert!(!gate.allow(true, Id(26), at(10)));
+		assert!(gate.allow(true, Id(26), at(510)));
+		assert!(!gate.allow(true, Id(26), at(511)));
+		// A different channel starts its own pending gesture and never joins the first.
+		assert!(!gate.allow(true, Id(25), at(600)));
+		assert!(!gate.allow(true, Id(26), at(700)));
+		assert!(gate.allow(true, Id(26), at(800)));
+		// The window expires instead of pairing a much later click.
+		assert!(!gate.allow(true, Id(26), at(1_000)));
+		assert!(!gate.allow(true, Id(26), at(1_501)));
+	}
+
+	#[test]
+	fn double_click_preference_gates_guild_join_commands_only() {
+		let mut state = test_support::voice_demo_state();
+		state.demo = false;
+		state.gateway_connected = true;
+		state.voice.active = None;
+		let mut view = MessagingUi {
+			voice_available: true,
+			..Default::default()
+		};
+		let at = |millis| std::time::Duration::from_millis(millis);
+		let mut commands = Vec::new();
+		view.voice_double_click_join = true;
+		view.request_call_on_click(&mut state, Id(26), false, true, at(0), &mut commands);
+		assert!(commands.is_empty(), "a single click must not join");
+		view.request_call_on_click(&mut state, Id(26), false, true, at(100), &mut commands);
+		assert!(matches!(
+			commands.as_slice(),
+			[Command::Voice(client_core::voice::Command::Join {
+				channel: Id(26),
+				ring: false,
+				..
+			})]
+		));
+		// The completed gesture does not leave a click that joins a later target.
+		commands.clear();
+		view.request_call_on_click(&mut state, Id(25), false, true, at(200), &mut commands);
+		assert!(commands.is_empty());
+
+		// Disabled preserves the existing single-click join.
+		view.voice_double_click_join = false;
+		state.voice.active = None;
+		commands.clear();
+		view.request_call_on_click(&mut state, Id(25), false, true, at(300), &mut commands);
+		assert!(matches!(
+			commands.as_slice(),
+			[Command::Voice(client_core::voice::Command::Join {
+				channel: Id(25),
+				..
+			})]
+		));
+
+		// DM calls and other non-channel joins remain single-click even when enabled.
+		view.voice_double_click_join = true;
+		state.voice.active = None;
+		commands.clear();
+		view.request_call_on_click(&mut state, Id(25), false, false, at(400), &mut commands);
+		assert_eq!(commands.len(), 1);
+	}
 
 	#[test]
 	fn explicit_join_audio_waits_for_call_switch_and_survives_teardown() {

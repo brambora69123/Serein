@@ -24,6 +24,25 @@ history/cache and message transports are shared. Normal-account interoperability
 unofficial and live-unverified. The offline debug check is
 `cargo run --locked -p ui --example voice_chat`.
 
+Voice & Video settings includes an optional **Double-click to join** preference, disabled by
+default. When enabled, the guild voice stage's **Join Voice** button requires a second click on
+the same channel within 500 ms; the first click only starts that bounded local window. Selecting a
+channel, opening text chat, DM call controls, answer/decline and active-call switching keep their
+existing single-click behavior. The gate runs before the normal call request, so channel
+permissions, the current-call switch confirmation, gateway/voice availability and demo guards
+remain authoritative. In offline demo mode the preference is session-local like other settings
+and never opens a microphone or network connection. The window uses the UI frame clock rather
+than sleeping, and tests inject it directly.
+
+Behavioral provenance: Equicord `src/plugins/vcDoubleClick` (`index.ts` and `README.md`) at the
+resolved public commit `0d4da19faff378b7f62fd7fd31e78499a5e03e5b` (upstream repository
+`https://github.com/Equicord/Equicord`). That licensed unit is copyright (c) 2022 Vendicated and
+contributors and is distributed under **GPL-3.0-or-later**; the repository's copy is
+`extensions/licenses/Equicord-GPL-3.0.txt`. Only the input-gating behavior was reimplemented in
+original Rust. No upstream JavaScript, Discord monkey patch, callback, account flag, settings
+protocol or unrelated native code was copied, and this native implementation remains under
+Serein's MIT/Apache-2.0 terms.
+
 The Audio menu provides saved Microphone gain and Speaker volume controls from 0% to
 200%, initially 100%. Reset levels restores both to 100%. Changes apply to the active call
 without reopening devices and survive restart/logout through device preferences. Demo edits

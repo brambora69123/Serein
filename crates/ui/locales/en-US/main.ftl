@@ -4600,7 +4600,13 @@ voice-voice-settings-content-compare-with-the-other-participants-this-code-chang
 # Context: voice_settings_content
 voice-voice-settings-content-devices-levels = Devices & levels
 # Context: voice_settings_content
+voice-voice-settings-content-double-click-to-join = Double-click to join
+# Context: voice_settings_content
+voice-voice-settings-content-double-click-to-join-description = Require a second click on the same voice channel before joining. Selecting channels and text chat stay single-click.
+# Context: voice_settings_content
 voice-voice-settings-content-install-a-voice-enabled-build-to-use-these-controls = Install a voice-enabled build to use these controls.
+# Context: voice_settings_content
+voice-voice-settings-content-joining-calls = Joining calls
 # Context: voice_settings_content
 voice-voice-settings-content-voice-privacy-code = Voice privacy code
 # Context: voice_settings_content
