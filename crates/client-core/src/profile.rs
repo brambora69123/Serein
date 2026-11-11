@@ -117,6 +117,8 @@ pub struct ProfileView {
 #[derive(Default)]
 pub struct OwnProfile {
 	pub data: Option<UserProfile>,
+	/// Verified owned options for this editor only; absent when the optional read failed.
+	pub collectibles: Option<model::OwnedCollectibles>,
 	pub loading: bool,
 	pub saving: bool,
 	pub error: Option<&'static str>,
@@ -308,6 +310,37 @@ impl State {
 			self.own_profile.error = Some("Profile changes are invalid or exceed safe limits");
 			return None;
 		}
+		let full_nitro = self.premium_type == 2;
+		let unavailable = |required: bool| required && !full_nitro;
+		let decoration_allowed = changes
+			.avatar_decoration_sku_id
+			.flatten()
+			.is_none_or(|sku| {
+				self.own_profile
+					.collectibles
+					.as_ref()
+					.and_then(|owned| owned.decoration(sku))
+					.is_some_and(|option| !unavailable(option.requires_nitro))
+			});
+		let nameplate_allowed = changes.nameplate_sku_id.flatten().is_none_or(|sku| {
+			self.own_profile
+				.collectibles
+				.as_ref()
+				.and_then(|owned| owned.nameplate(sku))
+				.is_some_and(|option| !unavailable(option.requires_nitro))
+		});
+		let effect_allowed = changes.profile_effect_id.flatten().is_none_or(|sku| {
+			self.own_profile
+				.collectibles
+				.as_ref()
+				.and_then(|owned| owned.effect(sku))
+				.is_some_and(|option| !unavailable(option.requires_nitro))
+		});
+		if !(decoration_allowed && nameplate_allowed && effect_allowed) {
+			self.own_profile.error =
+				Some("Choose a verified owned cosmetic; subscription items need active full Nitro");
+			return None;
+		}
 		let user = self.user.as_ref()?.id;
 		self.own_profile.request = self.own_profile.request.wrapping_add(1);
 		self.own_profile.saving = true;
@@ -370,7 +403,7 @@ impl State {
 		&mut self,
 		user: Id,
 		request: u64,
-		result: Result<Box<UserProfile>, Failure>,
+		result: Result<Box<model::OwnProfileData>, Failure>,
 	) {
 		if !self.own_profile_pending(user, request) {
 			return;
@@ -379,8 +412,20 @@ impl State {
 		self.own_profile.loading = false;
 		self.own_profile.saving = false;
 		match result {
-			Ok(data) if data.user.id == user && data.guild.is_none() && data.valid() => {
-				if !self.refresh_own_user(&data.user) {
+			Ok(data)
+				if data.profile.user.id == user
+					&& data.profile.guild.is_none()
+					&& data.profile.valid()
+					&& data
+						.collectibles
+						.as_ref()
+						.is_none_or(model::OwnedCollectibles::valid) =>
+			{
+				let model::OwnProfileData {
+					profile,
+					collectibles,
+				} = *data;
+				if !self.refresh_own_user(&profile.user) {
 					self.own_profile.error =
 						Some("Profile metadata exceeds safe capacity; reload required");
 					self.own_profile.reload_required = true;
@@ -393,11 +438,12 @@ impl State {
 				if self.profile.as_ref().is_some_and(|view| view.user == user) {
 					self.clear_profile();
 				}
-				self.own_profile.error = data
+				self.own_profile.error = profile
 					.limited
 					.then_some("Full profile unavailable; editing is disabled");
-				self.own_profile.reload_required = data.limited;
-				self.own_profile.data = Some(*data);
+				self.own_profile.reload_required = profile.limited;
+				self.own_profile.data = Some(profile);
+				self.own_profile.collectibles = collectibles;
 			}
 			result => {
 				self.own_profile.reload_required = true;
@@ -1014,7 +1060,12 @@ mod tests {
 			event: Event::ProfileEdited {
 				user: Id(1),
 				request: state.own_profile.request,
-				result,
+				result: result.map(|profile| {
+					Box::new(model::OwnProfileData {
+						profile: *profile,
+						collectibles: None,
+					})
+				}),
 			},
 		});
 	}
@@ -1024,6 +1075,69 @@ mod tests {
 			..Default::default()
 		}
 	}
+	fn owned_catalog(subscription: bool) -> model::OwnedCollectibles {
+		model::OwnedCollectibles {
+			decorations: vec![model::OwnedCosmetic {
+				name: "Owned ring".into(),
+				item: model::AvatarDecoration {
+					asset: "a".repeat(32),
+					sku: Id(50),
+					expires_at: None,
+				},
+				requires_nitro: subscription,
+			}],
+			..Default::default()
+		}
+	}
+	fn confirm_with_owned(state: &mut State, owned: model::OwnedCollectibles) {
+		state.apply(Envelope {
+			generation: state.generation,
+			event: Event::ProfileEdited {
+				user: Id(1),
+				request: state.own_profile.request,
+				result: Ok(Box::new(model::OwnProfileData {
+					profile: *own_data("Owned"),
+					collectibles: Some(owned),
+				})),
+			},
+		});
+	}
+	#[test]
+	fn cosmetic_writes_require_exact_owned_sku_and_subscription_entitlement() {
+		let mut state = own_state();
+		state.load_own_profile();
+		confirm_with_owned(&mut state, owned_catalog(false));
+		let decoration = || model::ProfileEdit {
+			avatar_decoration_sku_id: Some(Some(Id(50))),
+			..Default::default()
+		};
+		assert!(state.save_own_profile(decoration()).is_some());
+		confirm_with_owned(&mut state, owned_catalog(false));
+		let unknown = model::ProfileEdit {
+			avatar_decoration_sku_id: Some(Some(Id(51))),
+			..Default::default()
+		};
+		assert!(state.save_own_profile(unknown).is_none());
+		assert!(
+			state
+				.save_own_profile(model::ProfileEdit {
+					avatar_decoration_sku_id: Some(None),
+					..Default::default()
+				})
+				.is_some()
+		);
+		confirm_with_owned(&mut state, owned_catalog(true));
+		for premium in [0, 1, 3] {
+			state.premium_type = premium;
+			assert!(state.save_own_profile(decoration()).is_none());
+		}
+		state.premium_type = 2;
+		assert!(state.save_own_profile(decoration()).is_some());
+		confirm_with_owned(&mut state, owned_catalog(true));
+		state.own_profile.collectibles = None;
+		assert!(state.save_own_profile(decoration()).is_none());
+	}
+
 	#[test]
 	fn incomplete_badge_catalog_cannot_replace_account_settings() {
 		let mut state = own_state();
@@ -1101,7 +1215,10 @@ mod tests {
 				event: Event::ProfileEdited {
 					user: Id(1),
 					request,
-					result: Ok(own_data("Wrong generation")),
+					result: Ok(Box::new(model::OwnProfileData {
+						profile: *own_data("Wrong generation"),
+						collectibles: None,
+					})),
 				},
 			});
 			assert!(state.own_profile.loading);
@@ -1192,7 +1309,10 @@ mod tests {
 				event: Event::ProfileEdited {
 					user: Id(1),
 					request,
-					result: Ok(own_data("Late")),
+					result: Ok(Box::new(model::OwnProfileData {
+						profile: *own_data("Late"),
+						collectibles: None,
+					})),
 				},
 			});
 			assert!(!state.own_profile.saving && state.own_profile.reload_required);
@@ -1261,7 +1381,10 @@ mod tests {
 		let event = Event::ProfileEdited {
 			user: Id(1),
 			request: state.own_profile.request,
-			result: Ok(profile),
+			result: Ok(Box::new(model::OwnProfileData {
+				profile: *profile,
+				collectibles: None,
+			})),
 		};
 		assert!(event.bytes() >= bytes + size_of::<Event>());
 		state.apply(Envelope {

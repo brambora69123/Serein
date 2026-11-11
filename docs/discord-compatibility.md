@@ -15,6 +15,42 @@ no message text is sent by that lookup. It does not access game processes, accou
 credentials or the microphone. Synthetic tests verify insertion, parsing and layout
 semantics only.
 
+## Account standing (Safety Hub) — November 9, 2026
+
+`GET /safety-hub/@me` is documented by
+[Userdoccers](https://docs.discord.food/resources/safety-hub) as the current user's Safety
+Hub. Serein uses the normal signed-in session and never a bot token. This is **unofficial
+and unverified**: the source is community documentation, not Discord's public bot API, and
+no live normal-account request was made while implementing this read. Discord may gate,
+change or remove the route.
+
+- **Explicit read.** Data & Privacy offers a clearly labelled read-only Account standing
+  panel. Opening the page sends nothing; the button starts one request, and a second
+  request cannot overlap the first. Closing the panel does not poll. Disconnecting,
+  resyncing or ending the session clears the answer and rejects an in-flight response
+  from an older request or generation.
+- **Standing.** Documented `account_standing.state` values are typed: 100 All Good,
+  200 Limited, 300 Very limited, 400 At risk and 500 Suspended. Missing or unknown standing
+  is **Unavailable**; malformed, oversized and failed responses retain a specific error instead
+  of pretending that standing was read. None of these states becomes All Good. In particular, an
+  oversized response does not claim that its HTTP request stopped the wider connected session.
+  Serein does not infer standing from flags, DMs, profile fields or local state.
+- **Classifications.** Serein retains at most 16 classifications: id, raw classification
+  type, description, HTTPS explainer link, up to 8 actions with up to 4 descriptions,
+  `max_expiration_time` parsed to Unix seconds, and the documented appeal status. Unknown
+  action or classification types fall back to bounded generic text. `flagged_content`,
+  message bodies and attachments are not parsed or retained. `guild_classifications`,
+  `username`, a full appeal form and the suspended-user token routes are outside this
+  read-only panel; Serein does not submit appeals or age verification.
+- **Bounds and links.** The response is capped at 128 KiB on the wire and 32 KiB retained,
+  with control characters removed and text/link lengths enforced. Explainer links must be
+  absolute HTTPS URLs without userinfo. They use the existing external-link handling, including
+  destination confirmation for external hosts; recognized Discord-owned HTTPS links can open
+  directly under that shared policy. Discord does not document a public Safety Hub web URL, so
+  the panel links its official
+  [warning-system support article](https://support.discord.com/hc/articles/18210965981847)
+  instead.
+
 ## Profile badges, badge directory and badge settings — October 12, 2026
 
 Newer badges include Account Age, Streaming, Game Time and Game Variety. They are tiered
@@ -141,10 +177,11 @@ establish it.
   layers over it. The popout keeps the overflow on screen.
 
 Unknown palettes, layer kinds, anchors, malformed values and expired items are dropped
-without rejecting the user, member row or profile. Cosmetic editing is not supported. All
-five are opt-in: they stay hidden, unrequested and without catalog reads until enabled in
-Settings › Appearance › Profile cosmetics. This is a local display choice; nothing is sent
-to Discord.
+without rejecting the user, member row or profile. Editing is limited to verified owned
+avatar decorations, nameplates and profile effects in the global own-profile editor; frame
+selection remains unavailable. All five display choices are opt-in: they stay hidden,
+unrequested and without catalog reads until enabled in Settings › Appearance › Profile
+cosmetics. These local visibility preferences do not equip or remove anything on Discord.
 
 ## Guild voice moderation — October 8, 2026
 
@@ -725,10 +762,33 @@ accounts see a disabled explanatory control. This is a UI hint, never an entitle
 and Discord's response remains authoritative. Profile-frame editing is not exposed until its
 mutation field is supported by evidence.
 
-Only deliberately changed fields are sent, including explicit null clears, in one account-profile
-write rather than a partly applied split save. Failures remain visible and uncertain saves require
-reload; no automatic write retry occurs. Readback confirms requested fields, including added or
-removed images. Geometric validation keeps group icons separate from profile images: avatar crops
+Only deliberately changed account fields are sent, including explicit null clears, in one
+`PATCH /users/@me`. Avatar decorations and nameplates use its documented unofficial
+`avatar_decoration_sku_id` and `nameplate_sku_id` fields. A changed profile effect then uses
+`profile_effect_id` on `PATCH /users/@me/profile`. These are ordered writes, not a cross-route
+atomic operation; an effect-only edit does not send an empty account PATCH. Failures remain
+visible and uncertain saves require reload; no automatic write retry occurs. Readback confirms
+every requested field, including all three cosmetic SKU identities and added or removed images.
+
+The editor reads `GET /users/@me/collectibles-purchases` with its profile, bounded to 512 KiB,
+32 products, eight items per product and 48 supported session-only options. Invalid, expired,
+unknown and unavailable entities cannot be selected; a valid empty list gives an explicit empty
+state, while an unavailable catalog leaves other profile fields editable and offers a reload.
+Purchase type 7 (`SUBSCRIPTION`) requires session-reported full Nitro (type 2). Ordinary,
+promotional, gifted and quest purchases do not require Nitro merely because the account reports
+`premium_type`, and duplicate SKU records prefer a non-subscription entitlement. Discord remains
+authoritative. There is no inventively named frame mutation field: frame display is retained,
+while frame editing is disabled with that reason. Sources are the unofficial
+[collectibles purchase and item structures](https://docs.discord.food/resources/collectibles#list-user-purchased-collectibles),
+[user account/profile mutation fields](https://docs.discord.food/resources/user#modify-current-user),
+and Discord's official [Shop](https://support.discord.com/hc/en-us/articles/17162747936663-Shop-FAQ),
+[avatar decoration](https://support.discord.com/hc/en-us/articles/13410113109911-Avatar-Decorations-FAQ),
+[nameplate](https://support.discord.com/hc/en-us/articles/30408457944215-Nameplates-FAQ),
+[profile effect](https://support.discord.com/hc/en-us/articles/17828465914263-Profile-Effects)
+and [profile frame](https://support.discord.com/hc/en-us/articles/40775065582615-Profile-Frames-FAQ)
+guidance. The official pages distinguish owned purchases from subscription-exclusive items; they
+do not document a user-API frame field. Mock HTTP, reducer and offline UI tests cover this slice;
+no live profile or inventory was read or changed. Geometric validation keeps group icons separate from profile images: avatar crops
 are square, while banners keep their aspect ratio and must be at least 680×240 pixels. Selection
 uses the existing bounded native image worker (at most 8 MiB input), converts a single frame to an
 in-memory PNG of at most 256 KiB, and does not persist a file path or animation. Animated avatar
@@ -3264,3 +3324,29 @@ connection access tokens, or reuse Spotify playback state. Opening it therefore 
 request and Spotify's independent poller is unchanged. Synthetic list, empty, error, pending and
 rejected cases are covered by focused parser, reducer and mock-HTTP tests; no live account response
 or mutation was used. Offline screenshot page: `connections` in `profile_preview`.
+
+## Authorized applications page - November 10, 2026
+
+Settings > Authorized Apps performs one explicit, bounded
+[`GET /oauth2/tokens`](https://docs.discord.food/topics/oauth2) when the page opens. The route is
+documented by Userdoccers, not Discord's public documentation, and normal-session delivery remains
+unofficial/live-unverified. One list read is requested. At most 64 grants are retained; additional
+rows are marked as limited and dropped while the retained rows remain actionable. Authorization and application IDs, names, descriptions, icons, scopes,
+approval timestamps and policy URLs are bounded, and total retained bytes are capped. Missing or
+unrecognized scopes, approval timestamps, verification flags and policy links stay unknown rather
+than being inferred; a malformed scope array is dropped and marks the row limited. The list is
+session RAM only and is never written to SQLite or the account cache.
+
+A requested detail row uses one
+[`GET /oauth2/tokens/{id}`](https://docs.discord.food/topics/oauth2) read and accepts only a
+response whose authorization ID matches the requested row. Deauthorization is per specific
+application and requires an explicit confirmation dialog. It uses one
+[`DELETE /oauth2/tokens/{id}`](https://docs.discord.food/topics/oauth2) attempt followed by one
+bounded list refetch; success is shown only when the refreshed list no longer contains that
+authorization. A failed, rejected or unconfirmed write leaves the row in place, and an ambiguous
+write is not retried until the user refreshes the list. The page does not read or persist access or
+refresh tokens, call `/oauth2/token` revocation, use client credentials, intercept callbacks, scrape
+the official client, or reuse Connections or Spotify state. Synthetic list, detail, empty, error,
+search, pending, rejected and ambiguous cases are covered by focused parser, reducer and mock-HTTP
+tests; no live account response or mutation was used. Offline preview page: `authorized apps`
+in `profile_preview` (`--demo-settings=authorized apps`).

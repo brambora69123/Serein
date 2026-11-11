@@ -2,6 +2,7 @@
 pub mod application_commands;
 pub mod archives;
 pub mod auth;
+pub mod authorized_apps;
 pub mod captcha;
 pub mod channel_actions;
 pub mod connections;
@@ -33,6 +34,7 @@ pub mod profile;
 pub mod reactions;
 pub mod read_state;
 mod replies;
+pub mod safety_hub;
 pub use replies::{HistoryNavigation, LinkResolution, ParkedReplies, Reply, ReplyDeletions};
 pub mod group_actions;
 pub mod onboarding;
@@ -102,6 +104,20 @@ pub enum Command {
 		kind: String,
 		id: String,
 		visible: bool,
+		request: u64,
+	},
+	/// One explicitly opened current-account OAuth2 authorization list.
+	AuthorizedApps {
+		request: u64,
+	},
+	/// One bounded detail read for a listed authorization.
+	AuthorizedAppDetail {
+		id: String,
+		request: u64,
+	},
+	/// One explicit deauthorization; the returned page is the confirmation refetch.
+	DeauthorizeAuthorizedApp {
+		id: String,
 		request: u64,
 	},
 	ChannelAction {
@@ -283,6 +299,10 @@ pub enum Command {
 		user: Id,
 		request: u64,
 		changes: Option<model::ProfileEdit>,
+	},
+	/// One explicit read-only account standing request; never polled.
+	SafetyHub {
+		request: u64,
 	},
 	Voice(voice::Command),
 	Members {
@@ -614,7 +634,7 @@ pub enum Event {
 	ProfileEdited {
 		user: Id,
 		request: u64,
-		result: Result<Box<UserProfile>, auth::Failure>,
+		result: Result<Box<OwnProfileData>, auth::Failure>,
 	},
 	Connections {
 		request: u64,
@@ -623,6 +643,22 @@ pub enum Event {
 	ConnectionVisibility {
 		request: u64,
 		result: Result<model::connections::Connection, auth::Failure>,
+	},
+	SafetyHub {
+		request: u64,
+		result: Result<model::safety_hub::Snapshot, auth::Failure>,
+	},
+	AuthorizedApps {
+		request: u64,
+		result: Result<model::authorized_apps::AuthorizedAppsPage, auth::Failure>,
+	},
+	AuthorizedAppDetail {
+		request: u64,
+		result: Result<model::authorized_apps::AuthorizedAppGrant, auth::Failure>,
+	},
+	AuthorizedAppDeauthorized {
+		request: u64,
+		result: Result<model::authorized_apps::AuthorizedAppsPage, auth::Failure>,
 	},
 	Voice(voice::Event),
 	ChannelCreated(Channel),
@@ -846,6 +882,8 @@ pub struct State {
 	pub own_profile: profile::OwnProfile,
 	pub badge_editor: profile::BadgeEditor,
 	pub connections: connections::Connections,
+	pub safety_hub: safety_hub::View,
+	pub authorized_apps: authorized_apps::AuthorizedApps,
 	pub invites: invites::Cache,
 	pub invite_join: invites::Join,
 	pub guild_creation: guild_creation::Creation,
@@ -1088,6 +1126,8 @@ impl Default for State {
 			own_profile: Default::default(),
 			badge_editor: Default::default(),
 			connections: Default::default(),
+			safety_hub: Default::default(),
+			authorized_apps: Default::default(),
 			invites: Default::default(),
 			invite_join: Default::default(),
 			guild_creation: Default::default(),
@@ -2512,6 +2552,10 @@ impl State {
 			);
 			return;
 		}
+		if let Command::SafetyHub { request } = command {
+			self.reject_safety_hub(request);
+			return;
+		}
 		if matches!(command, Command::GuildFolders(_)) {
 			self.apply_guild_folders(Err(auth::Failure::ProtocolAt(
 				"Server organization was not queued; try again",
@@ -2653,6 +2697,18 @@ impl State {
 		}
 		if let Command::SetConnectionVisibility { request, .. } = command {
 			self.apply_connection_visibility(request, Err(auth::Failure::Capacity));
+			return;
+		}
+		if let Command::AuthorizedApps { request } = command {
+			self.apply_authorized_apps(request, Err(auth::Failure::Capacity));
+			return;
+		}
+		if let Command::AuthorizedAppDetail { request, .. } = command {
+			self.apply_authorized_app_detail(request, Err(auth::Failure::Capacity));
+			return;
+		}
+		if let Command::DeauthorizeAuthorizedApp { request, .. } = command {
+			self.apply_authorized_app_deauthorized(request, Err(auth::Failure::Capacity));
 			return;
 		}
 		if let Command::GifFavorites { request, .. } = command {
@@ -3008,6 +3064,8 @@ impl State {
 			self.invalidate_messaging_permissions(None);
 			self.interrupt_own_profile();
 			self.interrupt_connections();
+			self.interrupt_safety_hub();
+			self.interrupt_authorized_apps();
 		}
 		if let Event::Typing(signal) = &envelope.event {
 			self.observe_typing_at(
@@ -3489,6 +3547,22 @@ impl State {
 			}
 			Event::ConnectionVisibility { request, result } => {
 				self.apply_connection_visibility(request, result);
+				Ok(())
+			}
+			Event::SafetyHub { request, result } => {
+				self.apply_safety_hub(request, result);
+				Ok(())
+			}
+			Event::AuthorizedApps { request, result } => {
+				self.apply_authorized_apps(request, result);
+				Ok(())
+			}
+			Event::AuthorizedAppDetail { request, result } => {
+				self.apply_authorized_app_detail(request, result);
+				Ok(())
+			}
+			Event::AuthorizedAppDeauthorized { request, result } => {
+				self.apply_authorized_app_deauthorized(request, result);
 				Ok(())
 			}
 
@@ -4523,6 +4597,7 @@ impl State {
 				self.cancel_guild_creation();
 				self.read_state.cancel();
 				self.clear_profile();
+				self.disconnect_safety_hub();
 				// The voice socket is independent and a RESUME replays roster changes, so the call,
 				// roster and known DM calls all stay. Only a fresh READY invalidates the voice state.
 				self.voice.incoming = None;
@@ -4560,6 +4635,7 @@ impl State {
 				self.read_state.cancel();
 				self.clear_profile();
 				self.profile_cache.clear();
+				self.disconnect_safety_hub();
 				self.disconnect_voice(
 					"Discord session or permissions changed; rejoin after refreshing",
 				);
@@ -4771,6 +4847,8 @@ impl State {
 			self.interrupt_own_profile();
 			self.interrupt_badge_settings();
 			self.interrupt_connections();
+			self.interrupt_safety_hub();
+			self.interrupt_authorized_apps();
 			self.local_game_activity = Default::default();
 			self.cancel_message_actions();
 			if self.folders_pending {
@@ -5068,13 +5146,24 @@ impl Event {
 				Self::Invite { code, result } => {
 					code.capacity() + result.as_ref().map_or(0, |embed| embed.bytes())
 				}
-				Self::Profile { result, .. } | Self::ProfileEdited { result, .. } => {
-					result.as_ref().map_or(0, |p| p.bytes())
+				Self::Profile { result, .. } => result.as_ref().map_or(0, |p| p.bytes()),
+				Self::ProfileEdited { result, .. } => {
+					result.as_ref().map_or(0, |data| data.bytes())
 				}
 				Self::StreamPreview { result, .. } => result.as_ref().map_or(0, String::capacity),
 				Self::BadgeSettings { result, .. } => result
 					.as_ref()
 					.map_or(0, |s| (s.order.capacity() + s.hidden.capacity()) * 4),
+				Self::SafetyHub { result, .. } => result
+					.as_ref()
+					.map_or(0, model::safety_hub::Snapshot::bytes),
+				Self::AuthorizedApps { result, .. }
+				| Self::AuthorizedAppDeauthorized { result, .. } => result
+					.as_ref()
+					.map_or(0, model::authorized_apps::AuthorizedAppsPage::bytes),
+				Self::AuthorizedAppDetail { result, .. } => result
+					.as_ref()
+					.map_or(0, model::authorized_apps::AuthorizedAppGrant::bytes),
 				Self::Voice(event) => event.bytes(),
 				Self::Permissions(event) => event.bytes(),
 				Self::GuildEmojis { emojis, .. } => custom_emoji_bytes(emojis),

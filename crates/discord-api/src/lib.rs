@@ -1,6 +1,7 @@
 // Origin-fixed REST adapter. No cookies, redirects, logging, persistence or bot SDK.
 mod activity_sharing;
 mod archives;
+mod authorized_apps;
 mod badges;
 mod channel_actions;
 mod collectibles;
@@ -22,6 +23,7 @@ pub mod proxy;
 #[cfg(test)]
 mod proxy_tests;
 pub mod rpc;
+mod safety_hub;
 mod server_actions;
 mod server_admin;
 mod server_audit_log;
@@ -1287,6 +1289,18 @@ impl DiscordApi {
 				request,
 				result: self.set_connection_visibility(&kind, &id, visible).await,
 			},
+			Command::AuthorizedApps { request } => Event::AuthorizedApps {
+				request,
+				result: self.authorized_apps().await,
+			},
+			Command::AuthorizedAppDetail { id, request } => Event::AuthorizedAppDetail {
+				request,
+				result: self.authorized_app(&id).await,
+			},
+			Command::DeauthorizeAuthorizedApp { id, request } => Event::AuthorizedAppDeauthorized {
+				request,
+				result: self.deauthorize_authorized_app(&id).await,
+			},
 			Command::GifFavorites { request, change } => {
 				let (result, frequent_emoji) = match self.gif_favorites(change).await {
 					Ok((gifs, emoji)) => (Ok(gifs), emoji),
@@ -1601,6 +1615,10 @@ impl DiscordApi {
 			Command::BadgeSettings { request, settings } => Event::BadgeSettings {
 				request,
 				result: self.save_badge_settings(settings).await,
+			},
+			Command::SafetyHub { request } => Event::SafetyHub {
+				request,
+				result: self.safety_hub().await,
 			},
 			Command::StreamPreview {
 				guild,

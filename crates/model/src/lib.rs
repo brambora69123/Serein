@@ -1,11 +1,13 @@
 //! UI-neutral session entities. No filesystem or network dependencies.
 pub mod account;
 pub mod application_commands;
+pub mod authorized_apps;
 pub mod connections;
 mod image_sharing;
 pub mod polls;
 pub mod public_upload;
 pub mod registered_games;
+pub mod safety_hub;
 pub use image_sharing::ImageShare;
 pub mod archives;
 pub mod channel_display;

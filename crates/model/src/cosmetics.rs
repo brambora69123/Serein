@@ -65,6 +65,99 @@ impl CosmeticPreferences {
 	};
 }
 
+/// This route is read only while the global profile editor is open. It is never persisted.
+pub const MAX_OWNED_COLLECTIBLES: usize = 48;
+pub const MAX_OWNED_COLLECTIBLES_BYTES: usize = 512 * 1024;
+
+/// One verified purchase entry. Subscription-origin items retain their own Nitro requirement;
+/// ordinary, gifted, promotional and quest purchases do not infer one from the account.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct OwnedCosmetic<T> {
+	pub name: String,
+	pub item: T,
+	pub requires_nitro: bool,
+}
+impl<T> OwnedCosmetic<T> {
+	fn valid_name(&self) -> bool {
+		!self.name.is_empty() && label_bytes(&self.name)
+	}
+}
+
+/// Bounded owned options for the three supported editor fields. Frames are deliberately absent:
+/// ownership may be listed, but no supported profile-frame mutation field has been verified.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct OwnedCollectibles {
+	pub decorations: Vec<OwnedCosmetic<AvatarDecoration>>,
+	pub nameplates: Vec<OwnedCosmetic<Nameplate>>,
+	pub effects: Vec<OwnedCosmetic<ProfileEffect>>,
+	/// Some purchasable or unsupported entries were omitted; known entries remain authoritative.
+	pub limited: bool,
+}
+impl OwnedCollectibles {
+	pub fn decoration(&self, sku: Id) -> Option<&OwnedCosmetic<AvatarDecoration>> {
+		self.decorations
+			.iter()
+			.find(|option| option.item.sku == sku)
+	}
+	pub fn nameplate(&self, sku: Id) -> Option<&OwnedCosmetic<Nameplate>> {
+		self.nameplates.iter().find(|option| option.item.sku == sku)
+	}
+	pub fn effect(&self, sku: Id) -> Option<&OwnedCosmetic<ProfileEffect>> {
+		self.effects.iter().find(|option| option.item.sku == sku)
+	}
+	fn unique<T>(options: &[OwnedCosmetic<T>], sku: impl Fn(&T) -> Id) -> bool {
+		let mut ids: Vec<Id> = options.iter().map(|option| sku(&option.item)).collect();
+		ids.sort_unstable();
+		ids.dedup();
+		ids.len() == options.len()
+	}
+	pub fn bytes(&self) -> usize {
+		size_of::<Self>()
+			+ self.decorations.capacity() * size_of::<OwnedCosmetic<AvatarDecoration>>()
+			+ self
+				.decorations
+				.iter()
+				.map(|option| option.name.capacity() + option.item.asset.capacity())
+				.sum::<usize>()
+			+ self.nameplates.capacity() * size_of::<OwnedCosmetic<Nameplate>>()
+			+ self
+				.nameplates
+				.iter()
+				.map(|option| {
+					option.name.capacity()
+						+ option.item.asset.capacity()
+						+ option.item.label.capacity()
+				})
+				.sum::<usize>()
+			+ self.effects.capacity() * size_of::<OwnedCosmetic<ProfileEffect>>()
+			+ self
+				.effects
+				.iter()
+				.map(|option| option.name.capacity() + option.item.bytes())
+				.sum::<usize>()
+	}
+	pub fn valid(&self) -> bool {
+		let count = self.decorations.len() + self.nameplates.len() + self.effects.len();
+		count <= MAX_OWNED_COLLECTIBLES
+			&& self.bytes() <= MAX_OWNED_COLLECTIBLES_BYTES
+			&& Self::unique(&self.decorations, |item| item.sku)
+			&& Self::unique(&self.nameplates, |item| item.sku)
+			&& Self::unique(&self.effects, |item| item.sku)
+			&& self
+				.decorations
+				.iter()
+				.all(|option| option.valid_name() && option.item.sku.0 != 0 && option.item.valid())
+			&& self
+				.nameplates
+				.iter()
+				.all(|option| option.valid_name() && option.item.valid())
+			&& self
+				.effects
+				.iter()
+				.all(|option| option.valid_name() && option.item.valid())
+	}
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AvatarDecoration {
 	/// Preset hash; `a_` marks an animated preset.

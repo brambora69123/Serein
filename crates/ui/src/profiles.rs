@@ -4655,7 +4655,7 @@ fn effect_clock(
 }
 
 /// The equipped profile frame and effect around and over a finished card.
-fn paint_collectibles(
+pub(crate) fn paint_collectibles(
 	ui: &mut egui::Ui,
 	avatars: &mut Avatars,
 	data: &model::UserProfile,
@@ -4805,7 +4805,7 @@ pub fn synthetic(user: &User, guild: Option<Id>) -> model::UserProfile {
 
 /// Locally drawn sparkles on the official 450 x 880 effect canvas; never service artwork.
 #[cfg(any(test, feature = "demo"))]
-fn synthetic_effect() -> model::ProfileEffect {
+pub(crate) fn synthetic_effect() -> model::ProfileEffect {
 	let asset = |c: char| model::EffectAsset {
 		shop: false,
 		hash: c.to_string().repeat(64),
