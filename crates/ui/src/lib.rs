@@ -25,6 +25,7 @@ mod categories;
 pub use categories::debug_thread_navigation_check;
 #[cfg(feature = "demo")]
 pub use timeline::debug_unread_navigation_check;
+mod authorized_apps;
 mod channel_marks;
 mod channel_menu;
 mod channel_permissions;
@@ -93,6 +94,95 @@ mod timestamp_picker;
 pub fn synthetic_own_profile(user: &model::User) -> model::UserProfile {
 	profiles::synthetic(user, None)
 }
+
+/// Small synthetic ownership catalog for the same offline profile, never a Shop substitute.
+#[cfg(any(test, feature = "demo"))]
+pub fn synthetic_owned_collectibles() -> model::OwnedCollectibles {
+	model::OwnedCollectibles {
+		decorations: vec![
+			model::OwnedCosmetic {
+				name: "Synthetic orbit".into(),
+				item: model::AvatarDecoration {
+					asset: "d".repeat(32),
+					sku: model::Id(9101),
+					expires_at: None,
+				},
+				requires_nitro: false,
+			},
+			model::OwnedCosmetic {
+				name: "Synthetic member ring".into(),
+				item: model::AvatarDecoration {
+					asset: "e".repeat(32),
+					sku: model::Id(9103),
+					expires_at: None,
+				},
+				requires_nitro: true,
+			},
+		],
+		nameplates: vec![model::OwnedCosmetic {
+			name: "Synthetic aurora".into(),
+			item: model::Nameplate {
+				asset: "nameplates/synthetic/aurora/".into(),
+				sku: model::Id(9102),
+				label: "Synthetic aurora nameplate".into(),
+				palette: model::NameplatePalette::Violet,
+				expires_at: None,
+			},
+			requires_nitro: false,
+		}],
+		effects: vec![model::OwnedCosmetic {
+			name: "Synthetic sparkles".into(),
+			item: profiles::synthetic_effect(),
+			requires_nitro: false,
+		}],
+		limited: false,
+	}
+}
+
+/// Apply an admitted change to the offline snapshot, including the account/banner fields and
+/// each owned cosmetic route's resulting readback. No transport or credential storage exists.
+#[cfg(any(test, feature = "demo"))]
+pub fn synthetic_apply_profile_edit(
+	profile: &mut model::UserProfile,
+	changes: model::ProfileEdit,
+	owned: &model::OwnedCollectibles,
+) {
+	if let Some(name) = changes.global_name {
+		profile.user.name = name.clone().unwrap_or_else(|| profile.username.clone());
+		profile.global_name = name;
+	}
+	if let Some(bio) = changes.bio {
+		profile.bio = bio;
+	}
+	if let Some(pronouns) = changes.pronouns {
+		profile.pronouns = pronouns;
+	}
+	if let Some(color) = changes.accent_color {
+		profile.accent_color = color;
+	}
+	if let Some(avatar) = changes.avatar {
+		profile.user.avatar = avatar.map(|_| "0123456789abcdef0123456789abcdef".to_owned());
+	}
+	if let Some(banner) = changes.banner {
+		profile.banner = banner.map(|_| "1123456789abcdef0123456789abcdef".to_owned());
+	}
+	if let Some(sku) = changes.avatar_decoration_sku_id {
+		profile.user.cosmetics.get_or_insert_default().decoration = sku
+			.and_then(|sku| owned.decoration(sku))
+			.map(|option| option.item.clone());
+	}
+	if let Some(sku) = changes.nameplate_sku_id {
+		profile.user.cosmetics.get_or_insert_default().nameplate = sku
+			.and_then(|sku| owned.nameplate(sku))
+			.map(|option| option.item.clone());
+	}
+	if let Some(sku) = changes.profile_effect_id {
+		profile.effect_sku = sku;
+		profile.effect = sku
+			.and_then(|sku| owned.effect(sku))
+			.map(|option| Box::new(option.item.clone()));
+	}
+}
 mod contact_editor;
 pub mod dialog;
 mod join_server;
@@ -106,6 +196,7 @@ mod reactions;
 mod reading;
 mod registered_games;
 pub(crate) mod rtl;
+mod safety_hub;
 pub mod screen;
 pub mod scroll;
 mod search;

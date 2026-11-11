@@ -10,6 +10,7 @@ section-customization = Customization
 page-account = My Account
 page-profile = Profile
 page-connections = Connections
+page-authorized-apps = Authorized Apps
 page-general = General
 page-appearance = Appearance
 page-chat = Chat
@@ -25,6 +26,7 @@ page-themes = Themes
 description-account = The Discord account signed in on this device.
 description-profile = Choose how you appear across Discord.
 description-connections = View the third-party accounts linked to this account.
+description-authorized-apps = Review applications authorized to access this account.
 description-general = Startup, window and graphics behavior on this device.
 description-appearance = Theme, colours, window effects and layout.
 description-chat = How messages, media, links and scrolling behave.
@@ -2115,6 +2117,25 @@ profile-edit-form-undo = Undo
 profile-edit-form-use-default = Use default
 # Context: form
 profile-edit-form-your-picture-will-be-removed-when-you-save = Your picture will be removed when you save.
+
+profile-edit-form-owned-cosmetics = Owned cosmetics
+profile-edit-form-owned-cosmetics-unavailable = Owned items could not be loaded. Other profile fields still save; reload to verify cosmetic ownership.
+profile-edit-form-reload-owned-cosmetics = Reload owned items
+profile-edit-form-avatar-decoration = Avatar decoration
+profile-edit-form-owned-avatar-decoration = Verified owned decorations only. Clear is always available.
+profile-edit-form-no-owned-avatar-decorations = No owned decorations
+profile-edit-form-nameplate = Nameplate
+profile-edit-form-owned-nameplate = Verified owned nameplates only. Clear is always available.
+profile-edit-form-no-owned-nameplates = No owned nameplates
+profile-edit-form-profile-effect = Profile effect
+profile-edit-form-owned-profile-effect = Owned effects save in a second request after account changes; any save failure requires reload.
+profile-edit-form-no-owned-profile-effects = No owned profile effects
+profile-edit-form-owned-cosmetics-partial = Only verified owned entries are shown. Unsupported or incomplete entries cannot be selected.
+profile-edit-form-profile-frame = Profile frame
+profile-edit-form-profile-frame-unavailable = Display only. No supported profile frame mutation field has been verified.
+profile-edit-form-none = None
+profile-edit-form-requires-full-nitro = requires active full Nitro
+profile-edit-form-equipped-cosmetic-not-owned = The equipped SKU is not in verified owned purchases. You can clear it, but cannot select it as a new value.
 # Context: preview
 profile-edit-preview-about-me = About Me
 # Context: preview
@@ -3654,6 +3675,50 @@ settings-storage-page-your-privacy = Your privacy
 settings-storage-page-saved-login = Saved login
 settings-storage-page-plaintext-login = Save login in plaintext without a keyring
 settings-storage-page-plaintext-login-description = Used only when no OS keyring (GNOME Keyring, KWallet, Keychain or Credential Manager) works. The token is stored unencrypted in a private file in Serein's data folder, where anyone with access to your user account can read it. Turning this off deletes those files.
+# Context: safety_hub
+settings-safety-hub-title = Account standing (read-only, unofficial)
+# Context: safety_hub
+settings-safety-hub-read-only-unofficial = Read-only. After you choose Check, Serein requests Discord's Safety Hub for this signed-in account once. This is an unofficial, unverified normal-session behavior; Discord may change or remove it. Serein never infers standing from flags, DMs or your profile.
+# Context: safety_hub
+settings-safety-hub-standing = Standing
+# Context: safety_hub
+settings-safety-hub-check = Check account standing
+# Context: safety_hub
+settings-safety-hub-loading = Checking…
+# Context: safety_hub
+settings-safety-hub-not-checked = Not checked
+# Context: safety_hub
+settings-safety-hub-unavailable = Unavailable
+# Context: safety_hub
+settings-safety-hub-all-good = All Good
+# Context: safety_hub
+settings-safety-hub-limited = Limited
+# Context: safety_hub
+settings-safety-hub-very-limited = Very limited
+# Context: safety_hub
+settings-safety-hub-at-risk = At risk
+# Context: safety_hub
+settings-safety-hub-suspended = Suspended
+# Context: safety_hub
+settings-safety-hub-classification = Violation recorded (type { $type })
+# Context: safety_hub
+settings-safety-hub-action = Action recorded (type { $type })
+# Context: safety_hub
+settings-safety-hub-expires = Expires { $time }
+# Context: safety_hub
+settings-safety-hub-appeal-pending = Appeal under review
+# Context: safety_hub
+settings-safety-hub-appeal-upheld = Appeal denied; the classification remains
+# Context: safety_hub
+settings-safety-hub-appeal-invalidated = Appeal accepted; the classification was removed
+# Context: safety_hub
+settings-safety-hub-appeal-eligible = Discord reports that an appeal may be available in its own client.
+# Context: safety_hub
+settings-safety-hub-dsa-eligible = Discord reports DSA appeal eligibility.
+# Context: safety_hub
+settings-safety-hub-open-explanation = Open explanation
+# Context: safety_hub
+settings-safety-hub-official-info = Discord's warning system and account standing (official support article)
 # Context: cosmetic_settings
 settings-cosmetics = Profile cosmetics
 # Context: cosmetic_settings
@@ -5394,3 +5459,39 @@ settings-connections-only-you = Only you
 settings-connections-unknown = Unknown
 settings-connections-on = On
 settings-connections-off = Off
+settings-connections-authorized-apps = Manage authorized apps
+
+## Settings > Authorized Apps
+settings-authorized-apps-unofficial = Unofficial normal-session route · read-only list; deauthorization is confirmed and live-unverified.
+settings-authorized-apps-search = Search authorized apps
+settings-authorized-apps-loading = Loading authorized apps…
+settings-authorized-apps-try-again = Try again
+settings-authorized-apps-unavailable = Authorized apps are unavailable right now.
+settings-authorized-apps-empty = No authorized apps
+settings-authorized-apps-empty-description = Applications you authorize will appear here.
+settings-authorized-apps-no-search-results = No authorized apps match your search.
+settings-authorized-apps-limited = Some authorization details were too large and are unavailable. Deauthorization is disabled for those rows.
+settings-authorized-apps-scopes = Scopes
+settings-authorized-apps-scopes-unknown = Scopes unavailable
+settings-authorized-apps-no-scopes = No scopes reported
+settings-authorized-apps-authorized = Authorized
+settings-authorized-apps-unknown = Unknown
+settings-authorized-apps-field-unavailable = Some details for this authorization are unavailable and are shown as unknown.
+settings-authorized-apps-details = Details
+settings-authorized-apps-details-loading = Loading details…
+settings-authorized-apps-authorization-id = Authorization ID
+settings-authorized-apps-terms = Terms of Service
+settings-authorized-apps-privacy = Privacy Policy
+settings-authorized-apps-no-policy-links = No policy links reported.
+settings-authorized-apps-deauthorize = Deauthorize
+settings-authorized-apps-deauthorize-unavailable = Deauthorization is unavailable for this authorization.
+settings-authorized-apps-deauthorizing = Deauthorizing…
+settings-authorized-apps-deauthorized = Application deauthorized
+settings-authorized-apps-refresh = Refresh list
+settings-authorized-apps-refresh-before-retry = Refresh the list before retrying; the previous attempt may have reached Discord.
+settings-authorized-apps-confirm-title = Deauthorize application?
+settings-authorized-apps-confirm-message = This revokes this application's access to your account:
+settings-authorized-apps-cancel = Cancel
+settings-authorized-apps-verified = Verified
+settings-authorized-apps-not-verified = Not verified
+settings-authorized-apps-verification-unknown = Verification unknown

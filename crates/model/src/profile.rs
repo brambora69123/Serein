@@ -28,6 +28,12 @@ pub struct ProfileEdit {
 	pub avatar: Option<Option<String>>,
 	/// New banner as a PNG data URI; nested `None` removes the current banner.
 	pub banner: Option<Option<String>>,
+	/// Owned SKU to equip; nested `None` removes the current avatar decoration.
+	pub avatar_decoration_sku_id: Option<Option<Id>>,
+	/// Owned SKU to equip; nested `None` removes the current nameplate.
+	pub nameplate_sku_id: Option<Option<Id>>,
+	/// Owned SKU to equip on the profile route; nested `None` removes the effect.
+	pub profile_effect_id: Option<Option<Id>>,
 }
 impl ProfileEdit {
 	fn text_bytes(&self) -> usize {
@@ -74,6 +80,13 @@ impl ProfileEdit {
 				.accent_color
 				.flatten()
 				.is_none_or(|color| color <= 0xff_ffff)
+			&& [
+				self.avatar_decoration_sku_id,
+				self.nameplate_sku_id,
+				self.profile_effect_id,
+			]
+			.into_iter()
+			.all(|sku| sku.flatten().is_none_or(|sku| sku.0 != 0))
 	}
 }
 
@@ -111,6 +124,9 @@ mod edit_tests {
 			accent_color: Some(Some(0xff_ffff)),
 			avatar: Some(Some("data:image/png;base64,iVBORw0KGgo=".into())),
 			banner: Some(Some("data:image/png;base64,iVBORw0KGgo=".into())),
+			avatar_decoration_sku_id: Some(Some(Id(1))),
+			nameplate_sku_id: Some(None),
+			profile_effect_id: Some(Some(Id(2))),
 		};
 		assert!(edit.valid());
 		edit.avatar = Some(Some("data:image/jpeg;base64,/9j/".into()));
@@ -132,6 +148,15 @@ mod edit_tests {
 		edit.pronouns = Some(String::new());
 		edit.accent_color = Some(None);
 		assert!(edit.valid());
+		edit.avatar_decoration_sku_id = Some(Some(Id(0)));
+		assert!(!edit.valid());
+		edit.avatar_decoration_sku_id = None;
+		edit.nameplate_sku_id = Some(Some(Id(0)));
+		assert!(!edit.valid());
+		edit.nameplate_sku_id = None;
+		edit.profile_effect_id = Some(Some(Id(0)));
+		assert!(!edit.valid());
+		edit.profile_effect_id = None;
 		edit.global_name = Some(Some(" ".into()));
 		assert!(!edit.valid());
 		edit.global_name = None;
@@ -176,6 +201,24 @@ pub struct UserProfile {
 	/// The account's Profile Privacy hides details from this viewer; the card says so.
 	pub private: bool,
 }
+/// One global-profile editor snapshot. `None` means the optional owned-inventory read failed;
+/// ordinary profile fields remain editable, while setting an unverified SKU stays disabled.
+#[derive(Clone)]
+pub struct OwnProfileData {
+	pub profile: UserProfile,
+	pub collectibles: Option<crate::OwnedCollectibles>,
+}
+impl OwnProfileData {
+	pub fn bytes(&self) -> usize {
+		size_of::<Self>()
+			+ self.profile.bytes()
+			+ self
+				.collectibles
+				.as_ref()
+				.map_or(0, crate::OwnedCollectibles::bytes)
+	}
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ProfileGameWidgetKind {
 	Favorite,

@@ -54,6 +54,8 @@ mod registered_games;
 mod rendering_demo;
 #[cfg(target_os = "linux")]
 mod round_corners;
+#[cfg(feature = "demo")]
+mod safety_hub_demo;
 mod screen;
 #[cfg(feature = "demo")]
 mod server_settings_demo;
@@ -2061,6 +2063,12 @@ impl Desktop {
 			state.older_exhausted = true;
 		}
 		#[cfg(feature = "demo")]
+		if demo && std::env::args().any(|arg| arg == "--demo-show-cosmetics") {
+			// Explicit fixture-only artwork preference; production stays opt-in and unchanged.
+			messaging.cosmetics = model::CosmeticPreferences::SHOWN;
+			state.profile_cosmetics = model::CosmeticPreferences::SHOWN;
+		}
+		#[cfg(feature = "demo")]
 		if demo && std::env::args().any(|arg| arg == "--demo-profile") {
 			// Presence for the fixture card comes from the same synthetic People rows.
 			let _ = state.request_members();
@@ -2106,7 +2114,10 @@ impl Desktop {
 					event: Event::ProfileEdited {
 						user,
 						request,
-						result: Ok(Box::new(profile)),
+						result: Ok(Box::new(model::OwnProfileData {
+							profile,
+							collectibles: Some(ui::synthetic_owned_collectibles()),
+						})),
 					},
 				});
 			}
@@ -3717,13 +3728,19 @@ impl Desktop {
 			let event = match command {
 				// Offline typing has no transport or synthetic state change.
 				Command::Typing { .. } => return,
-				// Synthetic connection pages are populated by the client state, never a service.
-				Command::Connections { .. } | Command::SetConnectionVisibility { .. } => return,
+				// Synthetic connection and authorization pages are populated by the client
+				// state, never a service.
+				Command::Connections { .. }
+				| Command::SetConnectionVisibility { .. }
+				| Command::AuthorizedApps { .. }
+				| Command::AuthorizedAppDetail { .. }
+				| Command::DeauthorizeAuthorizedApp { .. } => return,
 				// Offline previews confirm locally; nothing reaches the service.
 				Command::BadgeSettings { request, settings } => Event::BadgeSettings {
 					request,
 					result: Ok(settings),
 				},
+				Command::SafetyHub { request } => safety_hub_demo::execute(request),
 				Command::ApplicationCommands {
 					channel,
 					guild,
@@ -4375,27 +4392,16 @@ impl Desktop {
 								if !changes.valid() {
 									return Err(Failure::Capacity);
 								}
-								if let Some(name) = changes.global_name {
-									profile.user.name =
-										name.clone().unwrap_or_else(|| profile.username.clone());
-									profile.global_name = name;
-								}
-								if let Some(bio) = changes.bio {
-									profile.bio = bio;
-								}
-								if let Some(pronouns) = changes.pronouns {
-									profile.pronouns = pronouns;
-								}
-								if let Some(color) = changes.accent_color {
-									profile.accent_color = color;
-								}
-								if let Some(avatar) = changes.avatar {
-									// Synthetic hash: the fixture never uploads or fetches images.
-									profile.user.avatar = avatar
-										.map(|_| "0123456789abcdef0123456789abcdef".to_owned());
-								}
+								ui::synthetic_apply_profile_edit(
+									&mut profile,
+									changes,
+									&ui::synthetic_owned_collectibles(),
+								);
 							}
-							Ok(Box::new(profile))
+							Ok(Box::new(model::OwnProfileData {
+								profile,
+								collectibles: Some(ui::synthetic_owned_collectibles()),
+							}))
 						})
 						.unwrap_or(Err(Failure::Protocol));
 					Event::ProfileEdited {

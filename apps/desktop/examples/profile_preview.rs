@@ -114,6 +114,40 @@ impl eframe::App for Preview {
 				client_core::Command::ServerAction { action, request } => {
 					server_settings_demo::execute_action(&mut self.state, action, request)
 				}
+				client_core::Command::SafetyHub { request } => client_core::Event::SafetyHub {
+					request,
+					result: Ok(test_support::safety_hub::Fixture::Good.snapshot()),
+				},
+				client_core::Command::EditProfile {
+					user,
+					request,
+					changes,
+				} => {
+					let result = self
+						.state
+						.own_profile
+						.data
+						.clone()
+						.map(|mut profile| {
+							if let Some(changes) = changes {
+								ui::synthetic_apply_profile_edit(
+									&mut profile,
+									changes,
+									&ui::synthetic_owned_collectibles(),
+								);
+							}
+							Box::new(model::OwnProfileData {
+								profile,
+								collectibles: Some(ui::synthetic_owned_collectibles()),
+							})
+						})
+						.ok_or(client_core::auth::Failure::Protocol);
+					client_core::Event::ProfileEdited {
+						user,
+						request,
+						result,
+					}
+				}
 				client_core::Command::ChannelAction {
 					guild,
 					channel,
@@ -265,7 +299,10 @@ fn prime_profile(state: &mut client_core::State) {
 			event: client_core::Event::ProfileEdited {
 				user,
 				request,
-				result: Ok(Box::new(profile)),
+				result: Ok(Box::new(model::OwnProfileData {
+					profile,
+					collectibles: Some(ui::synthetic_owned_collectibles()),
+				})),
 			},
 		});
 	}
