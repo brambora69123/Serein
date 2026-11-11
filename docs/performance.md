@@ -1965,25 +1965,25 @@ Discord interoperability or subscription eligibility.
 
 ### Local blocked-message filtering — November 10, 2026
 
-The comparison uses the preceding installed profile/connections revision and source commit
-`3bf111dc`. Both use the standard voice-enabled `cargo xtask package --format dir` method on
+The comparison uses the merged account-controls executable and integrated source commit
+`b38fdbb2`. Both use the standard voice-enabled `cargo xtask package --format dir` method on
 Linux x86-64, Rust 1.99.1 and locked dependencies. The compressed tree uses sorted `linux-root`
-files, zeroed gzip timestamps and normalized uid/gid. The final gate passed **1,659 tests, 0
-failures, 14 ignored** with **2 Cargo jobs and 2 test threads**.
+files, zeroed gzip timestamps and normalized uid/gid. The final combined gate passed **1,689
+tests, 0 failures, 14 ignored** with **2 Cargo jobs and 2 test threads**.
 
-| Metric | Previously installed build | Local relationship filter | Delta |
+| Metric | Merged account build | Local relationship filter | Delta |
 | --- | ---: | ---: | ---: |
-| Executable bytes | 96,465,640 | 96,469,992 | +4,352 (+0.005%) |
-| Installed `linux-root`, 245 files each | 101,166,065 | 101,170,417 | +4,352 (+0.004%) |
-| Compressed normalized `linux-root` (`tar.gz`) bytes | 57,650,665 | 57,636,345 | −14,320 (−0.025%) |
+| Executable bytes | 96,724,968 | 96,733,416 | +8,448 (+0.009%) |
+| Installed `linux-root`, 245 files each | 101,425,393 | 101,433,841 | +8,448 (+0.008%) |
+| Compressed normalized `linux-root` (`tar.gz`) bytes | 57,739,391 | 57,740,513 | +1,122 (+0.002%) |
 
 Final executable SHA-256:
-`27533f56777a06ff8338e7826643956930844f75743d8a71f085b63f1a245be1`.
+`2bd4d9440835128cc02beef000ff97a3a47dda8f9948bb91a63f32e9c67dc546`.
 Compressed-tree SHA-256:
-`0432b50908bca91a472bc8012c23fdf11e2637adc2dc2867b73753c25babd302`.
+`964479959f9dc98b2b8e293d587574f9c9ee17ddda0a527c9ebffcf3dcfb80f7`.
 Both packaged executable paths had matching bytes, `ldd` reported no missing libraries, and the
-245-file installation tree had no broken symlinks. The smaller compressed tree is treated as
-compression noise, not an improvement. No CPU/RSS, frame-time, startup or live Discord performance
+245-file installation tree had no broken symlinks. The 0.002% compressed delta is treated as
+compressor variation, not an improvement claim. No CPU/RSS, frame-time, startup or live Discord performance
 was measured. The native settings interaction and focused filtered-row regression use synthetic
 relationships only; see [the capture guide](pr-evidence/no-blocked-messages/README.md).
 ### Account standing, authorized apps and owned profile cosmetics — November 10, 2026
