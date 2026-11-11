@@ -54,6 +54,10 @@ pub struct AppPreferences {
 	pub hide_nitro_emojis: bool,
 	/// Device-local opt-in; older saved preferences deserialize with conversion off.
 	pub convert_emoticons: bool,
+	/// Hide visible rows authored by blocked users without changing account relationships.
+	pub hide_blocked_messages: bool,
+	/// When the blocked-message filter is on, also hide rows authored by ignored users.
+	pub hide_ignored_messages: bool,
 	/// Insert a picked GIF's provider link into the composer instead of sending it at once.
 	pub gif_insert: bool,
 	/// Defaults applied when opening invite creation; the service still enforces its limits.
@@ -143,6 +147,8 @@ impl Default for AppPreferences {
 			channel_display: Default::default(),
 			hide_nitro_emojis: false,
 			convert_emoticons: false,
+			hide_blocked_messages: false,
+			hide_ignored_messages: false,
 			gif_insert: false,
 			invite_defaults: Default::default(),
 			preload_on_hover: true,
@@ -2346,6 +2352,7 @@ mod tests {
 		assert!(legacy.voice_processing.is_none());
 		assert!(legacy.voice_noise_suppression);
 		assert!(!legacy.voice_double_click_join);
+		assert!(!legacy.hide_blocked_messages && !legacy.hide_ignored_messages);
 		// Existing installs run first-run setup once, like a fresh one.
 		assert!(!legacy.setup_done);
 		// Existing serialized bindings omit the newly optional diagnostics shortcut.
@@ -2416,6 +2423,8 @@ mod tests {
 				unread_badge: false,
 				..Default::default()
 			},
+			hide_blocked_messages: true,
+			hide_ignored_messages: true,
 			voice_noise_suppression: true,
 			voice_processing: Some(model::voice_settings::VoiceProcessing::from_legacy(true)),
 			voice_muted: true,

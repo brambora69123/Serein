@@ -55,6 +55,8 @@ impl Settings {
 			channel_display: ui.channel_display.clone(),
 			hide_nitro_emojis: ui.hide_nitro_emojis,
 			convert_emoticons: ui.convert_emoticons,
+			hide_blocked_messages: ui.hide_blocked_messages,
+			hide_ignored_messages: ui.hide_ignored_messages,
 			silent_typing: ui.silent_typing.clone(),
 			prefer_friend_nickname: ui.prefer_friend_nickname,
 			gif_insert: ui.gif_insert,
@@ -120,6 +122,8 @@ impl Settings {
 		ui.channel_display = value.channel_display.clone();
 		ui.hide_nitro_emojis = value.hide_nitro_emojis;
 		ui.convert_emoticons = value.convert_emoticons;
+		ui.hide_blocked_messages = value.hide_blocked_messages;
+		ui.hide_ignored_messages = value.hide_ignored_messages;
 		ui.silent_typing = value.silent_typing.clone();
 		ui.silent_typing_locations = value.silent_typing.locations_text();
 		ui.prefer_friend_nickname = value.prefer_friend_nickname;
@@ -595,6 +599,8 @@ mod tests {
 		};
 		settings.current.prefer_friend_nickname = true;
 		settings.current.voice_double_click_join = true;
+		settings.current.hide_blocked_messages = true;
+		settings.current.hide_ignored_messages = true;
 		let mut ui = ui::MessagingUi::default();
 		settings.apply(&mut ui);
 		assert!(ui.gif_insert);
@@ -603,6 +609,7 @@ mod tests {
 		assert_eq!(ui.silent_typing_locations, "20, 10");
 		assert!(ui.prefer_friend_nickname);
 		assert!(ui.voice_double_click_join);
+		assert!(ui.hide_blocked_messages && ui.hide_ignored_messages);
 		settings.observe(&ui);
 		assert!(!settings.state.dirty);
 
@@ -617,6 +624,10 @@ mod tests {
 		assert!(!settings.current.silent_typing.enabled);
 		assert!(!settings.current.prefer_friend_nickname);
 		assert!(!settings.current.voice_double_click_join);
+		ui.hide_blocked_messages = false;
+		ui.hide_ignored_messages = false;
+		settings.observe(&ui);
+		assert!(!settings.current.hide_blocked_messages && !settings.current.hide_ignored_messages);
 		assert!(settings.state.dirty);
 	}
 

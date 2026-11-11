@@ -1963,6 +1963,29 @@ voice session was modified for these measurements; protocol deserializers and HT
 were exercised only with synthetic data and mocked servers. Those local results do not prove live
 Discord interoperability or subscription eligibility.
 
+### Local blocked-message filtering — November 10, 2026
+
+The comparison uses the merged account-controls executable and integrated source commit
+`b38fdbb2`. Both use the standard voice-enabled `cargo xtask package --format dir` method on
+Linux x86-64, Rust 1.99.1 and locked dependencies. The compressed tree uses sorted `linux-root`
+files, zeroed gzip timestamps and normalized uid/gid. The final combined gate passed **1,689
+tests, 0 failures, 14 ignored** with **2 Cargo jobs and 2 test threads**.
+
+| Metric | Merged account build | Local relationship filter | Delta |
+| --- | ---: | ---: | ---: |
+| Executable bytes | 96,724,968 | 96,733,416 | +8,448 (+0.009%) |
+| Installed `linux-root`, 245 files each | 101,425,393 | 101,433,841 | +8,448 (+0.008%) |
+| Compressed normalized `linux-root` (`tar.gz`) bytes | 57,739,391 | 57,740,513 | +1,122 (+0.002%) |
+
+Final executable SHA-256:
+`2bd4d9440835128cc02beef000ff97a3a47dda8f9948bb91a63f32e9c67dc546`.
+Compressed-tree SHA-256:
+`964479959f9dc98b2b8e293d587574f9c9ee17ddda0a527c9ebffcf3dcfb80f7`.
+Both packaged executable paths had matching bytes, `ldd` reported no missing libraries, and the
+245-file installation tree had no broken symlinks. The 0.002% compressed delta is treated as
+compressor variation, not an improvement claim. No CPU/RSS, frame-time, startup or live Discord performance
+was measured. The native settings interaction and focused filtered-row regression use synthetic
+relationships only; see [the capture guide](pr-evidence/no-blocked-messages/README.md).
 ### Account standing, authorized apps and owned profile cosmetics — November 10, 2026
 
 The comparison uses the preceding installed profile/connections revision and the feature state
