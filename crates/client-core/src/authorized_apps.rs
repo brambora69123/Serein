@@ -438,22 +438,16 @@ impl State {
 		}
 	}
 
-	/// A lost session invalidates the in-flight list, detail and any unconfirmed write.
+	/// Interrupting a session discards the visible list/detail as well as stale request IDs. A
+	/// reconnecting user must never confirm a destructive action against an earlier snapshot.
 	pub(crate) fn interrupt_authorized_apps(&mut self) {
-		if let Some(view) = self.authorized_apps.view.as_mut()
-			&& view.loading
-		{
+		if let Some(view) = self.authorized_apps.view.as_mut() {
 			view.loading = false;
 			view.request = view.request.wrapping_add(1);
-			view.error = Some("Authorized apps loading was interrupted; reconnect and reload");
+			view.page = None;
+			view.error = Some("Authorized apps were interrupted; reconnect and reload");
 		}
-		if let Some(detail) = self.authorized_apps.detail.as_mut()
-			&& detail.loading
-		{
-			detail.loading = false;
-			detail.request = detail.request.wrapping_add(1);
-			detail.error = Some("Application details were interrupted; reconnect and reload");
-		}
+		self.authorized_apps.detail = None;
 		if let Some(deauthorization) = self.authorized_apps.deauthorization.as_mut()
 			&& deauthorization.saving
 		{
@@ -776,6 +770,7 @@ mod tests {
 
 	#[test]
 	fn session_interruption_invalidates_pending_list_detail_and_write() {
+		let mut connected = state();
 		let mut state = state();
 		let Some(Command::AuthorizedApps { request }) = state.request_authorized_apps() else {
 			panic!()
@@ -787,5 +782,24 @@ mod tests {
 		assert!(state.authorized_apps.view.as_ref().unwrap().error.is_some());
 		state.apply_authorized_apps(request, Ok(page(vec![grant("Synthetic")])));
 		assert!(state.authorized_apps.view.as_ref().unwrap().page.is_none());
+
+		let Some(Command::AuthorizedApps { request }) = connected.request_authorized_apps() else {
+			panic!()
+		};
+		connected.apply_authorized_apps(request, Ok(page(vec![grant("Synthetic")])));
+		connected.apply(Envelope {
+			generation: connected.generation,
+			event: Event::Disconnected,
+		});
+		assert!(
+			connected
+				.authorized_apps
+				.view
+				.as_ref()
+				.unwrap()
+				.page
+				.is_none()
+		);
+		assert!(connected.deauthorize_authorized_app("100").is_none());
 	}
 }

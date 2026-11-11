@@ -471,12 +471,12 @@ pub fn decode_purchases(bytes: &[u8]) -> Result<OwnedCollectibles, DecodeError> 
 		return Err(DecodeError);
 	}
 	let products: Vec<Lenient<PurchaseProductDto>> = crate::decode(bytes)?;
-	if products.len() > MAX_PURCHASE_PRODUCTS {
-		return Err(DecodeError);
-	}
 	let now = model::unix_now();
-	let mut owned = OwnedCollectibles::default();
-	for product in products {
+	let mut owned = OwnedCollectibles {
+		limited: products.len() > MAX_PURCHASE_PRODUCTS,
+		..Default::default()
+	};
+	for product in products.into_iter().take(MAX_PURCHASE_PRODUCTS) {
 		let product = match product {
 			Lenient::Value(product) => product,
 			Lenient::Invalid(_) => {
@@ -924,8 +924,13 @@ mod tests {
 				.unwrap()
 				.limited
 		);
-		let many = vec![json!(null); MAX_PURCHASE_PRODUCTS + 1];
-		assert!(decode_purchases(serde_json::to_vec(&many).unwrap().as_slice()).is_err());
+		let mut many = purchases.as_array().unwrap().clone();
+		many.resize(MAX_PURCHASE_PRODUCTS + 1, json!(null));
+		let truncated = decode_purchases(serde_json::to_vec(&many).unwrap().as_slice()).unwrap();
+		assert!(truncated.valid() && truncated.limited);
+		assert_eq!(truncated.decorations.len(), 2);
+		assert_eq!(truncated.nameplates.len(), 1);
+		assert_eq!(truncated.effects.len(), 1);
 		assert!(decode_purchases(&vec![b' '; MAX_PURCHASES_WIRE + 1]).is_err());
 	}
 

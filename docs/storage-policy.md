@@ -2086,8 +2086,10 @@ arrays are dropped rather than invented. A requested detail row is bounded by th
 Deauthorization keeps only the pending authorization ID, application name and fixed status text
 until one bounded list refetch confirms the row is gone. No access token, refresh token, client
 secret, callback code or raw authorization payload is retained. In-flight list, detail and pending
-deauthorization state are invalidated on session interruption; logout or account reset clears the
-whole view. Nothing is written to SQLite, exports, diagnostics or the account cache.
+deauthorization state are invalidated on session interruption. Interrupted or reconnecting sessions
+also discard the visible list/detail immediately, so no stale snapshot can be deauthorized; a fresh
+list read is required before another attempt. Logout or account reset clears the whole view.
+Nothing is written to SQLite, exports, diagnostics or the account cache.
 
 ### Persistent native message history (schema 31)
 

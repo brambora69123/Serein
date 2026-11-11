@@ -98,7 +98,11 @@ impl MessagingUi {
 			design::notice(
 				ui,
 				design::Level::Success,
-				&self.language.text("settings-authorized-apps-deauthorized"),
+				&format!(
+					"{} · {}",
+					self.language.text("settings-authorized-apps-deauthorized"),
+					deauthorization.application_name
+				),
 			);
 			ui.add_space(8.0);
 		}

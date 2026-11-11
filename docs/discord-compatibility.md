@@ -3330,8 +3330,8 @@ or mutation was used. Offline screenshot page: `connections` in `profile_preview
 Settings > Authorized Apps performs one explicit, bounded
 [`GET /oauth2/tokens`](https://docs.discord.food/topics/oauth2) when the page opens. The route is
 documented by Userdoccers, not Discord's public documentation, and normal-session delivery remains
-unofficial/live-unverified. Only the most recent authorization per application is requested. At
-most 64 grants are retained; authorization and application IDs, names, descriptions, icons, scopes,
+unofficial/live-unverified. One list read is requested. At most 64 grants are retained; additional
+rows are marked as limited and dropped while the retained rows remain actionable. Authorization and application IDs, names, descriptions, icons, scopes,
 approval timestamps and policy URLs are bounded, and total retained bytes are capped. Missing or
 unrecognized scopes, approval timestamps, verification flags and policy links stay unknown rather
 than being inferred; a malformed scope array is dropped and marks the row limited. The list is

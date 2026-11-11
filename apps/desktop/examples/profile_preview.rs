@@ -114,6 +114,10 @@ impl eframe::App for Preview {
 				client_core::Command::ServerAction { action, request } => {
 					server_settings_demo::execute_action(&mut self.state, action, request)
 				}
+				client_core::Command::SafetyHub { request } => client_core::Event::SafetyHub {
+					request,
+					result: Ok(test_support::safety_hub::Fixture::Good.snapshot()),
+				},
 				client_core::Command::EditProfile {
 					user,
 					request,

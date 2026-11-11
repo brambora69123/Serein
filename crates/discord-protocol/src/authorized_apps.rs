@@ -167,12 +167,10 @@ pub fn decode_authorized_apps(bytes: &[u8]) -> Result<AuthorizedAppsPage, Decode
 		return Err(DecodeError);
 	}
 	let rows: Vec<GrantDto> = serde_json::from_slice(bytes).map_err(|_| DecodeError)?;
-	if rows.len() > MAX_AUTHORIZED_APPS {
-		return Err(DecodeError);
-	}
-	let mut limited = false;
+	let mut limited = rows.len() > MAX_AUTHORIZED_APPS;
 	let items: Vec<_> = rows
 		.into_iter()
+		.take(MAX_AUTHORIZED_APPS)
 		.map(|row| {
 			let grant = row.into_model();
 			limited |= grant.limited;
@@ -251,10 +249,11 @@ mod tests {
 				)
 			})
 			.collect();
-		assert!(
-			decode_authorized_apps(format!("[{}]", rows.join(",")).as_bytes()).is_err(),
-			"one row over the cap is rejected, never silently dropped"
-		);
+		let page = decode_authorized_apps(format!("[{}]", rows.join(",")).as_bytes()).unwrap();
+		assert_eq!(page.items.len(), MAX_AUTHORIZED_APPS);
+		assert!(page.limited);
+		assert!(page.items[0].can_deauthorize());
+		assert_eq!(page.items.last().unwrap().id, "63");
 		let long = "x".repeat(MAX_APPLICATION_NAME_CHARS + 1);
 		let page = decode_authorized_apps(
 			format!(

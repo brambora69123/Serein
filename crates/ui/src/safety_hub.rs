@@ -156,7 +156,7 @@ impl MessagingUi {
 		crate::markdown::confirm_external_link(
 			ui.ctx(),
 			&mut self.settings.safety_hub_opening,
-			true,
+			self.reading_preferences.confirm_external_links,
 		);
 	}
 }
